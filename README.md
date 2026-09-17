@@ -2,6 +2,23 @@
 
 Skill files, etc. for making part-learning tracks for a community chorus.
 
+## The workflow
+
+**Glyph-based sheet-music PDF (exported from a music editor) → Claude → Sibelius + Cantai**
+
+1. Start from a PDF that a notation program exported (Sibelius, Finale, Dorico, MuseScore).
+   Its noteheads, slurs and lyrics are vector objects with exact coordinates, so they can be
+   *read*, not recognised. A scan or photo is a different, worse job — `check_pdf_type.py`
+   tells you which you have.
+2. Give the PDF and `SKILL.md` to Claude. Following the skill, Claude extracts the notes,
+   rhythms, lyrics, ties and slurs from the glyph stream, explodes the condensed choral staves
+   into one monophonic part per voice, applies the "who sings here" instructions by hand, and
+   verifies the result (XSD, bar lengths, ranges, lyric checks, render-and-compare).
+   Output: a print-faithful MusicXML, plus — on request — a Cantai version (Step 6 of the skill,
+   or `cantai_mode.py` run on the faithful file).
+3. Open the MusicXML in Sibelius, put the vocal staves on Cantai voices, and export the
+   part-learning tracks.
+
 ## What is here
 
 - `SKILL.md` — the *choral-pdf-to-singable-musicxml* skill: how to turn a choral PDF into
