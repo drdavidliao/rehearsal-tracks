@@ -357,12 +357,24 @@ GROUP_START = ('<part-group type="start" number="1"><group-symbol>bracket</group
 GROUP_STOP = '<part-group type="stop" number="1"/>'
 
 
-def identification(composer=None, arranger=None, rights=None, software=None):
+def identification(composer=None, arranger=None, rights=None, software=None,
+                   creators=()):
+    """`creators` is [(type, name), ...] for anyone past composer and arranger.
+
+    MusicXML's `type` on `<creator>` is free text — composer, lyricist and
+    arranger are only the standard values — so "adapter", "editor" or
+    "translator" are all legal, and a reader that does not recognise a type
+    still has the name.  An adaptation is somebody's work and belongs in the
+    file, not in a filename: a director who decides how a piece is revoiced
+    made editorial decisions on every bar of it.
+    """
     s = '<identification>'
     if composer:
         s += f'<creator type="composer">{escape(composer)}</creator>'
     if arranger:
         s += f'<creator type="arranger">{escape(arranger)}</creator>'
+    for kind, name in creators:
+        s += f'<creator type="{escape(kind)}">{escape(name)}</creator>'
     if rights:
         s += f'<rights>{escape(rights)}</rights>'
     if software:
@@ -370,12 +382,38 @@ def identification(composer=None, arranger=None, rights=None, software=None):
     return s + '</identification>'
 
 
+def credit(text, page=1, kind=None, justify='right', valign='bottom',
+           x=None, y=None, size=None):
+    """A printed credit line.
+
+    `<identification>` is metadata; `<credit>` is what appears on the page.
+    Verovio and Sibelius both draw the credits when a file has them, so
+    anyone whose name should be *visible* needs one of these as well.
+    """
+    s = f'<credit page="{page}">'
+    if kind:
+        s += f'<credit-type>{escape(kind)}</credit-type>'
+    attrs = f' justify="{justify}" valign="{valign}"'
+    if x is not None:
+        attrs += f' default-x="{x}"'
+    if y is not None:
+        attrs += f' default-y="{y}"'
+    if size is not None:
+        attrs += f' font-size="{size}"'
+    return s + f'<credit-words{attrs}>{escape(text)}</credit-words></credit>'
+
+
 def score_part(pid, name, abbr):
     return (f'<score-part id="{pid}"><part-name>{escape(name)}</part-name>'
             f'<part-abbreviation>{escape(abbr)}</part-abbreviation></score-part>')
 
 
-def score_xml(title, ident, part_list, parts):
-    """part_list: the already-built <part-list> children, in order."""
+def score_xml(title, ident, part_list, parts, credits=()):
+    """part_list: the already-built <part-list> children, in order.
+
+    `credits` are `credit()` strings, and sit between <identification> and
+    <part-list>, which is where MusicXML wants them.
+    """
     return '\n'.join([HEAD, f'<work><work-title>{escape(title)}</work-title></work>', ident,
+                      *credits,
                       '<part-list>', *part_list, '</part-list>', *parts, '</score-partwise>'])

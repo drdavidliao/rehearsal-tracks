@@ -72,7 +72,10 @@ class Print:
     def lay_out(self, src):
         """Insert <defaults> and the encoded breaks. `src` is a path or XML text."""
         xml = src if src.lstrip().startswith('<') else open(src, encoding='utf-8').read()
-        xml = re.sub(r'<part-list>', self.defaults_xml() + '<part-list>', xml, count=1)
+        # <defaults> goes before <credit>, which goes before <part-list>; inserting
+        # it straight before <part-list> puts it after any credits and fails the XSD.
+        anchor = '<credit ' if '<credit ' in xml else '<part-list>'
+        xml = xml.replace(anchor, self.defaults_xml() + anchor, 1)
         page_starts = {self.systems[i] for i in range(0, len(self.systems), self.per_page)}
 
         def ap(mo):
@@ -105,12 +108,68 @@ class Print:
         tk.loadData(xml)
         return tk
 
-    def render(self, xml, pdf_out, png_pages=(), quiet=False):
+    def credit_block(self, svg, lines, size=30, leading=1.3):
+        """Draw credit lines onto a rendered page. Verovio will not.
+
+        Its MusicXML importer drops `<credit>` entirely, and its automatic page
+        head renders exactly one thing — the movement- or work-title. No
+        composer, no arranger, nobody. Sibelius does import `<credit>`, so the
+        encoded credits are what matter once the file gets there, but the PDF
+        is what the singers hold and it must not go out anonymous.
+
+        The lines are right-aligned to the right margin and stacked in the band
+        between the top margin and the first staff line, both measured off the
+        rendered page. The type shrinks to fit rather than overrunning the
+        music, because three credit lines do not fit the gap a title alone
+        leaves.
+        """
+        if not lines:
+            return svg
+        from lxml import etree
+        ns = {'s': 'http://www.w3.org/2000/svg'}
+        root = etree.fromstring(svg.encode())
+        tr = root.xpath('//s:g[@class="page-margin"]/@transform', namespaces=ns)
+        dy = 0.0
+        if tr:
+            m = re.search(r'translate\([-\d.]+,\s*([-\d.]+)', tr[0])
+            if m:
+                dy = float(m.group(1))
+
+        top = self.margins['top'] * 10
+        floor = None
+        for d in root.xpath('//s:g[@class="staff"]//s:path/@d', namespaces=ns):
+            m = re.match(r'M(-?[\d.]+)\s+(-?[\d.]+)', d)
+            if m:
+                y = (float(m.group(2)) + dy) / 10.0
+                floor = y if floor is None else min(floor, y)
+        if floor is None:
+            floor = top + size * (len(lines) * leading + 1)
+
+        band = floor - top
+        need = size * (leading * (len(lines) - 1) + 1.5)
+        if need > band:                       # shrink to fit rather than overrun
+            size *= band / need
+        right = self.page_w * 10 - self.margins['right'] * 10
+        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
+        g.set('class', 'credits')
+        for i, line in enumerate(lines):
+            el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
+            el.set('x', f'{right:.1f}')
+            el.set('y', f'{top + size * (1.0 + leading * i):.1f}')
+            el.set('text-anchor', 'end')
+            el.set('font-family', 'Times,serif')
+            el.set('font-size', f'{size:.1f}px')
+            el.text = line
+        return etree.tostring(root, encoding='unicode')
+
+    def render(self, xml, pdf_out, png_pages=(), quiet=False, credits=()):
         """Write a print-ready PDF, and optionally PNGs of named pages."""
         import cairosvg
         tk = self.toolkit(xml)
         n = tk.getPageCount()
         svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
+        if credits:
+            svgs[0] = self.credit_block(svgs[0], credits)
         per = [len(re.findall(r'class="system"', s)) for s in svgs]
         if not quiet:
             print(f'{n} pages, systems/page {per}')
