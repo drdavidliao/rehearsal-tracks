@@ -57,19 +57,32 @@ matter what `smuflTextFont` says. `printing.install_smufl_font()` unpacks
 Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
 which is what cairosvg actually consults.
 
-**A credit with no coordinates lands in the corner of the paper.** MusicXML
-page positions are in tenths and, as the spec's own schema documentation puts
-it, "the default-x and default-y attributes adjust the origin relative to the
-bottom left-hand corner of the page" — so a `<credit>` without them defaults to
-(0, 0), flush to the bottom-left edge with no margin. Several unpositioned
-credits stack there on top of one another, and all but the last look like the
-reader dropped them. Verovio skips them silently; Sibelius draws the pile.
-And leave `credit-type` off any line you want to *see*: Sibelius routes a
-typed credit into its Score Info fields rather than onto the page, so a typed
-composer and a typed arranger both disappear while an untyped adaptation line
-next to them prints. Neither is a bug in the reader. `printing.Print.credit_xml` computes the
-positions from the same page plan the layout uses, and `header_tenths` sizes
-the gap above the first system so the block has somewhere to sit.
+**The two readers want opposite credit encodings, and a probe is the only
+way to learn that.** A file with six differently-encoded credits, each
+labelled with its own encoding, settles in one import what three rounds of
+guessing did not:
+
+* **Sibelius keeps one credit per zone of the page.** Given six separate
+  `<credit>` elements aimed at the same corner it drew the last and silently
+  dropped five. But it renders every `<credit-words>` inside a *single*
+  credit as its own line. So a multi-line credit block is the encoding that
+  survives — which is what MuseScore writes.
+* **Verovio is the mirror image.** It draws every separate credit and only the
+  *first* `<credit-words>` of a block.
+
+`printing.Print.credit_xml` therefore emits one block, and
+`expand_credit_blocks` splits it into one credit per line on the way into
+Verovio and nowhere else: the file gets the encoding the notation program
+reads, the renderer gets the one it reads.
+
+Positions are not optional either. MusicXML page coordinates are in tenths and
+the schema's own documentation says "the default-x and default-y attributes
+adjust the origin relative to the bottom left-hand corner of the page", so a
+credit without them lands at (0, 0) — the corner of the paper, no margin.
+`credit_xml` computes them from the same page plan the layout uses, and
+`header_tenths` sizes the gap above the first system so the block has
+somewhere to sit. `<defaults>` must also precede `<credit>`, which must
+precede `<part-list>`, or the file fails the schema.
 
 Two smaller ones. Verovio randomises the id suffix on every generated SVG
 element per render, and rendering a page after sweeping the whole document can

@@ -101,11 +101,53 @@ class Print:
                 "lyricSize": self.lyric_size, "svgViewBox": True,
                 "header": "auto", "footer": "none"}
 
+    def expand_credit_blocks(self, xml, leading=30):
+        """Split a multi-line credit into one credit per line, for Verovio only.
+
+        The two readers want opposite encodings, and a probe settles which:
+
+        * Sibelius keeps ONE credit per zone of the page — given six separate
+          credits aimed at the same corner it drew the last and silently
+          dropped five — but renders every `<credit-words>` of a single credit
+          as its own line.
+        * Verovio is the mirror image: it draws every separate credit and only
+          the first `<credit-words>` of a block.
+
+        So the file keeps the block, which is what the notation program reads,
+        and the renderer is handed the expansion. Nothing else sees this.
+        """
+        if xml.count('<credit-words') < 2:
+            return xml
+        from lxml import etree
+        head, _, rest = xml.partition('<score-partwise')
+        root = etree.fromstring(('<score-partwise' + rest).encode())
+        for cr in root.findall('credit'):
+            words = cr.findall('credit-words')
+            if len(words) < 2:
+                continue
+            first = words[0]
+            try:
+                y0 = float(first.get('default-y'))
+            except (TypeError, ValueError):
+                continue
+            idx = list(root).index(cr)
+            for i, w in enumerate(words):
+                one = etree.Element('credit')
+                one.set('page', cr.get('page', '1'))
+                cw = etree.SubElement(one, 'credit-words')
+                for k, v in first.items():
+                    cw.set(k, v)
+                cw.set('default-y', f'{y0 - leading * i:g}')
+                cw.text = (w.text or '').rstrip('\n')
+                root.insert(idx + i, one)
+            root.remove(cr)
+        return head + etree.tostring(root, encoding='unicode')
+
     def toolkit(self, xml):
         import verovio
         tk = verovio.toolkit()
         tk.setOptions(self.options())
-        tk.loadData(xml)
+        tk.loadData(self.expand_credit_blocks(xml))
         return tk
 
     def credit_xml(self, title, lines, title_size=22, size=10,
@@ -136,10 +178,9 @@ class Print:
             out.append(credit(title, kind='title', justify='center',
                               valign='top', x=page_w // 2, y=top,
                               size=title_size))
-        y = top - gap
-        for i, (kind, text) in enumerate(lines):
-            out.append(credit(text, kind=kind, justify='right', valign='top',
-                              x=right, y=y - leading * i, size=size))
+        if lines:
+            out.append(credit([t for _, t in lines], justify='right',
+                              valign='top', x=right, y=top - gap, size=size))
         return out
 
     def header_tenths(self, nlines, title_size=22, leading=30, gap=62):

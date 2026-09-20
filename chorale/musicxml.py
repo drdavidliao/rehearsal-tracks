@@ -384,12 +384,19 @@ def identification(composer=None, arranger=None, rights=None, software=None,
 
 def credit(text, page=1, kind=None, justify='right', valign='bottom',
            x=None, y=None, size=None):
-    """A printed credit line.
+    """A printed credit. `text` is one string, or several for a stacked block.
 
     `<identification>` is metadata; `<credit>` is what appears on the page.
-    Verovio and Sibelius both draw the credits when a file has them, so
-    anyone whose name should be *visible* needs one of these as well.
+
+    Several lines go in ONE credit as successive `<credit-words>`, not as
+    separate `<credit>` elements: the spec says "a series of credit-words and
+    credit-symbol elements within a single credit element follow one another
+    in sequence visually", only the first carries the position, and the line
+    break is a literal newline at the end of each. This is what MuseScore
+    writes, and Sibelius keeps only one of several sibling `<credit>` elements
+    aimed at the same corner of the page — give it three and two disappear.
     """
+    lines = [text] if isinstance(text, str) else list(text)
     s = f'<credit page="{page}">'
     if kind:
         s += f'<credit-type>{escape(kind)}</credit-type>'
@@ -400,7 +407,10 @@ def credit(text, page=1, kind=None, justify='right', valign='bottom',
         attrs += f' default-y="{y}"'
     if size is not None:
         attrs += f' font-size="{size}"'
-    return s + f'<credit-words{attrs}>{escape(text)}</credit-words></credit>'
+    for i, line in enumerate(lines):
+        nl = '\n' if i < len(lines) - 1 else ''
+        s += f'<credit-words{attrs if i == 0 else ""}>{escape(line)}{nl}</credit-words>'
+    return s + '</credit>'
 
 
 def score_part(pid, name, abbr):
