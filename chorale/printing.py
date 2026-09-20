@@ -108,68 +108,47 @@ class Print:
         tk.loadData(xml)
         return tk
 
-    def credit_block(self, svg, lines, size=30, leading=1.3):
-        """Draw credit lines onto a rendered page. Verovio will not.
+    def credit_xml(self, title, lines, title_size=22, size=10,
+                   leading=30, gap=62):
+        """The <credit> elements, positioned in page coordinates.
 
-        Its MusicXML importer drops `<credit>` entirely, and its automatic page
-        head renders exactly one thing — the movement- or work-title. No
-        composer, no arranger, nobody. Sibelius does import `<credit>`, so the
-        encoded credits are what matter once the file gets there, but the PDF
-        is what the singers hold and it must not go out anonymous.
+        MusicXML page positions are in tenths, and the reference documentation
+        is explicit that "the origin is changed relative to the bottom
+        left-hand corner of the specified page", positive x right and positive
+        y up. A credit with no default-x/default-y therefore defaults to (0, 0)
+        — the bottom-left corner of the paper, flush to the edge — and several
+        unpositioned credits land on top of one another there, so all but one
+        look like they were dropped. Always give coordinates.
 
-        The lines are right-aligned to the right margin and stacked in the band
-        between the top margin and the first staff line, both measured off the
-        rendered page. The type shrinks to fit rather than overrunning the
-        music, because three credit lines do not fit the gap a title alone
-        leaves.
+        Verovio renders these too, once they are positioned.
         """
-        if not lines:
-            return svg
-        from lxml import etree
-        ns = {'s': 'http://www.w3.org/2000/svg'}
-        root = etree.fromstring(svg.encode())
-        tr = root.xpath('//s:g[@class="page-margin"]/@transform', namespaces=ns)
-        dy = 0.0
-        if tr:
-            m = re.search(r'translate\([-\d.]+,\s*([-\d.]+)', tr[0])
-            if m:
-                dy = float(m.group(1))
+        from .musicxml import credit
+        page_w, page_h = self.tenths(self.page_w), self.tenths(self.page_h)
+        right = page_w - self.tenths(self.margins['right'])
+        top = page_h - self.tenths(self.margins['top'])
+        out = []
+        if title:
+            out.append(credit(title, kind='title', justify='center',
+                              valign='top', x=page_w // 2, y=top,
+                              size=title_size))
+        y = top - gap
+        for i, (kind, text) in enumerate(lines):
+            out.append(credit(text, kind=kind, justify='right', valign='top',
+                              x=right, y=y - leading * i, size=size))
+        return out
 
-        top = self.margins['top'] * 10
-        floor = None
-        for d in root.xpath('//s:g[@class="staff"]//s:path/@d', namespaces=ns):
-            m = re.match(r'M(-?[\d.]+)\s+(-?[\d.]+)', d)
-            if m:
-                y = (float(m.group(2)) + dy) / 10.0
-                floor = y if floor is None else min(floor, y)
-        if floor is None:
-            floor = top + size * (len(lines) * leading + 1)
+    def header_tenths(self, nlines, title_size=22, leading=30, gap=62):
+        """How far the first system must sit below the top margin to clear the
+        header block, so `system_distance` can be set from the credits rather
+        than guessed at."""
+        return int(gap + leading * nlines + title_size)
 
-        band = floor - top
-        need = size * (leading * (len(lines) - 1) + 1.5)
-        if need > band:                       # shrink to fit rather than overrun
-            size *= band / need
-        right = self.page_w * 10 - self.margins['right'] * 10
-        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
-        g.set('class', 'credits')
-        for i, line in enumerate(lines):
-            el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
-            el.set('x', f'{right:.1f}')
-            el.set('y', f'{top + size * (1.0 + leading * i):.1f}')
-            el.set('text-anchor', 'end')
-            el.set('font-family', 'Times,serif')
-            el.set('font-size', f'{size:.1f}px')
-            el.text = line
-        return etree.tostring(root, encoding='unicode')
-
-    def render(self, xml, pdf_out, png_pages=(), quiet=False, credits=()):
+    def render(self, xml, pdf_out, png_pages=(), quiet=False):
         """Write a print-ready PDF, and optionally PNGs of named pages."""
         import cairosvg
         tk = self.toolkit(xml)
         n = tk.getPageCount()
         svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
-        if credits:
-            svgs[0] = self.credit_block(svgs[0], credits)
         per = [len(re.findall(r'class="system"', s)) for s in svgs]
         if not quiet:
             print(f'{n} pages, systems/page {per}')

@@ -57,17 +57,16 @@ matter what `smuflTextFont` says. `printing.install_smufl_font()` unpacks
 Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
 which is what cairosvg actually consults.
 
-**Verovio will not print your credits.** Its MusicXML importer drops
-`<credit>` entirely, and its automatic page head renders exactly one thing —
-the movement- or work-title. No composer, no arranger, nobody. Sibelius does
-import `<credit>`, so encoded credits are what matter once the file gets there,
-but a PDF is what singers hold and it must not go out anonymous:
-`printing.Print.credit_block` draws the lines onto the rendered page itself,
-right-aligned in the band between the top margin and the first staff line, both
-measured off the render, shrinking the type to fit rather than overrunning the
-music. And `<defaults>` must precede `<credit>`, which must precede
-`<part-list>` — inserting layout defaults straight before `<part-list>` puts
-them after the credits and fails the schema.
+**A credit with no coordinates lands in the corner of the paper.** MusicXML
+page positions are in tenths and, as the spec's own schema documentation puts
+it, "the default-x and default-y attributes adjust the origin relative to the
+bottom left-hand corner of the page" — so a `<credit>` without them defaults to
+(0, 0), flush to the bottom-left edge with no margin. Several unpositioned
+credits stack there on top of one another, and all but the last look like the
+reader dropped them. Verovio skips them silently; Sibelius draws the pile.
+Neither is a bug in the reader. `printing.Print.credit_xml` computes the
+positions from the same page plan the layout uses, and `header_tenths` sizes
+the gap above the first system so the block has somewhere to sit.
 
 Two smaller ones. Verovio randomises the id suffix on every generated SVG
 element per render, and rendering a page after sweeping the whole document can
