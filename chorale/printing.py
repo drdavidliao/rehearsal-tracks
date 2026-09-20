@@ -120,7 +120,12 @@ class Print:
         unpositioned credits land on top of one another there, so all but one
         look like they were dropped. Always give coordinates.
 
-        Verovio renders these too, once they are positioned.
+        Leave `kind` None unless you want the line swallowed. Sibelius takes a
+        credit carrying a <credit-type> into its Score Info fields instead of
+        drawing it on the page, so a typed composer line and a typed arranger
+        line both vanish while an untyped one beside them prints. The names
+        belong in <identification><creator> anyway; these are the copies meant
+        to be seen. Verovio draws all of them, typed or not.
         """
         from .musicxml import credit
         page_w, page_h = self.tenths(self.page_w), self.tenths(self.page_h)

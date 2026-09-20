@@ -64,7 +64,10 @@ bottom left-hand corner of the page" — so a `<credit>` without them defaults t
 (0, 0), flush to the bottom-left edge with no margin. Several unpositioned
 credits stack there on top of one another, and all but the last look like the
 reader dropped them. Verovio skips them silently; Sibelius draws the pile.
-Neither is a bug in the reader. `printing.Print.credit_xml` computes the
+And leave `credit-type` off any line you want to *see*: Sibelius routes a
+typed credit into its Score Info fields rather than onto the page, so a typed
+composer and a typed arranger both disappear while an untyped adaptation line
+next to them prints. Neither is a bug in the reader. `printing.Print.credit_xml` computes the
 positions from the same page plan the layout uses, and `header_tenths` sizes
 the gap above the first system so the block has somewhere to sit.
 
