@@ -1,0 +1,171 @@
+"""Page layout and PDF rendering, via Verovio.
+
+Two things here are not obvious and cost real time to find.
+
+`unit` is the staff-size knob, not `scale`.  Verovio's `unit` is half a staff
+space in 1/10 mm, so a staff height of `mm` millimetres is `mm / 4 * 10 / 2`.
+`scale` only zooms the finished SVG, so turning it up makes a big picture of a
+small score.
+
+cairosvg does not honour `@font-face`, so every SMuFL glyph Verovio draws as text
+— chord-symbol accidentals above all — comes out as a tofu rectangle in the PDF
+no matter what `smuflTextFont` is set to.  `install_smufl_font()` unpacks
+Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
+which is what cairosvg actually consults.
+"""
+import base64
+import io
+import os
+import re
+import subprocess
+
+PAGE_LETTER = (215.9, 279.4)
+PAGE_A4 = (210.0, 297.0)
+PAGE_OCTAVO = (171.45, 260.35)
+
+
+class Print:
+    """A page plan: staff size, paper, margins, and where the systems begin.
+
+    `systems` is the list of bar numbers that start a system.  Taking every
+    `per_page`th of them gives the page breaks, so the two settings cannot
+    disagree with each other.
+    """
+
+    def __init__(self, systems, staff_mm=7.0, page=PAGE_LETTER, per_page=2,
+                 margins=None, system_distance=150, top_system_distance=90,
+                 staff_distance=85, lyric_size=4.0, spacing_staff=4, spacing_system=20,
+                 justify_vertically=False):
+        self.systems = list(systems)
+        self.staff_mm = staff_mm
+        self.page_w, self.page_h = page
+        self.per_page = per_page
+        self.margins = margins or dict(left=14.0, right=11.0, top=13.0, bottom=12.0)
+        self.system_distance = system_distance
+        self.top_system_distance = top_system_distance
+        self.staff_distance = staff_distance
+        self.lyric_size = lyric_size
+        self.spacing_staff = spacing_staff
+        self.spacing_system = spacing_system
+        self.justify_vertically = justify_vertically
+
+    def tenths(self, mm):
+        return round(mm / self.staff_mm * 40)
+
+    def defaults_xml(self):
+        mg = self.margins
+        return ('<defaults>'
+                f'<scaling><millimeters>{self.staff_mm}</millimeters><tenths>40</tenths></scaling>'
+                f'<page-layout><page-height>{self.tenths(self.page_h)}</page-height>'
+                f'<page-width>{self.tenths(self.page_w)}</page-width>'
+                f'<page-margins type="both"><left-margin>{self.tenths(mg["left"])}</left-margin>'
+                f'<right-margin>{self.tenths(mg["right"])}</right-margin>'
+                f'<top-margin>{self.tenths(mg["top"])}</top-margin>'
+                f'<bottom-margin>{self.tenths(mg["bottom"])}</bottom-margin></page-margins></page-layout>'
+                '<system-layout><system-margins><left-margin>0</left-margin>'
+                '<right-margin>0</right-margin></system-margins>'
+                f'<system-distance>{self.system_distance}</system-distance>'
+                f'<top-system-distance>{self.top_system_distance}</top-system-distance></system-layout>'
+                f'<staff-layout><staff-distance>{self.staff_distance}</staff-distance></staff-layout>'
+                '</defaults>')
+
+    def lay_out(self, src):
+        """Insert <defaults> and the encoded breaks. `src` is a path or XML text."""
+        xml = src if src.lstrip().startswith('<') else open(src, encoding='utf-8').read()
+        xml = re.sub(r'<part-list>', self.defaults_xml() + '<part-list>', xml, count=1)
+        page_starts = {self.systems[i] for i in range(0, len(self.systems), self.per_page)}
+
+        def ap(mo):
+            m = int(mo.group(1))
+            if m in page_starts and m != 1:
+                return mo.group(0) + '<print new-page="yes"/>'
+            if m in self.systems and m != 1:
+                return mo.group(0) + '<print new-system="yes"/>'
+            return mo.group(0)
+
+        return re.sub(r'<measure number="(\d+)">', ap, xml)
+
+    def options(self):
+        mg = self.margins
+        return {"pageWidth": int(self.page_w * 10), "pageHeight": int(self.page_h * 10),
+                "pageMarginLeft": int(mg['left'] * 10), "pageMarginRight": int(mg['right'] * 10),
+                "pageMarginTop": int(mg['top'] * 10), "pageMarginBottom": int(mg['bottom'] * 10),
+                "unit": self.staff_mm / 4 * 10 / 2, "scale": 100, "adjustPageHeight": False,
+                "breaks": "encoded", "justifyVertically": self.justify_vertically,
+                "spacingStaff": self.spacing_staff, "spacingSystem": self.spacing_system,
+                "lyricSize": self.lyric_size, "svgViewBox": True,
+                "header": "auto", "footer": "none"}
+
+    def toolkit(self, xml):
+        import verovio
+        tk = verovio.toolkit()
+        tk.setOptions(self.options())
+        tk.loadData(xml)
+        return tk
+
+    def render(self, xml, pdf_out, png_pages=(), quiet=False):
+        """Write a print-ready PDF, and optionally PNGs of named pages."""
+        import cairosvg
+        tk = self.toolkit(xml)
+        n = tk.getPageCount()
+        svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
+        per = [len(re.findall(r'class="system"', s)) for s in svgs]
+        if not quiet:
+            print(f'{n} pages, systems/page {per}')
+        pdfs = [cairosvg.svg2pdf(bytestring=s.encode(), dpi=254) for s in svgs]
+        try:
+            from pypdf import PdfReader, PdfWriter
+        except ImportError:
+            from PyPDF2 import PdfReader, PdfWriter
+        w = PdfWriter()
+        for b in pdfs:
+            w.append(PdfReader(io.BytesIO(b)))
+        with open(pdf_out, 'wb') as f:
+            w.write(f)
+        for p in png_pages:
+            png_page(svgs[p - 1], f'{pdf_out[:-4]}_p{p}.png')
+        return n, per
+
+
+def png_page(svg, out, width=1500):
+    """PNG of one rendered page, composited onto white.
+
+    cairosvg writes a transparent background; measuring ink on the raw output
+    counts the transparency as black and every page looks equally full.
+    """
+    import cairosvg
+    from PIL import Image
+    im = Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(),
+                                                output_width=width))).convert('RGBA')
+    bg = Image.new('RGBA', im.size, (255, 255, 255, 255))
+    bg.alpha_composite(im)
+    bg.convert('RGB').save(out)
+    return out
+
+
+def install_smufl_font(force=False):
+    """Make Verovio's Leipzig visible to cairosvg, killing the tofu rectangles.
+
+    Verovio ships the font base64'd inside data/Leipzig.css as WOFF2; fontconfig
+    cannot read WOFF2, so it is converted on the way out.  Returns the installed
+    path, or None if the font was already there.
+    """
+    import verovio
+    dest_dir = os.path.expanduser('~/.fonts')
+    dest = os.path.join(dest_dir, 'Leipzig.ttf')
+    if os.path.exists(dest) and not force:
+        return None
+    css_path = os.path.join(os.path.dirname(verovio.__file__), 'data', 'Leipzig.css')
+    css = open(css_path, encoding='utf-8').read()
+    m = re.search(r'base64,([A-Za-z0-9+/=]+)', css)
+    if not m:
+        raise RuntimeError(f'no embedded font found in {css_path}')
+    raw = base64.b64decode(m.group(1))
+    from fontTools.ttLib import TTFont
+    f = TTFont(io.BytesIO(raw))
+    f.flavor = None
+    os.makedirs(dest_dir, exist_ok=True)
+    f.save(dest)
+    subprocess.run(['fc-cache', '-f'], check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return dest
