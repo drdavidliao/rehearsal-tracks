@@ -75,6 +75,17 @@ guessing did not:
 Verovio and nowhere else: the file gets the encoding the notation program
 reads, the renderer gets the one it reads.
 
+**The copyright notice is a third case.** Sibelius turns `<rights>` into a
+copyright line of its own and pins it to the *bottom margin* — which is also
+where it justifies the staves down to after import, so the notice and the last
+system land on each other. Widening the bottom margin does not help: it moves
+both together. The fix is to drop `<rights>`, pass the notice as `credit_xml`'s
+`footer`, and let it sit *inside* the margin band a few millimetres off the
+paper edge, where justification cannot reach it. Leaving `<rights>` in as well
+gets you two notices. Verovio needs it painted on separately (`draw_footer`):
+it converts credits into the page head only and drops a bottom-positioned one
+under all three `footer` settings — none, auto and encoded were all tried.
+
 Positions are not optional either. MusicXML page coordinates are in tenths and
 the schema's own documentation says "the default-x and default-y attributes
 adjust the origin relative to the bottom left-hand corner of the page", so a

@@ -151,7 +151,8 @@ class Print:
         return tk
 
     def credit_xml(self, title, lines, title_size=22, size=10,
-                   leading=30, gap=62):
+                   leading=30, gap=62, footer=None, footer_size=9,
+                   footer_mm=6.5):
         """The <credit> elements, positioned in page coordinates.
 
         MusicXML page positions are in tenths, and the reference documentation
@@ -181,6 +182,17 @@ class Print:
         if lines:
             out.append(credit([t for _, t in lines], justify='right',
                               valign='top', x=right, y=top - gap, size=size))
+        if footer:
+            # Inside the bottom margin, not above it. Sibelius anchors the
+            # copyright it generates from <rights> to the bottom margin and
+            # then justifies the staves down onto that same line, so the two
+            # collide and widening the margin moves both together — it cannot
+            # separate them. A credit placed in the margin band clears the
+            # music whatever the justification does. Drop <rights> from
+            # <identification> when you use this, or you get both.
+            out.append(credit(footer, justify='center', valign='bottom',
+                              x=page_w // 2, y=self.tenths(footer_mm),
+                              size=footer_size))
         return out
 
     def header_tenths(self, nlines, title_size=22, leading=30, gap=62):
@@ -189,12 +201,38 @@ class Print:
         than guessed at."""
         return int(gap + leading * nlines + title_size)
 
-    def render(self, xml, pdf_out, png_pages=(), quiet=False):
+    def draw_footer(self, svg, text, mm=6.5, size=28):
+        """Paint a footer line onto a rendered page.
+
+        Verovio converts credits into its page *head* only: a credit
+        positioned down in the bottom margin is dropped, and `footer` set to
+        none, auto or encoded makes no difference — all three were tried. The
+        notation program reads the credit from the file; the PDF needs the
+        line drawn.
+        """
+        if not text:
+            return svg
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
+        g.set('class', 'footer')
+        el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
+        el.set('x', f'{self.page_w * 10 / 2:.1f}')
+        el.set('y', f'{self.page_h * 10 - mm * 10:.1f}')
+        el.set('text-anchor', 'middle')
+        el.set('font-family', 'Times,serif')
+        el.set('font-size', f'{size}px')
+        el.text = text
+        return etree.tostring(root, encoding='unicode')
+
+    def render(self, xml, pdf_out, png_pages=(), quiet=False, footer=None):
         """Write a print-ready PDF, and optionally PNGs of named pages."""
         import cairosvg
         tk = self.toolkit(xml)
         n = tk.getPageCount()
         svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
+        if footer:
+            svgs[0] = self.draw_footer(svgs[0], footer)
         per = [len(re.findall(r'class="system"', s)) for s in svgs]
         if not quiet:
             print(f'{n} pages, systems/page {per}')
