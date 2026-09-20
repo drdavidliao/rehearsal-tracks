@@ -1,0 +1,378 @@
+  </main>
+
+  <aside class="rail">
+    <div class="panel">
+      <div class="phead"><h2 id="edhead">Nothing selected</h2></div>
+      <div class="pbody" id="edbody">
+        <p class="hint">Click a beat under any measure to start a span. Drag, or shift-click
+          a second beat, to extend it. Then write what should happen there.</p>
+      </div>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;min-height:0">
+      <div class="phead"><h2>Instructions</h2><span class="spacer"></span>
+        <span class="count mono" id="ncount">0</span></div>
+      <div class="list" id="list"></div>
+    </div>
+  </aside>
+</div>
+
+<dialog id="dlgpal">
+  <div class="phead"><h2>Palette</h2><span class="spacer"></span>
+    <button class="btn ghost" id="paladd" type="button">Add item</button>
+    <button class="btn" id="palclose" type="button">Done</button></div>
+  <div class="pbody">
+    <p class="hint" style="margin-bottom:12px">A palette item is a name and the text it drops into
+      the box. Nothing is compiled — edit the text after you insert it.</p>
+    <div id="pallist"></div>
+  </div>
+</dialog>
+
+<dialog id="dlgtext">
+  <div class="phead"><h2 id="txthead">Export</h2><span class="spacer"></span>
+    <button class="btn" id="txtclose" type="button">Close</button></div>
+  <div class="pbody"><textarea id="txtarea" style="min-height:300px" readonly></textarea></div>
+</dialog>
+
+<script>
+(function(){
+"use strict";
+const META = __META__, BEATS = __BEATS__;
+const DOC = "__DOC__";
+const SCORE = "__SCORE__";
+
+const cells = Array.from(document.querySelectorAll(".beat"));
+const byIndex = new Map(cells.map(c => [+c.dataset.i, c]));
+const state = { palette: [], annotations: [] };
+let sel = null, anchor = null, dragging = false, editing = null, focusAnn = null;
+let db = null, dl = null, writing = false, pending = false;
+let rev = 0, flash = null;
+const unsaved = new Set();      // ids written locally but not yet confirmed by the store
+let stat = "local";             // local | saving | saved | error
+let edKey = null;               // what the editor is currently showing
+let statMsg = "";
+
+const $ = id => document.getElementById(id);
+const bar = i => Math.floor(i / BEATS) + 1, beat = i => (i % BEATS) + 1;
+const cellName = i => "m" + bar(i) + " b" + beat(i);
+const spanName = (a, b) => a === b ? cellName(a) : cellName(a) + " – " + cellName(b);
+const ref = i => bar(i) + "." + beat(i);
+
+function toast(msg){
+  const t = document.createElement("div");
+  t.className = "toast"; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2400);
+}
+
+/* ---------------- persistence ---------------- */
+function localSave(){
+  try { localStorage.setItem("bench", JSON.stringify(state)); } catch(e){}
+}
+function localLoad(){
+  try {
+    const raw = localStorage.getItem("bench");
+    if (raw) Object.assign(state, JSON.parse(raw));
+  } catch(e){}
+}
+function setStat(s, msg){ stat = s; statMsg = msg || ""; paintStat(); }
+function paintStat(){
+  const el = $("stat"); if (!el) return;
+  const t = { local: "kept in this browser", saving: "saving…", saved: "saved",
+              error: "not saved — " + statMsg }[stat] || "";
+  el.textContent = t;
+  el.className = "stat" + (stat === "error" ? " bad" : "");
+  el.title = stat === "error"
+    ? "The shared store refused the write (" + statMsg + "). Your work is still here and in "
+      + "this browser's storage; export it with Download JSON."
+    : t;
+}
+async function save(){
+  localSave();
+  if (!db){ setStat("local"); return; }
+  if (writing){ pending = true; return; }
+  writing = true;
+  setStat("saving");
+  const sent = state.annotations.map(a => a.id);
+  try {
+    rev++;
+    await db.doc(DOC).set({ palette: state.palette, annotations: state.annotations,
+                            rev: rev, score: SCORE, updated: new Date().toISOString() });
+    sent.forEach(id => unsaved.delete(id));
+    setStat("saved");
+  } catch(e){
+    const code = (e && e.code) || "unknown";
+    setStat("error", code);
+    toast("Not saved to the store (" + code + ") — your work is still here.");
+  } finally {
+    writing = false;
+    if (pending){ pending = false; save(); }
+  }
+}
+
+/* ---------------- rendering ---------------- */
+function paintCells(){
+  const marked = new Set(), focused = new Set();
+  for (const a of state.annotations){
+    for (let i = a.a; i <= a.b; i++){
+      marked.add(i);
+      if (focusAnn === a.id) focused.add(i);
+    }
+  }
+  for (const [i, el] of byIndex){
+    el.classList.toggle("ann", marked.has(i));
+    el.classList.toggle("focusann", focused.has(i));
+    el.classList.toggle("sel", !!sel && i >= sel.a && i <= sel.b);
+  }
+}
+
+function chipsHTML(){
+  if (!state.palette.length)
+    return '<p class="hint" style="margin:8px 0">No palette items yet — '
+         + '<button class="btn ghost" type="button" data-openpal="1" '
+         + 'style="padding:1px 7px;font-size:12px">add some</button></p>';
+  return '<div class="chips">' + state.palette.map((p, k) =>
+    '<button class="chip" type="button" data-chip="' + k + '">' + esc(p.name) + '</button>'
+  ).join("") + '</div>';
+}
+
+function esc(s){ return String(s).replace(/[&<>"]/g, c =>
+  ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+
+function renderEditor(force){
+  // Rebuilding this panel destroys the textarea, so only do it when what the
+  // editor is showing actually changed — never because data arrived.
+  const key = sel ? sel.a + ":" + sel.b + ":" + (editing || "") : "none";
+  if (!force && key === edKey) return;
+  edKey = key;
+  const head = $("edhead"), body = $("edbody");
+  if (!sel){
+    head.textContent = editing ? "Nothing selected" : "Nothing selected";
+    body.innerHTML = '<p class="hint">Click a beat under any measure to start a span. Drag, or '
+      + 'shift-click a second beat, to extend it. Then write what should happen there.</p>';
+    return;
+  }
+  head.innerHTML = '<span class="span">' + esc(spanName(sel.a, sel.b)) + '</span>';
+  const cur = editing ? state.annotations.find(a => a.id === editing) : null;
+  body.innerHTML = chipsHTML()
+    + '<textarea id="txt" placeholder="What happens across these beats?"></textarea>'
+    + '<div class="row"><button class="btn primary" id="btnsave" type="button">'
+    + (cur ? "Update" : "Add instruction") + '</button>'
+    + '<button class="btn ghost" id="btnclear" type="button">Clear</button>'
+    + (cur ? '<span class="spacer"></span><button class="btn ghost" id="btndel" type="button" '
+           + 'style="color:var(--wash)">Delete</button>' : '')
+    + '</div>';
+  const ta = $("txt");
+  ta.value = cur ? cur.text : "";
+  ta.focus();
+}
+
+function renderList(){
+  const list = $("list");
+  const items = state.annotations.slice().sort((x, y) => x.a - y.a || x.b - y.b);
+  $("ncount").textContent = items.length ? items.length : "0";
+  if (!items.length){
+    list.innerHTML = '<p class="empty">Nothing written yet. The list keeps score order, '
+      + 'not the order you add things.</p>';
+    return;
+  }
+  list.innerHTML = items.map(a =>
+    '<button class="item' + (flash === a.id ? ' flash' : '') + '" type="button" data-id="'
+    + esc(a.id) + '"' + (focusAnn === a.id ? ' aria-current="true"' : '') + '>'
+    + '<span class="ispan">' + esc(spanName(a.a, a.b)) + '</span>'
+    + (a.tag ? '<span class="itag">' + esc(a.tag) + '</span>' : '')
+    + '<div class="itext">' + esc(a.text || "(no text)") + '</div></button>'
+  ).join("");
+}
+
+function render(){ paintCells(); renderEditor(); renderList(); }
+// what arrives from the store may repaint the score and the list, never the draft
+function renderQuiet(){ paintCells(); renderList(); paintStat(); }
+
+/* ---------------- selection ---------------- */
+function setSel(a, b){
+  sel = { a: Math.min(a, b), b: Math.max(a, b) };
+  if (editing){
+    const cur = state.annotations.find(x => x.id === editing);
+    if (!cur || cur.a !== sel.a || cur.b !== sel.b){ editing = null; focusAnn = null; }
+  }
+  render();
+}
+
+document.addEventListener("pointerdown", e => {
+  const el = e.target.closest(".beat");
+  if (!el) return;
+  e.preventDefault();
+  const i = +el.dataset.i;
+  if (e.shiftKey && anchor !== null) setSel(anchor, i);
+  else { anchor = i; editing = null; focusAnn = null; setSel(i, i); }
+  dragging = true;
+});
+document.addEventListener("pointermove", e => {
+  if (!dragging) return;
+  const el = document.elementFromPoint(e.clientX, e.clientY);
+  const b = el && el.closest && el.closest(".beat");
+  if (b && anchor !== null) setSel(anchor, +b.dataset.i);
+});
+document.addEventListener("pointerup", () => { dragging = false; });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && !document.querySelector("dialog[open]")){
+    sel = null; editing = null; focusAnn = null; render();
+  }
+});
+
+/* ---------------- actions ---------------- */
+document.addEventListener("click", e => {
+  const t = e.target;
+
+  if (t.closest("[data-openpal]")){ openPalette(); return; }
+
+  const chip = t.closest(".chip");
+  if (chip){
+    const p = state.palette[+chip.dataset.chip];
+    const ta = $("txt");
+    if (p && ta){
+      ta.value = ta.value ? ta.value.replace(/\s*$/, "") + "\n" + p.text : p.text;
+      ta.dataset.tag = p.name; ta.focus();
+    }
+    return;
+  }
+
+  if (t.id === "btnsave"){
+    // keep the panel in view on narrow screens, where the list sits below the fold
+    const ta = $("txt"); if (!ta || !sel) return;
+    const text = ta.value.trim();
+    if (!text){ toast("Write something first."); ta.focus(); return; }
+    const tag = ta.dataset.tag || "";
+    if (editing){
+      const cur = state.annotations.find(a => a.id === editing);
+      if (cur){ cur.text = text; cur.a = sel.a; cur.b = sel.b; if (tag) cur.tag = tag;
+                unsaved.add(cur.id); }
+    } else {
+      const id = "a" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      state.annotations.push({ id: id, a: sel.a, b: sel.b, tag: tag, text: text });
+      unsaved.add(id);
+      flash = id;
+      setTimeout(() => { flash = null; renderList(); }, 1400);
+    }
+    editing = null; focusAnn = null; sel = null; anchor = null;
+    save(); render();
+    return;
+  }
+
+  if (t.id === "btnclear"){ sel = null; editing = null; focusAnn = null; render(); return; }
+
+  if (t.id === "btndel"){
+    state.annotations = state.annotations.filter(a => a.id !== editing);
+    unsaved.delete(editing);
+    editing = null; focusAnn = null; sel = null;
+    save(); render(); toast("Deleted.");
+    return;
+  }
+
+  const item = t.closest(".item");
+  if (item){
+    const a = state.annotations.find(x => x.id === item.dataset.id);
+    if (!a) return;
+    editing = a.id; focusAnn = a.id; anchor = a.a;
+    sel = { a: a.a, b: a.b };
+    render();
+    const c = byIndex.get(a.a);
+    if (c) c.scrollIntoView({ block: "center", behavior: "smooth" });
+    return;
+  }
+});
+
+/* ---------------- palette editor ---------------- */
+function renderPalette(){
+  $("pallist").innerHTML = state.palette.map((p, k) =>
+    '<div class="pal"><input data-pk="' + k + '" data-f="name" value="' + esc(p.name) + '">'
+    + '<textarea data-pk="' + k + '" data-f="text">' + esc(p.text) + '</textarea>'
+    + '<button class="x" type="button" data-pdel="' + k + '" aria-label="Remove">&times;</button></div>'
+  ).join("") || '<p class="hint">Empty. Add the phrases you keep retyping.</p>';
+}
+function openPalette(){ renderPalette(); $("dlgpal").showModal(); }
+$("btnpal").addEventListener("click", openPalette);
+$("palclose").addEventListener("click", () => {
+  $("dlgpal").close(); save(); paintCells(); renderEditor(true); renderList();
+});
+$("paladd").addEventListener("click", () => {
+  state.palette.push({ name: "New", text: "" }); renderPalette();
+});
+$("dlgpal").addEventListener("input", e => {
+  const k = e.target.dataset.pk;
+  if (k === undefined) return;
+  state.palette[+k][e.target.dataset.f] = e.target.value;
+});
+$("dlgpal").addEventListener("click", e => {
+  const d = e.target.closest("[data-pdel]");
+  if (!d) return;
+  state.palette.splice(+d.dataset.pdel, 1); renderPalette();
+});
+$("txtclose").addEventListener("click", () => $("dlgtext").close());
+
+/* ---------------- export ---------------- */
+function asJSON(){
+  const items = state.annotations.slice().sort((x, y) => x.a - y.a || x.b - y.b);
+  return JSON.stringify({
+    score: SCORE, beats_per_bar: BEATS,
+    instructions: items.map(a => ({ from: ref(a.a), to: ref(a.b),
+                                    tag: a.tag || undefined, text: a.text }))
+  }, null, 2);
+}
+function asText(){
+  const items = state.annotations.slice().sort((x, y) => x.a - y.a || x.b - y.b);
+  return SCORE + "\n\n" + items.map(a =>
+    spanName(a.a, a.b) + (a.tag ? "  [" + a.tag + "]" : "") + "\n"
+    + a.text.split("\n").map(l => "    " + l).join("\n")
+  ).join("\n\n") + "\n";
+}
+function showText(title, body){
+  $("txthead").textContent = title; $("txtarea").value = body;
+  $("dlgtext").showModal(); $("txtarea").select();
+}
+$("btnjson").addEventListener("click", async () => {
+  const body = asJSON();
+  if (!dl){ showText("Instructions (JSON)", body); return; }
+  try {
+    await dl.save({ filename: "revoicing.json", data: body });
+    toast("Saved.");
+  } catch(err){
+    if (err && err.code === "declined") return;
+    showText("Instructions (JSON)", body);
+  }
+});
+$("btncopy").addEventListener("click", async () => {
+  const body = asText();
+  try { await navigator.clipboard.writeText(body); toast("Copied."); }
+  catch(e){ showText("Instructions", body); }
+});
+
+/* ---------------- boot ---------------- */
+localLoad();
+render();
+paintStat();
+
+(async function(){
+  const use = window.claude && window.claude.use;
+  if (!use) return;
+  try { db = await window.claude.use("db"); } catch(e){ db = null; }
+  try { dl = await window.claude.use("downloads"); } catch(e){ dl = null; }
+  if (!db){ setStat("local"); return; }
+  setStat("saved");
+  db.doc(DOC).onSnapshot(snap => {
+    const d = snap.exists && snap.data();
+    if (!d) return;
+    // our own write is already on screen; never let an older server view undo it
+    if (writing || pending) return;
+    if (typeof d.rev === "number" && d.rev > rev) rev = d.rev;
+    const incoming = Array.isArray(d.annotations) ? d.annotations : [];
+    // anything this page wrote but the store has not confirmed stays, whatever arrives
+    const keep = state.annotations.filter(a => unsaved.has(a.id));
+    const seen = new Set(keep.map(a => a.id));
+    state.annotations = keep.concat(incoming.filter(a => !seen.has(a.id)));
+    if (!unsaved.size) state.palette = Array.isArray(d.palette) ? d.palette : [];
+    localSave();
+    renderQuiet();
+  }, e => { db = null; setStat("error", (e && e.code) || "subscription lost"); });
+})();
+})();
+</script>

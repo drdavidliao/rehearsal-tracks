@@ -9,7 +9,8 @@
     omr           folding an OMR export in, and repairing it
     printing      page layout, PDF rendering, the SMuFL font fix
     lyriccheck    syllables that would print on top of each other
-    instructions  the Revoicing Bench's exported spans
+    bench         build a revoicing bench page from any score
+    instructions  the bench's exported spans
 
 A piece script holds only what is true of that piece: its bars, its dynamics,
 its rehearsal letters, its part list.  Everything above is true of any piece.
@@ -22,4 +23,4 @@ stays self-contained; lyriccheck here is the library form of the same
 measurement, taking a loaded toolkit instead of a path.
 """
 __all__ = ['events', 'scoretext', 'beaming', 'collapse', 'musicxml', 'harmony',
-           'omr', 'printing', 'lyriccheck', 'instructions']
+           'omr', 'printing', 'lyriccheck', 'bench', 'instructions']

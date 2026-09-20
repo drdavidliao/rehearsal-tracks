@@ -83,7 +83,9 @@ class Print:
                 return mo.group(0) + '<print new-system="yes"/>'
             return mo.group(0)
 
-        return re.sub(r'<measure number="(\d+)">', ap, xml)
+        # MuseScore writes <measure number="1" width="253.75">; a pattern that
+        # demands '>' right after the number silently inserts no breaks at all.
+        return re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml)
 
     def options(self):
         mg = self.margins

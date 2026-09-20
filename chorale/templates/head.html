@@ -1,0 +1,156 @@
+<title>Revoicing Bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,400&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --paper:#f4f5f2; --card:#fbfbf9; --ink:#16191a; --ink-2:#4e5553; --ink-3:#7d8582;
+  --rule:#d6dad3; --rule-2:#e6e9e3;
+  --pencil:#2c4c9b; --pencil-2:#eaeefa; --pencil-3:rgba(44,76,155,.16);
+  --wash:#b9603a; --wash-2:rgba(185,96,58,.14);
+  --inv:0; --shadow:0 1px 2px rgba(20,25,22,.06),0 8px 24px rgba(20,25,22,.05);
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --paper:#111415; --card:#191d1f; --ink:#e7eae6; --ink-2:#a2aaa7; --ink-3:#727a78;
+  --rule:#2c3234; --rule-2:#232829;
+  --pencil:#87a6ef; --pencil-2:#1a2436; --pencil-3:rgba(135,166,239,.22);
+  --wash:#dd8e6b; --wash-2:rgba(221,142,107,.18);
+  --inv:1; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+}}
+:root[data-theme="dark"]{
+  --paper:#111415; --card:#191d1f; --ink:#e7eae6; --ink-2:#a2aaa7; --ink-3:#727a78;
+  --rule:#2c3234; --rule-2:#232829;
+  --pencil:#87a6ef; --pencil-2:#1a2436; --pencil-3:rgba(135,166,239,.22);
+  --wash:#dd8e6b; --wash-2:rgba(221,142,107,.18);
+  --inv:1; --shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.3);
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:400 15px/1.55 "IBM Plex Sans",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+h1,h2,h3{margin:0;font-family:Newsreader,Georgia,serif;font-weight:600;text-wrap:balance}
+button{font:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+
+/* ---------- chrome ---------- */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:40;
+  background:color-mix(in srgb,var(--paper) 88%,transparent);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--rule);}
+.topin{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+  padding:10px 16px;max-width:1600px;margin:0 auto}
+.top h1{font-size:19px;letter-spacing:-.01em}
+.top .sub{color:var(--ink-3);font-size:12.5px;letter-spacing:.02em}
+.spacer{flex:1 1 auto}
+.stat{font-size:11.5px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace;
+  padding:2px 8px;border:1px solid var(--rule);border-radius:999px;white-space:nowrap}
+.stat.bad{color:var(--wash);border-color:var(--wash)}
+.btn{border:1px solid var(--rule);background:var(--card);border-radius:7px;
+  padding:5px 11px;font-size:13px;cursor:pointer;white-space:nowrap}
+.btn:hover{border-color:var(--ink-3)}
+.btn.primary{background:var(--pencil);border-color:var(--pencil);color:#fff}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.ghost{background:transparent}
+:focus-visible{outline:2px solid var(--pencil);outline-offset:2px}
+
+/* ---------- desk ---------- */
+.desk{display:grid;grid-template-columns:minmax(0,1fr) 370px;gap:22px;
+  max-width:1600px;margin:0 auto;padding:18px 16px 64px}
+.scroll{min-width:0}
+.rail{position:sticky;top:calc(64px + env(safe-area-inset-top,0px));align-self:start;
+  max-height:calc(100vh - 88px);display:flex;flex-direction:column;gap:12px}
+
+/* ---------- systems ---------- */
+.system{background:var(--card);border:1px solid var(--rule-2);border-radius:10px;
+  padding:8px 10px 4px;margin-bottom:12px;box-shadow:var(--shadow)}
+.engwrap{width:100%}
+.eng{display:block;width:100%;height:auto;
+  filter:invert(var(--inv)) hue-rotate(calc(var(--inv) * 180deg))}
+.grid{position:relative;height:38px;margin-top:3px}
+.bar{position:absolute;top:0;bottom:0;border-left:1px solid var(--rule)}
+.bar:last-of-type{border-right:1px solid var(--rule)}
+.barno{position:absolute;top:0;left:3px;font-size:10.5px;color:var(--ink-3);
+  font-family:"IBM Plex Mono",monospace}
+.beat{position:absolute;top:12px;height:24px;padding:0;margin:0;cursor:pointer;
+  background:transparent;border:1px solid var(--rule);border-left:none;
+  font-size:10.5px;color:var(--ink-3);display:flex;align-items:center;justify-content:center;
+  font-family:"IBM Plex Mono",monospace;line-height:1;transition:background .08s}
+.beat:first-of-type{border-left:1px solid var(--rule)}
+.beat:hover{background:var(--rule-2)}
+.beat.ann{background:var(--wash-2);border-color:var(--wash);color:var(--ink-2)}
+.beat.sel{background:var(--pencil);border-color:var(--pencil);color:#fff;font-weight:500}
+.beat.focusann{box-shadow:inset 0 -3px 0 var(--wash)}
+.beat span{pointer-events:none}
+
+/* ---------- rail ---------- */
+.panel{background:var(--card);border:1px solid var(--rule-2);border-radius:10px;
+  box-shadow:var(--shadow);overflow:hidden}
+.phead{display:flex;align-items:center;gap:8px;padding:9px 12px;border-bottom:1px solid var(--rule-2)}
+.phead h2{font-size:14px;letter-spacing:.01em}
+.count{font-size:11px;color:var(--ink-3);font-family:"IBM Plex Mono",monospace}
+.pbody{padding:12px}
+.span{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--pencil);font-weight:500}
+.hint{color:var(--ink-3);font-size:12.5px;margin:0}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.chip{border:1px solid var(--rule);background:transparent;border-radius:999px;
+  padding:3px 10px;font-size:12px;cursor:pointer;font-family:"IBM Plex Mono",monospace}
+.chip:hover{border-color:var(--pencil);color:var(--pencil)}
+textarea{width:100%;min-height:104px;resize:vertical;padding:9px 10px;border-radius:7px;
+  border:1px solid var(--rule);background:var(--paper);color:var(--ink);font:inherit;font-size:14px}
+textarea:focus{border-color:var(--pencil);outline:none;box-shadow:0 0 0 3px var(--pencil-3)}
+.row{display:flex;gap:7px;align-items:center;margin-top:9px;flex-wrap:wrap}
+.list{overflow-y:auto;flex:1 1 auto;min-height:0}
+.item{display:block;width:100%;text-align:left;border:none;border-bottom:1px solid var(--rule-2);
+  background:transparent;padding:9px 12px;cursor:pointer}
+.item:hover{background:var(--pencil-2)}
+.item[aria-current="true"]{background:var(--pencil-2);box-shadow:inset 3px 0 0 var(--pencil)}
+.item.flash{animation:flash 1.3s ease-out}
+@keyframes flash{0%{background:var(--wash-2);box-shadow:inset 3px 0 0 var(--wash)}
+  100%{background:transparent;box-shadow:inset 3px 0 0 transparent}}
+.count{transition:color .2s}
+.item .ispan{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--pencil);font-weight:500}
+.item .itag{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--wash);margin-left:7px}
+.item .itext{font-size:13px;color:var(--ink-2);margin-top:2px;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.empty{padding:16px 12px;color:var(--ink-3);font-size:13px}
+
+/* ---------- palette editor ---------- */
+dialog{border:1px solid var(--rule);background:var(--card);color:var(--ink);
+  border-radius:12px;padding:0;max-width:min(520px,92vw);width:100%;box-shadow:var(--shadow)}
+dialog::backdrop{background:rgba(10,14,12,.45)}
+.pal{display:grid;grid-template-columns:120px 1fr auto;gap:8px;align-items:start;margin-bottom:8px}
+.pal input,.pal textarea{width:100%;padding:6px 8px;border-radius:6px;border:1px solid var(--rule);
+  background:var(--paper);color:var(--ink);font:inherit;font-size:13px}
+.pal textarea{min-height:46px}
+.x{border:1px solid var(--rule);background:transparent;border-radius:6px;
+  width:28px;height:28px;cursor:pointer;color:var(--ink-3);line-height:1}
+.x:hover{color:var(--wash);border-color:var(--wash)}
+.toast{position:fixed;left:50%;transform:translateX(-50%);
+  bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:80;
+  background:var(--ink);color:var(--paper);padding:8px 15px;border-radius:999px;font-size:13px}
+
+@media (max-width:980px){
+  .desk{grid-template-columns:minmax(0,1fr);padding-bottom:54vh}
+  .rail{position:fixed;left:0;right:0;bottom:0;top:auto;z-index:50;max-height:52vh;
+    padding:0 12px calc(12px + env(safe-area-inset-bottom,0px));
+    background:color-mix(in srgb,var(--paper) 94%,transparent);backdrop-filter:blur(10px);
+    border-top:1px solid var(--rule)}
+  .rail>.panel{margin-top:10px}
+  .list{max-height:26vh}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <div class="topin">
+    <h1>Revoicing Bench</h1>
+    <span class="sub mono" id="scoreline">__SCORELINE__</span>
+    <span class="spacer"></span>
+    <span class="stat" id="stat"></span>
+    <button class="btn ghost" id="btnpal" type="button">Palette</button>
+    <button class="btn ghost" id="btncopy" type="button">Copy as text</button>
+    <button class="btn" id="btnjson" type="button">Download JSON</button>
+  </div>
+</header>
+
+<div class="desk">
+  <main class="scroll" id="scroll">

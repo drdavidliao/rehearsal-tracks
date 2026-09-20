@@ -29,6 +29,7 @@ than in a rehearsal.
 | `omr` | folding an OMR export in and repairing it bar by bar |
 | `printing` | `Print` — page plan, Verovio options, PDF; and the SMuFL font fix |
 | `lyriccheck` | syllables that would print on top of each other |
+| `bench` | build a revoicing bench page from any score |
 | `instructions` | the Revoicing Bench's exported spans, resolved against real notes |
 
 ## Three ways two voices share a staff
@@ -63,6 +64,30 @@ change by diffing two PDFs** — diff the laid-out MusicXML. And Verovio's
 "justification is highly compressed" warning is about note spacing: it will not
 fire on a system that fits but whose words overlap, which is what `lyriccheck`
 is for.
+
+## The bench
+
+```
+python3 -m chorale.bench score.musicxml -o out/ --beats 8 --bars-per-system 4
+```
+
+A scrolling engraving with a clickable beat grid under every bar: shift-click a
+run of beats, write what should happen there. `--beats` is cells per bar and
+defaults to the notated beats, which is usually too coarse — in cut time the
+notated beat is a half note, so 4 or 8 is what you want. The grid is placed from
+the rendered SVG, so a cell sits under its note rather than dividing the bar
+evenly; cells with no attack are interpolated between the ones that have,
+anchored at the barlines, so a bar of one whole note still gets a usable grid.
+
+Publish the result as an artifact with the `db` and `downloads` capabilities,
+and seed `bench/<slug>` with a palette.
+
+Two things about other programs' exports. MuseScore declares
+`<supports element="print" attribute="new-page" type="no"/>`, and Verovio
+believes it and ignores every break you insert, flowing the whole score onto one
+system; the declaration has to go. And MuseScore writes
+`<measure number="1" width="253.75">`, so a pattern matching `<measure
+number="(\d+)">` finds nothing and inserts no breaks at all, silently.
 
 ## Instructions from the bench
 
