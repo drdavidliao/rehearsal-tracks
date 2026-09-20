@@ -1,29 +1,32 @@
 ---
-name: choral-pdf-to-singable-musicxml
-description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; includes an opt-in Cantai mode. Use for practice tracks, part-dominant recordings, or MusicXML/MIDI from sheet music."
+name: "choral-pdf-to-singable-musicxml"
+description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for practice tracks, part-dominant recordings, or MusicXML/MIDI from sheet music."
 ---
 
 # Choral PDF → singable MusicXML
 
-Written up after repairing one badly-converted TTBB octavo end to end. The
-numbers below are measured, not guessed. Everything here assumes the goal is a
-file good enough to *sing from or synthesise*, which is a much higher bar than a
-file that opens.
+Written up after repairing one badly-converted TTBB octavo end to end, then
+extended by a second job that took a scanned SATB octavo through OMR repair,
+a director's TTBB revoicing, and print layout. The numbers below are measured,
+not guessed. Everything here assumes the goal is a file good enough to *sing
+from or synthesise*, which is a much higher bar than a file that opens.
 
-**Two deliverables, decide which up front.** Steps 0–5 produce a *print-faithful*
+**Decide the deliverables up front.** Steps 0–5 produce a *print-faithful*
 file: what the engraver wrote, nothing more, suitable for Sibelius/Dorico/MuseScore
 engraving and for most synths. Step 6 is a separate, opt-in post-process that
 rewrites lyrics so Sibelius's Cantai singer sounds every note; its output is *not*
-for printing. Never mix the two — deliver the faithful file always, and the Cantai
-file in addition when asked for learning tracks.
+for printing. Steps 7–8 are for the other common ask: re-voicing the piece for a
+different ensemble and laying it out to be printed and sung from. Never mix the
+Cantai file with the rest — deliver the faithful file always, and the Cantai file
+in addition when asked for learning tracks.
 
-**This file is self-contained.** The four scripts it refers to are printed in
+**This file is self-contained.** The five scripts it refers to are printed in
 full under *Scripts* near the end. Write them out to disk verbatim before you
 start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
-`cantai_mode.py`. There are no other files to obtain.
+`cantai_mode.py`, `lyric_collisions.py`. There are no other files to obtain.
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli
 # and poppler-utils for pdftoppm / pdftotext
 ```
 
@@ -78,6 +81,34 @@ commercial OMR output, all from one 64-bar piece:
 - **Lyric fragments filed as tempo directions**, floating above staves.
 
 Run the QC script (Step 5) on anything OMR hands you, before you build on it.
+
+### 1.1 Treat OMR output as a donor, not a draft
+
+On a 67-bar SATB-with-piano octavo the commercial OMR (Newzik/Maestria) was
+worth keeping only for the **piano**, and even that needed twenty hand repairs.
+The vocal staves were faster to transcribe from scratch against image crops than
+to audit: the OMR had dropped a chord tone here, read G3 for B3 there, A4 for
+G4, C♮ for C♯ — and nothing in the file tells you which readings it got right.
+Budget the job as *transcribe the voices, repair the piano*.
+
+Hand-transcription wants a compact text source you can read and diff, not XML.
+A one-token-per-note line format (`B3q=hap- B3s=-py F#3e. E3q=day`, `R`
+for rests, `~` for ties, `(` `)` for slurs, one block per voice, one line per
+bar, bar number as the line label) is fast to type, trivially checkable against
+the meter, and makes a revoicing (Step 7) a text edit rather than an XML edit.
+
+**Check the OMR's bar numbering before you trust any bar reference.** That file
+had 69 measures for a 67-bar piece, and real bars 19–20 were filed as measures
+21–22 *in two parts only*, the rest unshifted. Write an explicit `real bar → OMR
+measure` map per part and route every repair through it. A repair applied to the
+wrong measure looks exactly like a repair that didn't work.
+
+**Work from crops, not pages.** `pdftoppm -r 300` the scan, then cut each system
+and each questioned bar to its own PNG and look at it. A crop of one bar answers
+"C♯ or D?" in seconds; a full page does not. Keep the crops — you will come back
+to the same bars when the user reports a problem three rounds later, and a
+named crop library (`pf_b47rh.png`, `z05_b25.png`) is the difference between
+re-answering a question and re-deriving it.
 
 ## Step 2 — If it's vector: read the glyph stream
 
@@ -350,6 +381,23 @@ Target invariants for each vocal part: no `<chord/>`, one voice per bar, every
 bar sums to its meter, and every sung note either carries a syllable or is
 covered by an `<extend/>` on an earlier one.
 
+### 3.2 Editorial cues belong to a voice, and the only clue is their height
+
+A condensed choral score is a grand staff: soprano and alto share the treble
+staff, tenor and bass the bass staff. `mel.`, dynamics and hairpins are attached
+to **one** of the two voices on a staff, and the only thing on the page that
+says which is whether the mark sits **above** the staff (the upper voice) or
+**below** it (the lower voice). Record the placement when you extract the mark
+and keep it attached; "it is near the treble clef, so it belongs to the treble
+part" sends every alto cue to the wrong singer, and nothing downstream notices.
+`mel.` means *this part has the melody* and must travel with the notes it labels
+through any explosion or revoicing.
+
+Small/cue-size noteheads are load-bearing too. Where a divisi prints its upper
+line cue-size, the arranger is marking it optional, which also tells you that an
+adjacent `mel.` belongs to the full-size lower line. Preserve it as
+`<type size="cue">`, or at minimum write it down.
+
 ## Step 4 — MusicXML element order (Sibelius rejects what others accept)
 
 music21, Verovio and MuseScore silently accept out-of-order children. Sibelius
@@ -367,8 +415,10 @@ sound? listening?` — and only **one** `<staff>`.
 Two real errors from this exact pipeline: `<notations>` emitted after `<lyric>`
 (because slurs were appended to finished notes), and a duplicated `<staff>` in a
 direction (because a staff number was added to a direction that already had one).
-Write a normaliser that reorders children to the canonical sequence and run it as
-the last step of every build.
+A third, from adding ties to an already-built note: `<tie>` goes immediately
+after `<duration>` and `<tied>` goes inside `<notations>`; appending `<tie>` at
+the end of the note validates nowhere. Write a normaliser that reorders children
+to the canonical sequence and run it as the last step of every build.
 
 ## Step 5 — Verify. All of it, every build.
 
@@ -400,6 +450,20 @@ the last step of every build.
 11. **Cross-staff onset alignment.** Notes at the same onset in different staves
     share an x within ~1.5 SP. One line of code; it catches a mis-split voice or
     a mis-read duration before you ever look at a render.
+12. **Every voice can read its own part off a shared staff.** On any staff
+    carrying two voices, reconstruct what each singer actually reads — the
+    line-2 syllable wherever that voice has its own notehead, the line-1
+    syllable wherever it is sharing one — and compare to that voice's own
+    syllable list. Equality, or you have a lyric-line bug (7.4).
+13. **No extender outruns its voice.** Every `<extend/>` must have a following
+    note *in the same voice* for the line to run under. Verovio says
+    "Syllable with underline extender under one single note" when it doesn't.
+14. **No lyric collisions in the layout you are going to print** —
+    `lyric_collisions.py`, Step 8.
+15. **A revoicing matches the original everywhere it was not asked to change.**
+    Sample both scores on a 16th-note grid, per voice, and diff pitch and
+    pitch-class; the only differences left should be the ones on the
+    instruction list (7.5).
 
 ## Step 6 — Cantai mode (optional; not for printing)
 
@@ -443,6 +507,17 @@ this section to age.
   melismas. Extension lines are re-derived so a piece gets `<extend/>` only if
   lyric-less notes still follow it.
 
+**Respell vocables, in the Cantai file only.** Cantai pronounces each syllable
+as though it were an isolated English word, so the `Li, li, li` and `Ni, ni, ni`
+of a vocalise come out wrong — on the the scanned SATB octavo the user's report
+was that Cantai "had a field day" with them. Respelling to `lai` / `nai` in the
+Cantai copy fixed it. Do it as a narrow regex over lyric text in the Cantai file
+only (`[LlNn]i[,.]?`, preserving case and trailing punctuation), print the count,
+and say in the handback which words were respelled. The print-faithful file
+keeps the engraver's spelling. Look for this whenever the text contains
+non-words: vocalise syllables, scat, and any invented syllable are the ones a
+grapheme-to-phoneme model has no dictionary entry for.
+
 **What to tell the user:** the pieces are pronounced by Cantai as isolated
 words, so vowels drift (`lo` from `love` comes out "low"); pitch and syllable
 timing are right, which is what a learning track needs. A bad piece is fixed
@@ -462,12 +537,214 @@ which takes ties out of melismas entirely so no singer in the ensemble has to
 stitch across one — that ended it. Keep the change log the script prints and
 hand it over, so the user knows every place the file departs from the print.
 
+## Step 7 — Revoicing, and collapsing voices onto shared staves
+
+A director hands you an instruction list ("SATB → TTBB: soprano down an octave
+to Tenor 2, alto to Bass, …, with these exceptions at bars 25–28, 43–44, 59–64").
+This is a *transcription of someone else's decisions*, and the failure mode is
+not wrong notes — it is quietly answering a question they already answered.
+
+### 7.1 Work from a text source, not from XML
+
+With the per-voice text format from 1.1, a revoicing is a new block of text per
+new voice, every bar written out explicitly, one pitch per token. It is
+readable, diffable, and you can hand the user the exact bars you produced for a
+rule you were unsure about. Editing XML directly makes every question
+"what did you do at bar 61?" expensive.
+
+Read the instruction list back to the user in your own words before building,
+and quote the bars. On the reference job an instruction that said "bars 61 beat 3
+to 64 repeat the bar 59 beat 4 – 61 beat 2 span" was first implemented as
+repeating a shorter span; only restating it caught that. When the user says a
+restatement is false, treat it as a hard stop and re-read the source — do not
+adjust the implementation around the misreading.
+
+### 7.2 Merging two parts onto one staff
+
+Two simultaneous events merge into one chord in voice 1 only when everything
+printable about them agrees: same duration, same dots, same note type, both
+notes or both rests, same tie start and stop, same slur start and stop, same
+lyric text and syllabic. Anything else → voice 1 carries the upper part, and a
+second voice follows after `<backup>`, with `<forward>` for its lead-in,
+explicit `<stem>up</stem>` / `<stem>down</stem>` on the split stretch, and
+`<voice>2</voice>`.
+
+Parts diverge and reconverge **several times inside one bar**. A prefix merge
+— agree until the first difference, then two voices to the end of the bar —
+produces needless two-voice writing and duplicate lyrics. Sync on every position
+where both parts have an event and the two are mergeable; write two voices only
+in the stretches between syncs.
+
+### 7.3 Directions can land where voice 1 has no note
+
+On a merged staff, a dynamic, a rehearsal mark or a `mel.` belonging to the
+lower voice can fall on a beat where voice 1 is in the middle of a held note.
+If you only emit directions at voice-1 note starts, those vanish — silently, and
+only in the bars where the parts diverge, which is exactly where the marks
+matter. Attach them at the barline with an offset instead:
+
+```xml
+<direction placement="below">
+  <direction-type><words font-style="italic">mel.</words></direction-type>
+  <offset>8</offset>
+</direction>
+```
+
+`<offset>` is in divisions and comes *after* `direction-type` (Step 4).
+
+### 7.4 Lyrics on a shared staff — decide by words, not by beats
+
+This is the part that goes wrong. **Decide the number of lyric lines for a bar
+by comparing the two voices' syllable *sequences*, not their note positions.**
+
+- **Sequences equal → one lyric line.** Drop the lower voice's copies entirely.
+  This is the common case: both parts sing the same words, one takes a two-note
+  melisma where the other has a plain quarter. The merge cannot chord them, so
+  the lower voice gets written out as voice 2 — and its duplicate syllable, the
+  same word on the same beat, plus an extender for the melisma, lands on a
+  second lyric line beneath an otherwise-empty one. That is the stray
+  `ing______` under a bar whose text is already complete. The slur shows the
+  melisma; the second line adds nothing.
+- **Sequences differ → two lines,** line 1 the upper voice and line 2 the lower
+  voice, *for every bar of the divergent passage*, including bars where one of
+  them is silent.
+
+A per-bar collision test — "does a voice-2 syllable start on the same beat as a
+voice-1 syllable?" — gets both cases wrong. It prints the duplicate in the first
+case. In the second it flips between one and two lines from bar to bar, so a
+single continuous phrase in one voice is split across two lyric lines: every
+word is present, and the part cannot be read. On the reference score this hit
+bars 20–26, 38–42, 48–49 and 54–58 in the tenors and eleven more in the low
+voices, and it is what the user saw as "stray syllables".
+
+Two details that follow published practice, checked against the engraved
+original:
+
+- **Do not copy a shared syllable onto both lines** where the parts are chorded
+  together. The second line appears only over the bars where the parts diverge;
+  a singer follows line 2 while it exists and line 1 where the notes are shared.
+- **Put both lines below the staff** (`number="1"`, `number="2"`, no `placement`)
+  unless you are deliberately reproducing an octavo that puts the divisi line
+  above to save vertical space. Mixed placement makes line 1 jump above and
+  below the staff from bar to bar.
+
+**Prune extenders the printed score cannot draw.** A voice-2 syllable held over
+a tie into a bar where the note merges back into voice 1 leaves voice 2 with no
+further note for the line to run under. Drop the `<extend/>`; the tie shows the
+sustain.
+
+**Verify by reconstructing the read** (check 12). Walk each voice and collect
+the syllable it would actually sing — line 2 where it has its own notehead,
+line 1 where it shares one — and compare to that voice's source syllable list.
+On the reference piece: 131 / 135 / 144 / 138 syllables, exact on all four.
+Nothing else catches a split phrase, because every syllable is present in the
+file and the XML validates.
+
+### 7.5 Cross-check the revoicing against the original
+
+Sample both scores on a 16th-note grid, per voice, and diff pitch and
+pitch-class; do the same for lyric position. Everything the director did not ask
+you to change must match, so the only differences left are the ones on the
+instruction list — which you then read back to them. On the reference job this
+caught an alto line extracted from the wrong half of a condensed staff, a bug
+no bar-length, XSD or range check would ever see, because the wrong notes were
+all perfectly plausible altos.
+
+## Step 8 — Laying out a part for print
+
+### 8.1 Verovio and cairosvg, the parts that surprise you
+
+- **`unit` is the staff-size knob**, not `scale`. With page dimensions given in
+  1/10 mm, `unit = staff_height_mm / 4 * 10 / 2`. `scale` only zooms the output
+  and changes nothing about how much music fits on a page.
+- Page size and margins are in 1/10 mm. **`cairosvg.svg2pdf(..., dpi=254)`** maps
+  those units to a real page; without it a US-Letter score comes out 22 × 29 in.
+- `breaks: "encoded"` honours `<print new-system="yes"/>` and
+  `<print new-page="yes"/>`. `breaks: "line"` honours system breaks and
+  paginates automatically — useful for a pilot, wrong for a final layout.
+- `justifyVertically` spreads systems from the top margin to the bottom margin.
+  With three or more systems that reads as even spacing. With two it opens one
+  chasm in the middle; leave it off.
+- cairosvg PNGs have a **transparent** background. Composite onto white before
+  converting to greyscale, or every ink measurement comes back NaN.
+- Verovio's SVG inner coordinates are 10× the viewBox units (viewBox in 1/10 mm,
+  drawing in 1/100 mm), which matters when you measure anything out of the SVG.
+
+### 8.2 How many bars fit on a line — do the arithmetic, don't guess
+
+Density is usable width ÷ staff height, and it transfers between page sizes.
+A published octavo at a 6.35 mm staff on a 6¾ × 10½ in page has ~137 mm of
+usable width and prints about **2 bars to a system** — call it ~10.8
+staff-heights per bar. US Letter with 14 / 11 mm side margins gives ~191 mm,
+1.4× as wide, so the same density is ~2.8 bars. **Three bars per system is the
+ceiling**, at a 6–7 mm staff. Four runs the words together, and Verovio will not
+always warn: its "justification is highly compressed" warning fires on note
+spacing, not on lyric width, so a system can be flagged clean and still print
+`Allthatwe'veknown`.
+
+Vertically, a four-staff system (two voice staves plus piano) with lyrics and
+chord symbols is about 78 mm at a 7 mm staff. **Three fit a Letter page and fill
+it. Two fit and leave the bottom third blank**, and no staff size fixes that:
+filling the page with two systems needs ~11 mm staves, at which only 1–2 bars
+fit per line and the piece grows from 12 pages to 17. Say this to the user
+rather than stretching the spacing — they are usually asking because of paper.
+
+Where you must shorten a system, shorten the *texted* ones. Four-bar systems are
+fine through passages where the voices are resting or holding.
+
+### 8.3 Measure the crowding
+
+`lyric_collisions.py` renders the laid-out file, pulls every syllable's x, y and
+font size out of the SVG, groups them by baseline and reports every pair whose
+gap is smaller than the estimated width of the first. That turns "does this look
+cramped" into a number you can iterate on, which is the only practical way to
+choose system breaks across a whole score. The width estimate is approximate:
+treat a gap a little under the estimate as tight-but-legible and a gap well
+under it as a collision, and use the tool comparatively between candidate
+layouts rather than as an absolute.
+
+### 8.4 Missing-glyph rectangles in the PDF
+
+Verovio draws notated accidentals as **paths**, but **chord-symbol** accidentals
+as `<text font-family="Leipzig">` at private-use code points (sharp = U+EA66).
+cairosvg does not implement `@font-face`, so with no Leipzig installed on the
+system, every chord-symbol sharp and flat renders as a tofu box while the music
+itself looks perfect — `A/C□`, `D/F□`. `smuflTextFont` does not change this.
+Install the font; Verovio ships it base64'd inside its own CSS:
+
+```python
+import re, base64
+from fontTools.ttLib import TTFont          # pip install fonttools brotli
+css = open('.../verovio/data/Leipzig.css').read()
+open('Leipzig.woff2','wb').write(base64.b64decode(
+    re.search(r'base64,([A-Za-z0-9+/=]+)', css).group(1)))
+f = TTFont('Leipzig.woff2'); f.flavor = None; f.save('Leipzig.ttf')
+```
+
+then `mkdir -p ~/.fonts && cp Leipzig.ttf ~/.fonts/ && fc-cache -f`. The same
+trick works for Bravura, Leland, Gootville and Petaluma, which ship the same way.
+Check for the problem by scanning the SVG for characters above U+007F: anything
+in the private-use range is a font you need installed.
+
+### 8.5 What travels to Sibelius
+
+Layout goes in `<defaults>` — `<scaling>` (millimetres per 40 tenths),
+`<page-layout>`, `<system-layout>`, `<staff-layout>` — plus `<print
+new-system>` / `<print new-page>` on measures. Sibelius honours the breaks and
+then runs its own vertical justification (Engraving Rules → Staves → "Justify
+staves when page is at least N% full").
+
+Set `<system-distance>` generously. 110 tenths at a 6 mm staff is ~17 mm between
+systems, which is not enough clearance for lyrics under one system and chord
+symbols over the next, and Sibelius will overlap them — the same layout that
+renders cleanly in Verovio. 150 tenths with `<staff-distance>` 85 behaved.
+
 ## Scripts
 
-All four are complete and standalone. Write them out as-is; nothing else is
+All five are complete and standalone. Write them out as-is; nothing else is
 needed. `check_pdf_type.py` and `find_performer_instructions.py` need only
 `pdfplumber`; `musicxml_qc.py` and `cantai_mode.py` need only the standard
-library.
+library; `lyric_collisions.py` needs `verovio` and `lxml`.
 
 
 ### check_pdf_type.py
@@ -897,6 +1174,81 @@ if __name__ == '__main__':
     main()
 ```
 
+### lyric_collisions.py
+
+```python
+#!/usr/bin/env python3
+"""Flag lyric syllables that would collide horizontally in a Verovio layout.
+
+    python3 lyric_collisions.py laid_out.musicxml [staff_mm]
+
+The input must already carry its <print new-system>/<print new-page> breaks.
+Renders it, pulls every syllable's x, baseline and font size out of the SVG,
+groups by baseline and reports every consecutive pair whose gap is smaller than
+an estimate of the first syllable's printed width.
+
+This is how you choose bars-per-system across a whole score without rendering
+and squinting at every page. Verovio's own "justification is highly compressed"
+warning is about NOTE spacing and will not fire on a system whose words overlap.
+
+The width estimate is approximate. A gap a little under the estimate is tight
+but legible; a gap well under it overlaps. Use it to compare candidate layouts.
+Needs verovio and lxml.
+"""
+import sys
+import verovio
+from lxml import etree
+
+NS = {'s': 'http://www.w3.org/2000/svg'}
+NARROW = set("ijltfr.,'’ ")
+
+def width(t, fs):
+    return sum(fs * (0.30 if c in NARROW else 0.56) for c in t)
+
+def check(path, staff_mm=7.0, page=(2159, 2794), marg=(140, 110, 130, 120)):
+    """page and margins in 1/10 mm: (w, h) and (left, right, top, bottom)."""
+    tk = verovio.toolkit()
+    tk.setOptions({"pageWidth": page[0], "pageHeight": page[1],
+                   "pageMarginLeft": marg[0], "pageMarginRight": marg[1],
+                   "pageMarginTop": marg[2], "pageMarginBottom": marg[3],
+                   "unit": staff_mm / 4 * 10 / 2, "adjustPageHeight": False,
+                   "breaks": "encoded", "svgViewBox": True})
+    tk.loadFile(path)
+    bad = []
+    for pg in range(1, tk.getPageCount() + 1):
+        root = etree.fromstring(tk.renderToSVG(pg).encode())
+        rows = {}
+        for g in root.xpath('//s:g[@class="syl"]', namespaces=NS):
+            ts = g.xpath('.//s:text', namespaces=NS)
+            inner = g.xpath('.//s:tspan[@font-size]', namespaces=NS)
+            if not ts or not inner: continue
+            txt = ''.join(ts[0].itertext()).strip()
+            if not txt: continue
+            fs = float(inner[-1].get('font-size').rstrip('px'))
+            try:
+                x, y = float(ts[0].get('x')), float(ts[0].get('y'))
+            except (TypeError, ValueError):
+                continue
+            # SVG inner units are 10x the viewBox; /20 buckets one lyric baseline
+            rows.setdefault(round(y / 20), []).append((x, txt, fs))
+        for row in rows.values():
+            row.sort()
+            for (x1, t1, fs), (x2, t2, _) in zip(row, row[1:]):
+                need = width(t1, fs)
+                if x2 - x1 < need:
+                    bad.append((pg, t1, t2, round(x2 - x1), round(need)))
+    return tk.getPageCount(), bad
+
+if __name__ == '__main__':
+    mm = float(sys.argv[2]) if len(sys.argv) > 2 else 7.0
+    n, bad = check(sys.argv[1], mm)
+    print(f'{n} pages, {len(bad)} overlapping syllable pair(s)')
+    for pg, a, b, gap, need in bad:
+        print(f'   p{pg}: {a!r} -> {b!r}   gap {gap} < {need}')
+    if not bad:
+        print('   none — this layout is printable')
+```
+
 ## Appendix — Sibelius "Opus" font glyph codes
 
 Empirically determined. **Other engravers use other fonts** (Finale = Maestro,
@@ -957,12 +1309,22 @@ Derived measurements, in staff spaces (SP = distance between adjacent staff line
 | OpusSpecial baseline offset vs Opus | 0.85 · SP lower |
 | dot x-offset from notehead | 1.6 – 2.0 · SP |
 
+**Verovio's own output**, when you render: notated accidentals are paths, but
+chord-symbol accidentals are `<text font-family="Leipzig">` at private-use code
+points — sharp `U+EA66`. See 8.4.
+
 ## Credits
 
 The Cantai section, the extension-line-as-source rule, the shared-hyphen rule,
 the Helsinki appendix, the clap-part encoding and checks 8–11 come from
 the two-soloist TTBB (TTBB + piano),
 a 2021 Sibelius/Helsinki export, done for a community chorus's learning tracks.
+
+The OMR-as-donor rule, the bar-remap warning, the cue-placement rule (3.2), the
+whole of Steps 7 and 8, checks 12–15, the vocable respelling and
+`lyric_collisions.py` come from the scanned SATB octavo (SATB +
+piano), a hand scan, taken through OMR repair, a director's TTBB
+revoicing, collapsing to two staves, and print layout.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
