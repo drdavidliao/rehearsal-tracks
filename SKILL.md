@@ -141,7 +141,15 @@ a page→system→measure map once and reuse it.
 
 Assign every glyph to the **nearest staff on the whole page** (not the nearest
 of the current system — otherwise the top staff swallows glyphs from the system
-above). Then:
+above).
+
+That rule is for glyphs drawn **on or beside their own staff**: noteheads,
+rests, accidentals, clefs, dots, flags. **It is wrong for stems and beams**,
+which are drawn away from the staff by design and routinely end up geometrically
+nearer a neighbouring staff than their own. Do not assign those to a staff at
+all — see 2.3.
+
+Then:
 
 ```python
 centre = (char['top'] + char['bottom']) / 2
@@ -178,10 +186,60 @@ puts the tenors an octave high in both notation and synthesis.
   dots, or you will read a dotted eighth as double-dotted (0.5 → 0.875).
 - **Triplets** are marked by a "3" in the OpusText font. Find the group of 3
   consecutive equal-duration notes bracketing it and scale by 2/3.
-- **Chord grouping**: cluster noteheads by x within ~1.3·SP (a second is drawn
-  offset by one notehead width, ≈1.28·SP). Deduplicate identical
-  (x, staff-position, glyph) triples — Sibelius double-strikes some glyphs for
-  faux-bold, which otherwise produces phantom chord members like `C4+C4`.
+- **Chord grouping keys on a shared stem, not a shared x.** Group the noteheads
+  one stem claims. A chord's noteheads do spread over ~1.3·SP of x, because a
+  second is drawn offset by one notehead width (≈1.28·SP) — but that spread is a
+  *consequence* of the grouping, not the test for it. Two notes in different
+  voices can print at the same x, and a stemless whole note sitting under a
+  stemmed note there is not a chord member; grouping by x merges them. (One
+  piano left-hand bar summed to 288 in a 144 bar before this was fixed.)
+  Deduplicate identical (x, staff-position, glyph) triples — Sibelius
+  double-strikes some glyphs for faux-bold, which otherwise produces phantom
+  chord members like `C4+C4`.
+
+**Stems and beams are page-global. Never assign them to a staff.**
+
+Nearest-staff assignment (2.2) tips from one staff to the next at the midpoint
+of the gap between their centres, and on a grand staff that midpoint is only
+about 3 SP below the upper staff's bottom line. Measured on one reference page
+at SP = 4.375: the piano right-hand staff ran 614.7–632.2 and the left hand
+659.3–676.8, so the boundary fell at y = 645.75 — **3.10 SP below the RH bottom
+line**. A down-stemmed lower voice clears that routinely. The beam under the RH
+lower voice spanned 645.2–651.8, straddling the boundary, and the three stems
+feeding it had centres 5.1, 2.9 and 0.7 pt from flipping. This is not a quirk of
+one engraving: any grand staff, and any vocal staff carrying a stem-down lower
+divisi voice, has the same geometry. A stem only has to reach ~3 SP below its
+own staff.
+
+So keep them in two page-global lists and let each staff query those:
+
+```python
+# per page, not per staff
+V = [...]   # every vertical line of stem linewidth
+B = [...]   # every beam rect and 5-point filled curve
+```
+
+- A **stem** is claimed by a notehead when its x matches the notehead's left or
+  right edge and its y-range reaches the notehead's baseline.
+- A **beam** counts for a stem when it crosses the stem's x **and** its
+  interpolated y falls inside the stem's y-span.
+
+Both tests are already in the pipeline; they just have to run against the
+page-global list instead of a pre-filtered per-staff one. This is strictly safer
+than proximity, because y-containment is what discriminates: staves sit ~45 pt
+apart here and a stem is 11–15 pt long, so a beam belonging to the neighbouring
+staff at the same x is 30+ pt outside this stem's span and cannot match.
+Proximity throws away the one measurement that resolves the ambiguity.
+
+*The symptom, if you get this wrong.* The beam vanishes from its own staff's
+beam list, so every note in that group loses its beam count, reads as a quarter
+instead of an eighth, and the bar over-runs. It is easy to misdiagnose: the
+*other* voice on that staff is fine, and the bar-length check fires on the staff
+rather than the voice, so "this staff is 36 over" reads like a missed dot or a
+tuplet and sends you looking in the wrong place. The tell is that the over-run is
+always one beam group's worth of notes and always on a staff carrying two voices.
+On the reference file it cost nine bars — a 12/8 bar of 144 summing to 180, three
+eighths read as quarters.
 
 **Validate every bar against its time signature.** This is the single most
 valuable check in the whole pipeline; it catches beam misreads, missed dots and
@@ -346,7 +404,10 @@ Rules, in priority order:
    disambiguate by duration.** Two notes of the same pitch in one bar — a held
    pedal and a passing note — are otherwise indistinguishable, and a tie landing
    on the wrong one puts a syllable in the wrong voice.
-1. **Chord on one stem** → upper notehead to part 1, lower to part 2.
+1. **Chord on one stem** → upper notehead to part 1, lower to part 2. *One
+   stem* is literal: take the noteheads that stem claims (2.3), not the ones
+   sharing its x. A stemless whole note printed at the same x belongs to another
+   voice, not to this chord.
 2. **Two stems on one column** (one up, one down) → upper voice to part 1, lower
    to part 2.
 3. **Unison (single note)** → duplicate identically to *both* daughter parts.
@@ -450,17 +511,26 @@ to the canonical sequence and run it as the last step of every build.
 11. **Cross-staff onset alignment.** Notes at the same onset in different staves
     share an x within ~1.5 SP. One line of code; it catches a mis-split voice or
     a mis-read duration before you ever look at a render.
-12. **Every voice can read its own part off a shared staff.** On any staff
+12. **Every notehead lands on its own staff's grid.** Its computed staff
+    position must come out a whole number of half staff spaces. A notehead
+    assigned to the wrong staff lands at a non-integral position, because two
+    staves in a system sit at arbitrary vertical offsets from each other. One
+    line of code, and it is the only *positive* evidence that nearest-staff
+    assignment (2.2) worked everywhere rather than merely not having been caught
+    failing — including the ledger-line notes in a grand-staff gap, which is
+    exactly where proximity is least trustworthy. On the reference file all
+    1,949 noteheads came within 0.12 of an integer.
+13. **Every voice can read its own part off a shared staff.** On any staff
     carrying two voices, reconstruct what each singer actually reads — the
     line-2 syllable wherever that voice has its own notehead, the line-1
     syllable wherever it is sharing one — and compare to that voice's own
     syllable list. Equality, or you have a lyric-line bug (7.4).
-13. **No extender outruns its voice.** Every `<extend/>` must have a following
+14. **No extender outruns its voice.** Every `<extend/>` must have a following
     note *in the same voice* for the line to run under. Verovio says
     "Syllable with underline extender under one single note" when it doesn't.
-14. **No lyric collisions in the layout you are going to print** —
+15. **No lyric collisions in the layout you are going to print** —
     `lyric_collisions.py`, Step 8.
-15. **A revoicing matches the original everywhere it was not asked to change.**
+16. **A revoicing matches the original everywhere it was not asked to change.**
     Sample both scores on a 16th-note grid, per voice, and diff pitch and
     pitch-class; the only differences left should be the ones on the
     instruction list (7.5).
@@ -633,7 +703,7 @@ a tie into a bar where the note merges back into voice 1 leaves voice 2 with no
 further note for the line to run under. Drop the `<extend/>`; the tie shows the
 sustain.
 
-**Verify by reconstructing the read** (check 12). Walk each voice and collect
+**Verify by reconstructing the read** (check 13). Walk each voice and collect
 the syllable it would actually sing — line 2 where it has its own notehead,
 line 1 where it shares one — and compare to that voice's source syllable list.
 On the reference piece: 131 / 135 / 144 / 138 syllables, exact on all four.
@@ -1321,10 +1391,14 @@ the two-soloist TTBB (TTBB + piano),
 a 2021 Sibelius/Helsinki export, done for a community chorus's learning tracks.
 
 The OMR-as-donor rule, the bar-remap warning, the cue-placement rule (3.2), the
-whole of Steps 7 and 8, checks 12–15, the vocable respelling and
+whole of Steps 7 and 8, checks 13–16, the vocable respelling and
 `lyric_collisions.py` come from the scanned SATB octavo (SATB +
 piano), a hand scan, taken through OMR repair, a director's TTBB
 revoicing, collapsing to two staves, and print layout.
+
+The page-global stem-and-beam rule (2.2, 2.3), the stem-keyed chord grouping
+(2.3, 3.1) and the notehead-grid check (check 12) come from the 12/8 TTBB (TTBB + piano, 12/8, six staves per system), a
+MuseScore/Leland vector PDF.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
