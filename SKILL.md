@@ -1026,13 +1026,18 @@ late-ensemble bug shifts one staff by a different 4–12 s every export.
 
 ### 9.4 Mix
 
-For each featured part: the featured voice +3 dB, every other voice −18 dB, the
-piano at 0 dB, summed without normalising, then encoded:
+For each featured part: the featured voice +3 dB, every other voice −21 dB, the
+piano at 0 dB, summed without normalising, then encoded. These are the defaults;
+use others only when the user asks. The other voices were at −18 dB until
+the 2008 Sibelius TTBB, where the user moved them to −21 dB. That lowers the other
+singers only: the featured part stays exactly as far above the piano as before,
+so if a part is lost under the piano, the fix is the piano level or the
+featured level, not the other voices.
 
 ```
 ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i "Piano.aiff" \
-  -filter_complex "[0:a]volume=-18dB[a0];[1:a]volume=3dB[a1];[2:a]volume=-18dB[a2];\
-[3:a]volume=-18dB[a3];[4:a]volume=0dB[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0" \
+  -filter_complex "[0:a]volume=-21dB[a0];[1:a]volume=3dB[a1];[2:a]volume=-21dB[a2];\
+[3:a]volume=-21dB[a3];[4:a]volume=0dB[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0" \
   -c:a libmp3lame -b:a 192k -joint_stereo 1 "Title - (Tenor 2) predominant.mp3"
 ```
 
@@ -1654,8 +1659,8 @@ Step 9 comes from exporting Cantai stems and mixing part-predominant tracks for
 the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
 session; its ffmpeg checks and mix command were re-run on synthetic stems
 before being written here. The Balanced track, the above-full-scale peak
-measurement and the entrance-pattern note come from mixing the set for
-the 2008 Sibelius TTBB.
+measurement, the −21 dB default and the entrance-pattern note come from mixing
+the set for the 2008 Sibelius TTBB.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
