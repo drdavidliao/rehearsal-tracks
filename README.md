@@ -3,49 +3,71 @@
 Turning sheet music into files a community chorus can rehearse from — part-learning
 tracks, revoicings, printable parts.
 
----
+**The work happens in a conversation with Claude**, following the method written
+down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
+any of the scripts in this repository yourself — Claude does that. The three
+sentences below are the ones worth knowing.
 
-## Type **MENU** any time for this list
+Typing `MENU` to Claude prints this same list back to you.
+
+---
 
 ### 🎼 &nbsp;PDF → MusicXML
 
-Glyph-based PDFs (exported from a notation program) work far better than scans.
+To convert a PDF of sheet music, attach the PDF and write something like:
 
-> Convert the attached PDF into a MusicXML file.
+```
+Convert the attached PDF into a MusicXML file.
+```
 
-If you already have an OMR attempt from Newzik or similar, hand that over too —
-it is worth keeping for the accompaniment even when the vocal staves are wrong:
+A glyph-based PDF — one that a notation program exported — works far better than
+a scan or a photo.
 
-> Convert the attached PDF into a MusicXML file. The attached MusicXML file is
-> Newzik's attempt, in case that helps.
+Or, if you already have a MusicXML file from an OMR like Newzik, attach that as
+well and write something like:
+
+```
+Convert the attached PDF into a MusicXML file. The attached MusicXML file is
+Newzik's attempt, in case that helps.
+```
+
+It is worth handing over even when the OMR made a mess of the vocal staves; the
+accompaniment is usually salvageable.
 
 ### ✍️ &nbsp;Plan an arrangement or revoicing
 
-Builds a **bench**: a scrolling page of the score with clickable boxes under every
-beat. Shift-click a run of beats, type what should happen there in plain English,
-and the pairs come back as a list of edits.
+To prepare a list of edits by clicking to select measures and then typing
+instructions in plain English, attach the MusicXML and write something like:
 
-> Prepare a BENCH for the attached MusicXML so I can write arranging/voicing
-> instructions.
+```
+Prepare a BENCH for the attached MusicXML so I can write arranging/voicing
+instructions.
+```
 
-An instruction looks like: *from measure 3 beat 2 through measure 5 beat 4,
-reassign the soprano part to tenor 2, alto to bass, tenor to tenor 1, and bass
-to baritone.*
+A **bench** is a scrolling page of the score with clickable boxes under every beat.
+Shift-click a run of beats, type what should happen there, and the pairs come back
+as a list of edits. An instruction looks like:
+
+> from measure 3 beat 2 through measure 5 beat 4, reassign the soprano part to
+> tenor 2, alto part to bass, tenor part to tenor 1, and bass part to baritone
 
 ### 🔧 &nbsp;Add kludges for Cantai
 
-Deliberately damages the arrangement to work around Cantai's bugs — removing some
-slurs, writing extra copies of a syllable — so its melisma handling stops holding
-notes that should have moved on.
+To deliberately damage the arrangement to work around Cantai bugs — for example
+removing some slurs and writing extra copies of a syllable, so that Cantai's
+melisma handling stops holding a note that should have moved on — attach the
+MusicXML and write something like:
 
-> Make the attached MusicXML compatible with Cantai.
+```
+Make the attached MusicXML compatible with Cantai.
+```
 
 **This file is for learning tracks only. Never print from it.** You always get the
 faithful file as well.
 
 ---
 
-Then open the MusicXML in [Sibelius](https://sibelius.com) and play it with
+Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 [Cantai](https://cantai.app).
 
 ---
