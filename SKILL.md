@@ -12,24 +12,41 @@ back to them and stop. Do not start work, do not ask a clarifying question.
 It is a reminder card for someone who does not handle these files every day,
 and the whole value of it is that it comes back the same every time.
 
-> **PDF → MusicXML**
-> *Convert the attached PDF into a MusicXML file.*
-> With an OMR attempt to donate:
-> *Convert the attached PDF into a MusicXML file. The attached MusicXML file
-> is Newzik's attempt, in case that helps.*
->
-> **Plan arranging / revoicing**
-> *Prepare a BENCH for the attached MusicXML so I can write arranging/voicing
-> instructions.*
-> Click to select a run of beats, then type what should happen there.
->
-> **Add kludges for Cantai**
-> *Make the attached MusicXML compatible with Cantai.*
-> Deliberately damages the notation to work around Cantai's melisma handling.
-> Never for printing.
->
-> Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
-> (cantai.app).
+These are sentences to type to Claude, with the file attached; nobody runs
+the scripts by hand. Print the commands as code blocks, so they read as
+something to copy rather than as quotations.
+
+**PDF → MusicXML.** Attach the PDF and write something like:
+
+```
+Convert the attached PDF into a MusicXML file.
+```
+
+If there is an OMR attempt (Newzik or similar), attach it too:
+
+```
+Convert the attached PDF into a MusicXML file. The attached MusicXML file is Newzik's attempt, in case that helps.
+```
+
+**Plan arranging / revoicing.** Attach the MusicXML and write something like:
+
+```
+Prepare a BENCH for the attached MusicXML so I can write arranging/voicing instructions.
+```
+
+Then click to select a run of beats and type what should happen there.
+
+**Add kludges for Cantai.** Attach the MusicXML and write something like:
+
+```
+Make the attached MusicXML compatible with Cantai.
+```
+
+This deliberately damages the notation to work around Cantai's melisma
+handling. Never print from it.
+
+Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
+(cantai.app).
 
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
@@ -558,6 +575,7 @@ to the canonical sequence and run it as the last step of every build.
 14. **No extender outruns its voice.** Every `<extend/>` must have a following
     note *in the same voice* for the line to run under. Verovio says
     "Syllable with underline extender under one single note" when it doesn't.
+    The fix is to keep the tied note in that voice (7.4), never to drop the line.
 15. **No lyric collisions in the layout you are going to print** —
     `lyric_collisions.py`, Step 8.
 16. **A revoicing matches the original everywhere it was not asked to change.**
@@ -728,10 +746,15 @@ original:
   above to save vertical space. Mixed placement makes line 1 jump above and
   below the staff from bar to bar.
 
-**Prune extenders the printed score cannot draw.** A voice-2 syllable held over
-a tie into a bar where the note merges back into voice 1 leaves voice 2 with no
-further note for the line to run under. Drop the `<extend/>`; the tie shows the
-sustain.
+**A tie never changes voice, and a held word keeps its line.** Merging is decided
+bar by bar, so a note held in voice 2 across a barline can land in a unison
+that merges into voice 1. The tie then jumps voices, and voice 2 has no note
+left for its syllable's extender to run under. Keep the tied note in voice 2 —
+a unison with one stem up and one down — and the line draws. Do not delete the
+`<extend/>` instead: an earlier version of this file said "the tie shows the
+sustain", and that was a workaround passed off as practice. The engraved
+original of the reference score prints both parts' lines into exactly such a
+unison, the upper tie curving in from above and the lower from below.
 
 **Verify by reconstructing the read** (check 13). Walk each voice and collect
 the syllable it would actually sing — line 2 where it has its own notehead,
@@ -749,6 +772,36 @@ instruction list — which you then read back to them. On the reference job this
 caught an alto line extracted from the wrong half of a condensed staff, a bug
 no bar-length, XSD or range check would ever see, because the wrong notes were
 all perfectly plausible altos.
+
+### 7.6 Crossed parts on a shared staff
+
+When the lower part goes above the upper, three things break on the page and
+nothing in the data catches any of them.
+
+- **Never chord crossed notes.** Two parts that agree in rhythm, ties, slurs
+  and syllable will merge into one chord, and a chord cannot say whose note is
+  whose: Baritone D3 under Bass E3 reads as the Baritone singing E3. Refuse the
+  merge whenever the lower part's note is above the upper's (a unison is not a
+  crossing) and write that stretch as two voices.
+- **Stems keep identifying the part.** Voice 1 stays up and voice 2 down even
+  while crossed. In a bar crossed throughout, voice 2's tie then defaults to
+  curving under, straight through voice 1's noteheads; write it
+  `<tied orientation="over">`. Sibelius honours the side. A probe showed it
+  ignores `bezier-x`/`bezier-y`/`bezier-x2`/`bezier-y2` and `default-y` on a
+  tie, so the height of the arc cannot be set from the file; any further lift
+  is a hand touch-up in Sibelius (Tie Middle Y). Verovio picks the tie side by
+  voice number rather than stem, so write the side explicitly on every tie of a
+  shared staff.
+- **A lyric line is not ended by a rest.** Both Sibelius and Verovio run an
+  extender on to the next syllable-less note in the same voice, however far
+  away. Splitting one crossed note off a chord gives voice 2 exactly such a
+  note, and a line from seven bars earlier ran across three systems to reach
+  it. Put a syllable-less voice-2 note that follows an already-finished
+  voice-2 line into voice 3; that was the only encoding that worked in a
+  Sibelius probe. Do not write `<lyric><extend type="stop"/></lyric>` for
+  Sibelius: it reads it as a new, empty syllable and every held word whose line
+  ended that way lost its line. A `print-object="no"` syllable was printed
+  anyway. The empty stop is fine for Verovio, and only for Verovio.
 
 ## Step 8 — Laying out a part for print
 
@@ -838,6 +891,10 @@ Set `<system-distance>` generously. 110 tenths at a 6 mm staff is ~17 mm between
 systems, which is not enough clearance for lyrics under one system and chord
 symbols over the next, and Sibelius will overlap them — the same layout that
 renders cleanly in Verovio. 150 tenths with `<staff-distance>` 85 behaved.
+
+Bracket the vocal staves with `<group-barline>no</group-barline>`. A joined
+barline runs down through the lyrics between the staves; engraved choral
+octavos break it at every vocal staff. The piano's two staves still join.
 
 ### 8.6 Credits: who wrote the piece, and why nobody sees it
 
@@ -1477,7 +1534,9 @@ The page-global stem-and-beam rule (2.2, 2.3), the stem-keyed chord grouping
 MuseScore/Leland vector PDF.
 
 The credit rules (8.6) and the probe-instead-of-tune habit come from putting
-an arranger's and an adapter's names on that same scanned-octavo score.
+an arranger's and an adapter's names on that same scanned-octavo score. The
+crossed-parts rules (7.6), the tie-stays-in-its-voice rule (7.4) and the
+barline rule (8.5) come from proofreading its TTBB print layout in Sibelius.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
