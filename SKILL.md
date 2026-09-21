@@ -48,6 +48,17 @@ handling. Never print from it.
 Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
 (cantai.app).
 
+**Make part-predominant practice tracks.** Export one audio file per staff from
+Sibelius (solo each staff, File > Export > Audio), put them in one folder,
+connect or attach it, and write something like:
+
+```
+Make a set of part-predominant tracks using the audio files in the the 2008 Sibelius TTBB folder.
+```
+
+That is Step 9: check every stem, then one mp3 per part, named for Chorus
+Connection.
+
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
 `python3 -m chorale.instructions`.
@@ -982,7 +993,11 @@ ffmpeg -hide_banner -i "Tenor 1.aiff" -af silencedetect=n=-50dB:d=0.3 -f null - 
 ```
 
 A silent stem, a stem matching another stem, or a voice entering seconds after
-the rest of its section is a bad export. Re-export that staff by hand.
+the rest of its section is a bad export. Re-export that staff by hand. Staggered
+entrances that agree *within* a section point to the score, not the bug (check
+the score when you have it): in the 2008 Sibelius TTBB both tenors came in at
+10.9 s and Baritone and Bass at 3.5 s, each pair within milliseconds, where the
+late-ensemble bug shifts one staff by a different 4–12 s every export.
 
 ### 9.3 What went wrong in Cantai exports
 

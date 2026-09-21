@@ -5,7 +5,7 @@ tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
 down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
-any of the scripts in this repository yourself — Claude does that. The three
+any of the scripts in this repository yourself — Claude does that. The four
 sentences below are the ones worth knowing.
 
 Typing `MENU` to Claude prints this same list back to you.
@@ -71,6 +71,23 @@ faithful file as well.
 
 Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 [Cantai](https://cantai.app).
+
+### 🎧 &nbsp;Make part-predominant practice tracks
+
+To make one practice track per part, with that part loud, the other voices
+faint, and the piano as written, first export one audio file per staff from
+Sibelius: solo each staff in turn and use **File > Export > Audio**. Put the
+files in one folder, connect that folder to Claude (or attach the files), and
+write something like:
+
+```
+Make a set of part-predominant tracks using the audio files in the the 2008 Sibelius TTBB folder.
+```
+
+Claude checks every file first for silent exports, accidental copies of another
+staff, and voices that come in late, then writes one mp3 per part beside the
+originals, named for Chorus Connection, e.g. `the 2008 Sibelius TTBB - (Tenor 2)
+predominant.mp3`.
 
 ---
 
