@@ -324,6 +324,9 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
     crossed = crossed_bars(bars)
     flipped = crossed if stems_follow_crossing else set()
     v2_tie = None if flipped else (dict(crossed_tie) if crossed_tie else None)
+    # Lyric-line state for voice 2, carried across bars (see below).
+    v2_line_open = False          # a voice-2 syllable's line is still running
+    v2_line_done = False          # a voice-2 line has run and ended since the last syllable
     header = header or EMPTY_HEADER
     out = [f'<part id="{pid}">']
     for m in range(1, spec.nbars + 1):
@@ -356,6 +359,8 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
                                 if split_here(pos, e['dur']) else None),
                           fermata=(m in spec.fermata_bars))
             s += marks.after(m, pos + e['dur'])
+        if not v2 and v2_line_open:
+            v2_line_open, v2_line_done = False, True     # voice 2 gone: its line ended
         if v2:
             s += f'<backup><duration>{spec.ticks(spec.bar_beats)}</duration></backup>'
             bm2 = beams_at(v2)
@@ -363,7 +368,27 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
             for i, (pos, e) in enumerate(v2):
                 if pos > cur:
                     s += f'<forward><duration>{spec.ticks(pos - cur)}</duration></forward>'
-                s += note_xml(e, spec, voice=2, beam=bm2[i],
+                # A lyric line is not ended by a rest in either reader: Sibelius
+                # and Verovio both run it on to the next note in the voice that
+                # has no syllable, however far away.  So a syllable-less voice-2
+                # note that turns up after a voice-2 line has already finished —
+                # typically a single note split off a chord because the parts
+                # cross — would drag that old line across the bars in between.
+                # Writing that note in voice 3 keeps it out of voice 2's lyric
+                # line.  The only encoding that worked in a Sibelius probe: an
+                # explicit empty stop syllable erased the line, and a hidden
+                # syllable was printed anyway.
+                voice = 2
+                if e['pitches']:
+                    if e['lyric']:
+                        v2_line_open = bool(e['lyric'].get('extend'))
+                        v2_line_done = False
+                    elif not e.get('tie_stop') and not v2_line_open and v2_line_done \
+                            and not bm2[i]:
+                        voice = 3
+                elif v2_line_open:
+                    v2_line_open, v2_line_done = False, True
+                s += note_xml(e, spec, voice=voice, beam=bm2[i],
                               stem='up' if m in flipped else 'down',
                               tie_attrs=v2_tie if (m in crossed and v2_tie) else None,
                               lyr_num=2 if two_lines else 1,

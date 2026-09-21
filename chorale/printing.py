@@ -88,7 +88,7 @@ class Print:
 
         # MuseScore writes <measure number="1" width="253.75">; a pattern that
         # demands '>' right after the number silently inserts no breaks at all.
-        return self.close_extenders(re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml))
+        return re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml)
 
     def options(self):
         mg = self.margins
@@ -156,9 +156,10 @@ class Print:
         on the last note of each melisma — the last note before a rest, a new
         syllable on that line, or the end of the part.
 
-        Sibelius infers the same way — it drew that very line from a "dow." to
-        a note seven bars on — so lay_out() writes the stops into the print
-        file as well, not only into what Verovio is handed.  Safe to run twice.
+        Do NOT write these stops into a file for Sibelius.  Sibelius infers the
+        same bad way, but it reads a text-less `<lyric><extend type="stop"/>`
+        as a new, empty syllable: the melisma then ends on its own note and the
+        line disappears altogether.  Safe to run twice.
         """
         if '<extend' not in xml:
             return xml
