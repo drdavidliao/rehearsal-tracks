@@ -5,6 +5,36 @@ description: "Turn a choral PDF into MusicXML correct enough to sing or drive si
 
 # Choral PDF → singable MusicXML
 
+## MENU
+
+When the user types `MENU` — on its own, in any case — print the block below
+back to them and stop. Do not start work, do not ask a clarifying question.
+It is a reminder card for someone who does not handle these files every day,
+and the whole value of it is that it comes back the same every time.
+
+> **PDF → MusicXML**
+> *Convert the attached PDF into a MusicXML file.*
+> With an OMR attempt to donate:
+> *Convert the attached PDF into a MusicXML file. The attached MusicXML file
+> is Newzik's attempt, in case that helps.*
+>
+> **Plan arranging / revoicing**
+> *Prepare a BENCH for the attached MusicXML so I can write arranging/voicing
+> instructions.*
+> Click to select a run of beats, then type what should happen there.
+>
+> **Add kludges for Cantai**
+> *Make the attached MusicXML compatible with Cantai.*
+> Deliberately damages the notation to work around Cantai's melisma handling.
+> Never for printing.
+>
+> Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
+> (cantai.app).
+
+`BENCH` in the second command means the clickable beat-grid page: build it
+with `python3 -m chorale.bench`, publish it, and read the spans back with
+`python3 -m chorale.instructions`.
+
 Written up after repairing one badly-converted TTBB octavo end to end, then
 extended by a second job that took a scanned SATB octavo through OMR repair,
 a director's TTBB revoicing, and print layout. The numbers below are measured,
@@ -809,6 +839,52 @@ systems, which is not enough clearance for lyrics under one system and chord
 symbols over the next, and Sibelius will overlap them — the same layout that
 renders cleanly in Verovio. 150 tenths with `<staff-distance>` 85 behaved.
 
+### 8.6 Credits: who wrote the piece, and why nobody sees it
+
+Getting a name onto the page took four rounds, because the two readers want
+opposite encodings and neither complains.
+
+**Position every credit.** MusicXML page coordinates are in tenths and the
+schema's own documentation says the `default-x` and `default-y` attributes
+"adjust the origin relative to the bottom left-hand corner of the page". A
+`<credit>` without them therefore sits at (0, 0) — the corner of the paper,
+flush to the edge, no margin — and several unpositioned credits pile up there,
+so all but one look dropped. Verovio skips them; Sibelius draws the pile.
+
+**Put every line that belongs in one corner into ONE `<credit>`, as successive
+`<credit-words>`.** The spec says "a series of credit-words and credit-symbol
+elements within a single credit element follow one another in sequence
+visually"; only the first carries the position, and the line break is a literal
+newline at the end of each. This is what MuseScore writes. Sibelius keeps one
+credit per zone of the page — given six separate `<credit>` elements aimed at
+the same corner it drew the last and silently dropped five — but renders every
+`<credit-words>` of a single credit as its own line. Verovio is the mirror
+image: it draws every separate credit and only the *first* line of a block. So
+encode the block, and expand it into separate credits on the way into Verovio
+and nowhere else.
+
+**`credit-type` is not decoration.** Sibelius routes a typed credit into its
+Score Info fields instead of onto the page. Leave the type off any line you
+want to see; the names still reach Score Info through
+`<identification><creator>`, which is where that metadata belongs.
+
+**The copyright notice is its own problem.** Sibelius turns `<rights>` into a
+copyright line pinned to the *bottom margin* — which is also where it
+justifies the staves down to after import, so the notice and the last system
+land on each other. Widening the bottom margin moves both together and cannot
+separate them. Drop `<rights>`, place the notice as a positioned credit inside
+the margin band a few millimetres off the paper edge, and justification can no
+longer reach it; leaving `<rights>` in as well gets two notices. Verovio needs
+that line painted onto the rendered page separately — it converts credits into
+the page *head* only and drops a bottom-positioned one under all three
+`footer` settings.
+
+**When a reader silently omits something, probe rather than tune.** Three
+rounds of adjusting attributes taught nothing. One throwaway file carrying six
+differently-encoded credits, each labelled with the encoding that produced it,
+answered every question in a single import. Build the probe the moment you are
+guessing twice about the same thing.
+
 ## Scripts
 
 All five are complete and standalone. Write them out as-is; nothing else is
@@ -1399,6 +1475,9 @@ revoicing, collapsing to two staves, and print layout.
 The page-global stem-and-beam rule (2.2, 2.3), the stem-keyed chord grouping
 (2.3, 3.1) and the notehead-grid check (check 12) come from the 12/8 TTBB (TTBB + piano, 12/8, six staves per system), a
 MuseScore/Leland vector PDF.
+
+The credit rules (8.6) and the probe-instead-of-tune habit come from putting
+an arranger's and an adapter's names on that same scanned-octavo score.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
