@@ -63,7 +63,8 @@ file: what the engraver wrote, nothing more, suitable for Sibelius/Dorico/MuseSc
 engraving and for most synths. Step 6 is a separate, opt-in post-process that
 rewrites lyrics so Sibelius's Cantai singer sounds every note; its output is *not*
 for printing. Steps 7–8 are for the other common ask: re-voicing the piece for a
-different ensemble and laying it out to be printed and sung from. Never mix the
+different ensemble and laying it out to be printed and sung from. Step 9 turns
+the finished score into part-predominant learning tracks. Never mix the
 Cantai file with the rest — deliver the faithful file always, and the Cantai file
 in addition when asked for learning tracks.
 
@@ -942,6 +943,87 @@ differently-encoded credits, each labelled with the encoding that produced it,
 answered every question in a single import. Build the probe the moment you are
 guessing twice about the same thing.
 
+## Step 9 — Stems and part-predominant learning tracks
+
+What a chorus actually rehearses from is one mp3 per part with that part on
+top: the part loud, the other voices faint, the piano as written. Sibelius does
+not make these. Export one audio stem per staff, check every stem, and mix in
+ffmpeg. Everything in this step was worked out on the solo-and-TTBB piece (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
+observations from that session, not documented behaviour.
+
+### 9.1 Export one stem per staff
+
+**Solo each staff and use File > Export > Audio.** Slow, and every manual
+export tested came out clean. Bob Zawalich's *Export Each Staff As Audio*
+plug-in is faster but not trustworthy with Cantai (9.3); if you use it, check
+every stem it writes. It writes WAV or AIFF only, not mp3.
+
+The Sibelius staff faders do not change a Cantai voice's volume — they send
+MIDI CC7, which Cantai appears to ignore. Balance with the per-instance Cantai
+strips in the Mixer, or, better, leave the stems flat and balance in the mix.
+
+### 9.2 Check every stem before mixing
+
+Three failures have all been seen, and none is audible until someone rehearses
+from the wrong track:
+
+```
+# peak per stem: -91.0 dB (ffmpeg's floor) means all zeros
+ffmpeg -hide_banner -i "Tenor 1.aiff" -af volumedetect -f null - 2>&1 | grep max_volume
+
+# sample-for-sample copies: identical checksums are the same audio.
+# Compare the opening too (-t 40): the plug-in leak copies only the first 25-38 s.
+ffmpeg -loglevel error -i "Tenor 1.aiff" -f s16le - | md5sum
+ffmpeg -loglevel error -i "Tenor 1.aiff" -t 40 -f s16le - | md5sum
+
+# first entrance: when the leading silence ends; compare across the section
+ffmpeg -hide_banner -i "Tenor 1.aiff" -af silencedetect=n=-50dB:d=0.3 -f null - 2>&1 \
+  | grep -m1 silence_end
+```
+
+A silent stem, a stem matching another stem, or a voice entering seconds after
+the rest of its section is a bad export. Re-export that staff by hand.
+
+### 9.3 What went wrong in Cantai exports
+
+- **The plug-in leaks the previous staff's audio.** The stem exported right
+  after Solo (Tenor 1) held the Solo's audio, sample for sample, for its first
+  25–38 s, where the score has rests. It reproduced in five exports, with
+  ensemble and single voices, with the same and different singers on the two
+  staves, and with a separate Cantai instance per staff. Live playback and
+  Sibelius's own File > Export > Audio of that staff were both clean.
+  Workaround: export the failing staff by hand. Untested: reorder the staves,
+  or put an empty staff after Solo, to see whether the leak follows export
+  order; if it does, it is worth reporting to the plug-in's author.
+- **Ensemble voices enter late.** With "Choir Male" (voices = 6), Tenor 1 came
+  in 4–12 s after the rest of the section, by a different amount each export,
+  and the individual singers were audible rather than blended. Single solo
+  voices entered on time. Prefer single voices for learning tracks.
+- **The first export after a settings change can be silent.** Three stems were
+  all zeros on the first run and fine on the second.
+
+### 9.4 Mix
+
+For each featured part: the featured voice +3 dB, every other voice −18 dB, the
+piano at 0 dB, summed without normalising, then encoded:
+
+```
+ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i "Piano.aiff" \
+  -filter_complex "[0:a]volume=-18dB[a0];[1:a]volume=3dB[a1];[2:a]volume=-18dB[a2];\
+[3:a]volume=-18dB[a3];[4:a]volume=0dB[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0" \
+  -c:a libmp3lame -b:a 192k -joint_stereo 1 "Title - (Tenor 2) predominant.mp3"
+```
+
+`normalize=0` matters. By default amix scales every input down to share the
+headroom and re-scales when a stem ends early, so a track's level would depend
+on how many stems went into it and would jump where one ran out. Measure every mix's
+peak afterwards (`volumedetect`, as above). Only if one goes over 0 dBFS, trim
+all of them by the same amount, so every part's track sits at the same level.
+
+**Filenames for Chorus Connection:** put the section in parentheses —
+`Shenandoah - (Tenor 2) predominant.mp3`. A Solo track gets no parentheses;
+Chorus Connection has no Solo section to file it under.
+
 ## Scripts
 
 All five are complete and standalone. Write them out as-is; nothing else is
@@ -1537,6 +1619,11 @@ The credit rules (8.6) and the probe-instead-of-tune habit come from putting
 an arranger's and an adapter's names on that same scanned-octavo score. The
 crossed-parts rules (7.6), the tie-stays-in-its-voice rule (7.4) and the
 barline rule (8.5) come from proofreading its TTBB print layout in Sibelius.
+
+Step 9 comes from exporting Cantai stems and mixing part-predominant tracks for
+the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
+session; its ffmpeg checks and mix command were re-run on synthetic stems
+before being written here.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
