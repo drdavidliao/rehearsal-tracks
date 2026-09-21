@@ -122,7 +122,7 @@ def chord_merge(a, b):
     return e
 
 
-def merge_runs(up, dn, beats=4):
+def merge_runs(up, dn, beats=4, hold_start=False):
     """Collapse two single-voice bars onto one staff.
 
     Returns (v1, v2).  v1 covers the whole bar: chords where the two parts agree,
@@ -132,6 +132,8 @@ def merge_runs(up, dn, beats=4):
     U, D = positions(up), positions(dn)
     umap, dmap = dict(U), dict(D)
     sync = {p for p in umap if p in dmap and mergeable(umap[p], dmap[p])}
+    if hold_start:                  # voice 2 arrives tied from the bar before
+        sync.discard(F(0))
     v1, v2 = [], []
     cur = F(0)
     ui = di = 0
@@ -154,6 +156,26 @@ def merge_runs(up, dn, beats=4):
         cur = nxt
     return v1, v2
 
+
+
+def merge_staff(up, dn, nbars, beats=4):
+    """merge_runs over a whole staff, keeping every tie inside one voice.
+
+    Merging is decided bar by bar, so a note held in voice 2 across a barline
+    could land, in the next bar, in a unison that merges into voice 1.  The tie
+    then jumps voices, and voice 2 has no note left for its syllable's extender
+    to run under, so the lyric line under a held word disappears.  When voice 2
+    ends a bar on a tie, the tied note in the next bar stays in voice 2 — a
+    unison written with one stem up and one down, as an engraver would.
+    `up` and `dn` are {bar: [events]}.  Returns {bar: (v1, v2)}.
+    """
+    bars = {}
+    for m in range(1, nbars + 1):
+        prev = bars.get(m - 1)
+        held = bool(prev and prev[1] and prev[1][-1][1]['tie']
+                    and prev[1][-1][0] + prev[1][-1][1]['dur'] == beats)
+        bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held)
+    return bars
 
 
 def crossed_bars(bars):
