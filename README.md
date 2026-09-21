@@ -46,10 +46,12 @@ instructions.
 
 A **bench** is a scrolling page of the score with clickable boxes under every beat.
 Shift-click a run of beats, type what should happen there, and the pairs come back
-as a list of edits. An instruction looks like:
+as a list of edits. The measure and beat range comes from what you clicked, so you
+never have to type it. For example, after clicking to select measure 3 beat 2
+through measure 5 beat 4, someone might write something like:
 
-> from measure 3 beat 2 through measure 5 beat 4, reassign the soprano part to
-> tenor 2, alto part to bass, tenor part to tenor 1, and bass part to baritone
+> reassign the soprano part to tenor 2, alto part to bass, tenor part to tenor 1,
+> and bass part to baritone
 
 ### 🔧 &nbsp;Add kludges for Cantai
 
