@@ -81,14 +81,14 @@ files in one folder, connect that folder to Claude (or attach the files), and
 write something like:
 
 ```
-Make a set of part-predominant tracks using the audio files in the the 2008 Sibelius TTBB folder.
+Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
 ```
 
 Claude checks every file first for silent exports, accidental copies of another
 staff, and voices that come in late, then writes one mp3 per part beside the
-originals, named for Chorus Connection, e.g. `the 2008 Sibelius TTBB - (Tenor 2)
-predominant.mp3`, plus a `the 2008 Sibelius TTBB - Balanced.mp3` with every part at
-the same level.
+originals, named for Chorus Connection, e.g. `Shenandoah - (Tenor 2)
+predominant.mp3`, plus a `Shenandoah - Balanced.mp3` with every part at the
+same level.
 
 ---
 

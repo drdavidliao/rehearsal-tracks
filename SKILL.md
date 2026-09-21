@@ -53,7 +53,7 @@ Sibelius (solo each staff, File > Export > Audio), put them in one folder,
 connect or attach it, and write something like:
 
 ```
-Make a set of part-predominant tracks using the audio files in the the 2008 Sibelius TTBB folder.
+Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
 ```
 
 That is Step 9: check every stem, then one mp3 per part plus a Balanced track,
