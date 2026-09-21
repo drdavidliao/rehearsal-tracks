@@ -87,7 +87,8 @@ Make a set of part-predominant tracks using the audio files in the the 2008 Sibe
 Claude checks every file first for silent exports, accidental copies of another
 staff, and voices that come in late, then writes one mp3 per part beside the
 originals, named for Chorus Connection, e.g. `the 2008 Sibelius TTBB - (Tenor 2)
-predominant.mp3`.
+predominant.mp3`, plus a `the 2008 Sibelius TTBB - Balanced.mp3` with every part at
+the same level.
 
 ---
 

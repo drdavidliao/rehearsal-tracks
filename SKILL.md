@@ -56,8 +56,8 @@ connect or attach it, and write something like:
 Make a set of part-predominant tracks using the audio files in the the 2008 Sibelius TTBB folder.
 ```
 
-That is Step 9: check every stem, then one mp3 per part, named for Chorus
-Connection.
+That is Step 9: check every stem, then one mp3 per part plus a Balanced track,
+named for Chorus Connection.
 
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
@@ -957,9 +957,11 @@ guessing twice about the same thing.
 ## Step 9 — Stems and part-predominant learning tracks
 
 What a chorus actually rehearses from is one mp3 per part with that part on
-top: the part loud, the other voices faint, the piano as written. Sibelius does
-not make these. Export one audio stem per staff, check every stem, and mix in
-ffmpeg. Everything in this step was worked out on the solo-and-TTBB piece (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
+top: the part loud, the other voices faint, the piano as written, plus one
+Balanced track with every part at the same level. Sibelius does not make these.
+Export one audio stem per staff, check every stem, and mix in ffmpeg.
+Everything in this step was worked out on the solo-and-TTBB piece
+(TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
 observations from that session, not documented behaviour.
 
 ### 9.1 Export one stem per staff
@@ -981,6 +983,11 @@ from the wrong track:
 ```
 # peak per stem: -91.0 dB (ffmpeg's floor) means all zeros
 ffmpeg -hide_banner -i "Tenor 1.aiff" -af volumedetect -f null - 2>&1 | grep max_volume
+
+# a peak that can be ABOVE full scale (a mix before encoding): volumedetect stops
+# at 0.0 dB, so read astats on double-precision samples instead
+ffmpeg -hide_banner -i mix.wav -af aformat=sample_fmts=dbl,astats=measure_overall=Peak_level:measure_perchannel=none \
+  -f null - 2>&1 | grep "Peak level"
 
 # sample-for-sample copies: identical checksums are the same audio.
 # Compare the opening too (-t 40): the plug-in leak copies only the first 25-38 s.
@@ -1029,15 +1036,23 @@ ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i 
   -c:a libmp3lame -b:a 192k -joint_stereo 1 "Title - (Tenor 2) predominant.mp3"
 ```
 
+**Always make a Balanced track as well:** every voice and the piano at 0 dB,
+nothing featured. It is part of every set, not an extra.
+
 `normalize=0` matters. By default amix scales every input down to share the
 headroom and re-scales when a stem ends early, so a track's level would depend
-on how many stems went into it and would jump where one ran out. Measure every mix's
-peak afterwards (`volumedetect`, as above). Only if one goes over 0 dBFS, trim
-all of them by the same amount, so every part's track sits at the same level.
+on how many stems went into it and would jump where one ran out. Measure every
+mix's peak before encoding (`astats`, as above; `volumedetect` cannot read past
+0.0). Only if one goes over 0 dBFS, trim all of them by the same amount, so the
+tracks keep their loudness relative to one another. The Balanced track is
+usually the one that goes over, because nothing in it is turned down: on the 2008 Sibelius TTBB it reached +2.06 dBFS (686 clipped samples), so all five tracks
+were trimmed 3 dB and the Balanced track landed at −1.2 dBFS after encoding.
+Do not otherwise even out the tracks' loudness.
 
 **Filenames for Chorus Connection:** put the section in parentheses —
 `Shenandoah - (Tenor 2) predominant.mp3`. A Solo track gets no parentheses;
-Chorus Connection has no Solo section to file it under.
+Chorus Connection has no Solo section to file it under. Nor does the Balanced
+track, which belongs to no section: `Shenandoah - Balanced.mp3`.
 
 ## Scripts
 
@@ -1638,7 +1653,9 @@ barline rule (8.5) come from proofreading its TTBB print layout in Sibelius.
 Step 9 comes from exporting Cantai stems and mixing part-predominant tracks for
 the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
 session; its ffmpeg checks and mix command were re-run on synthetic stems
-before being written here.
+before being written here. The Balanced track, the above-full-scale peak
+measurement and the entrance-pattern note come from mixing the set for
+the 2008 Sibelius TTBB.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
