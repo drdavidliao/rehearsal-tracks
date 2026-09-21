@@ -352,8 +352,13 @@ HEAD = ('<?xml version="1.0" encoding="UTF-8"?>\n'
         '"http://www.musicxml.org/dtds/partwise.dtd">\n'
         '<score-partwise version="4.0">')
 
+# Choral staves are bracketed but their barlines are NOT joined: the lyrics sit
+# between the staves, and a barline drawn through that gap runs straight
+# through the words.  Engraved choral octavos break the barline at every vocal
+# staff for exactly this reason.  The piano's two staves still join, because a
+# multi-staff part always does and there is no text between them.
 GROUP_START = ('<part-group type="start" number="1"><group-symbol>bracket</group-symbol>'
-               '<group-barline>yes</group-barline></part-group>')
+               '<group-barline>no</group-barline></part-group>')
 GROUP_STOP = '<part-group type="stop" number="1"/>'
 
 
@@ -427,3 +432,37 @@ def score_xml(title, ident, part_list, parts, credits=()):
     return '\n'.join([HEAD, f'<work><work-title>{escape(title)}</work-title></work>', ident,
                       *credits,
                       '<part-list>', *part_list, '</part-list>', *parts, '</score-partwise>'])
+
+
+def orient_tie(xml, part, bar, voice, pitch, orientation):
+    """Force the curve of one tie `over` or `under` the notes, in a built score.
+
+    `pitch` is the SOUNDING pitch as (step, alter, octave).  Renderers put the
+    tie on the stem-less side, which is almost always right; the exception is a
+    two-voice staff where the parts cross: voice 2 (stems down) is then the
+    higher part, its tie curves under by default, and it is drawn straight
+    through voice 1's noteheads.  The stems stay as they are;
+    only the arc moves.  Exactly one tie must match, or this raises.
+    """
+    import re
+    assert orientation in ('over', 'under')
+    pm = re.search(r'<part id="%s">.*?</part>' % re.escape(part), xml, re.S)
+    mm = re.search(r'<measure number="%d"[^>]*>.*?</measure>' % bar, pm.group(0), re.S)
+    step, alter, octave = pitch
+    want = f'<step>{step}</step>' + (f'<alter>{alter}</alter>' if alter else '') \
+        + f'<octave>{octave}</octave>'
+    hits = []
+    for nm in re.finditer(r'<note\b.*?</note>', mm.group(0), re.S):
+        n = nm.group(0)
+        if (f'<voice>{voice}</voice>' in n and want in n
+                and re.search(r'<tied type="start"\s*/>', n)):
+            hits.append(nm)
+    if len(hits) != 1:
+        raise ValueError(f'orient_tie: {len(hits)} tie starts match {part} bar {bar} '
+                         f'voice {voice} {pitch}, expected 1')
+    n = hits[0].group(0)
+    fixed = re.sub(r'<tied type="start"\s*/>',
+                   f'<tied type="start" orientation="{orientation}"/>', n, count=1)
+    measure = mm.group(0).replace(n, fixed, 1)
+    part_xml = pm.group(0).replace(mm.group(0), measure, 1)
+    return xml.replace(pm.group(0), part_xml, 1)
