@@ -88,7 +88,7 @@ class Print:
 
         # MuseScore writes <measure number="1" width="253.75">; a pattern that
         # demands '>' right after the number silently inserts no breaks at all.
-        return re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml)
+        return self.close_extenders(re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml))
 
     def options(self):
         mg = self.margins
@@ -156,8 +156,9 @@ class Print:
         on the last note of each melisma — the last note before a rest, a new
         syllable on that line, or the end of the part.
 
-        The file handed to a notation program keeps plain `<extend/>`, which is
-        what MuseScore writes too; only the renderer sees this.
+        Sibelius infers the same way — it drew that very line from a "dow." to
+        a note seven bars on — so lay_out() writes the stops into the print
+        file as well, not only into what Verovio is handed.  Safe to run twice.
         """
         if '<extend' not in xml:
             return xml
@@ -187,8 +188,13 @@ class Print:
                         continue
                     sung = {ly.get('number', '1'): ly for ly in note.findall('lyric')
                             if ly.findtext('text')}
+                    stopped = {ly.get('number', '1') for ly in note.findall('lyric')
+                               if not ly.findtext('text') and ly.find('extend') is not None
+                               and ly.find('extend').get('type') == 'stop'}
                     for num in list(open_):
-                        if num in sung:
+                        if num in stopped:
+                            del open_[num]    # already closed here (second pass)
+                        elif num in sung:
                             del open_[num]    # a new syllable ends the line by itself
                         else:
                             open_[num][1] = note
