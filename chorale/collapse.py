@@ -87,7 +87,16 @@ def mergeable(a, b):
     They must agree in everything a reader sees except pitch: length, notation,
     ties, slurs, and the syllable underneath.  Same sound, different spelling is
     still two voices.
+
+    And the parts must not be crossed.  `a` is the upper part, `b` the lower;
+    if `b` is above `a` here, a chord would put the lower part's note on top,
+    and a singer reading one stem cannot tell whose note is whose.  A crossing
+    is written as two voices, stems up and down, so each part keeps its own
+    stem.  A unison is not a crossing.
     """
+    if a['pitches'] and b['pitches'] and \
+            max(pkey(p) for p in b['pitches']) > min(pkey(p) for p in a['pitches']):
+        return False
     if a['dur'] != b['dur'] or a['dots'] != b['dots'] or a['base'] != b['base']:
         return False
     if bool(a['pitches']) != bool(b['pitches']):           # rest against note
@@ -144,6 +153,45 @@ def merge_runs(up, dn, beats=4):
             di += 1
         cur = nxt
     return v1, v2
+
+
+
+def crossed_bars(bars):
+    """Bars where the two parts on a shared staff are crossed the whole time.
+
+    Voice 1 is stems up and voice 2 stems down, because voice 1 is normally the
+    higher part.  When the parts cross for a stretch — voice 2 above voice 1 at
+    every moment both are singing different notes — that convention puts the
+    stems-down notes on top, and anything attached to them (a held note's tie,
+    most visibly) is drawn through the other part's noteheads or stems.  No tie
+    direction clears it; the engraved fix is to let the stems follow position
+    for that bar, which is how the part would look had it never been swapped.
+
+    A bar counts only if the voices are in reverse order at least once and in
+    normal order never.  Unisons and moments where one voice rests are neutral.
+    `bars` is {bar: (v1, v2)} from merge_runs.  Returns a set of bar numbers.
+    """
+    out = set()
+    for m, (v1, v2) in bars.items():
+        crossed = normal = False
+        v1pos = positions(v1)
+        for p, e in v2:
+            if not e['pitches']:
+                continue
+            for q, f in v1pos:
+                if not f['pitches'] or not (q < p + e['dur'] and p < q + f['dur']):
+                    continue
+                lo2 = min(pkey(x) for x in e['pitches'])
+                hi2 = max(pkey(x) for x in e['pitches'])
+                lo1 = min(pkey(x) for x in f['pitches'])
+                hi1 = max(pkey(x) for x in f['pitches'])
+                if lo2 > hi1:
+                    crossed = True
+                elif hi2 < lo1:
+                    normal = True
+        if crossed and not normal:
+            out.add(m)
+    return out
 
 
 # ---------------------------------------------------------------- lyric lines

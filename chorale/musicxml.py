@@ -111,7 +111,7 @@ WEDGE_STOP = '<direction><direction-type><wedge type="stop" number="1"/></direct
 
 
 def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
-             lyr_place=None, lyr_num=1, fermata=False):
+             lyr_place=None, lyr_num=1, fermata=False, tie_attrs=None):
     """One event — a rest, a note, or a chord — as one or more <note> elements."""
     s = ''
     for pi, p in enumerate(e['pitches'] or [None]):
@@ -144,7 +144,16 @@ def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
             if e.get('tie_stop'):
                 nots += '<tied type="stop"/>'
             if e['tie']:
-                nots += '<tied type="start"/>'
+                # On a shared staff the tie goes on the side away from the stem.
+                # Say so explicitly: Verovio picks the side by voice NUMBER, so a
+                # voice-2 note whose stems were flipped up (crossed_bars) still
+                # gets its tie curved under, straight through the other part.
+                if tie_attrs:
+                    side = ''.join(f' {k}="{v}"' for k, v in tie_attrs.items())
+                else:
+                    side = {'up': ' orientation="over"',
+                            'down': ' orientation="under"'}.get(stem, '')
+                nots += f'<tied type="start"{side}/>'
             if pi == 0 and e['slur_stop']:
                 nots += '<slur type="stop" number="1"/>'
             if pi == 0 and e['slur_start']:
@@ -288,7 +297,8 @@ def divided_part(pid, bars, clef, spec, first=False, marks=None, header=None):
     return '\n'.join(out)
 
 
-def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, two_map=None):
+def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, two_map=None,
+                   stems_follow_crossing=False, crossed_tie=(('orientation', 'over'),)):
     """Two parts on one staff, merging and splitting freely inside the bar.
 
     `bars` is {bar: (v1, v2)} from collapse.merge_runs; `two_map` is
@@ -297,8 +307,23 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
 
     A direction that falls where voice 1 has no note start would otherwise be
     lost, so it is attached at the bar line with an <offset> instead.
+
+    Stems identify the part: voice 1 up, voice 2 down, even where the parts
+    cross.  In a bar crossed throughout (collapse.crossed_bars), a voice-2 tie
+    is then the higher one, and its default under-curve runs through voice 1's
+    noteheads; it is written with the `crossed_tie` attributes instead, by
+    default orientation="over".  Only the side survives the trip: a probe
+    imported into Sibelius drew bezier-x/-y, bezier-x2/-y2 and default-y
+    exactly like plain "over", so the arc's height cannot be set from the file
+    and any further lift is a hand touch-up in Sibelius (Tie Middle Y).
+    Pass crossed_tie=None to leave those ties alone, or
+    `stems_follow_crossing=True` to flip the stems in those bars instead.
     """
+    from .collapse import crossed_bars
     marks = marks or EMPTY_MARKS
+    crossed = crossed_bars(bars)
+    flipped = crossed if stems_follow_crossing else set()
+    v2_tie = None if flipped else (dict(crossed_tie) if crossed_tie else None)
     header = header or EMPTY_HEADER
     out = [f'<part id="{pid}">']
     for m in range(1, spec.nbars + 1):
@@ -327,7 +352,8 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
         for i, (pos, e) in enumerate(v1pos):
             s += marks.at(m, pos)
             s += note_xml(e, spec, voice=1, beam=bm[i],
-                          stem='up' if split_here(pos, e['dur']) else None,
+                          stem=((('down' if m in flipped else 'up'))
+                                if split_here(pos, e['dur']) else None),
                           fermata=(m in spec.fermata_bars))
             s += marks.after(m, pos + e['dur'])
         if v2:
@@ -337,7 +363,9 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
             for i, (pos, e) in enumerate(v2):
                 if pos > cur:
                     s += f'<forward><duration>{spec.ticks(pos - cur)}</duration></forward>'
-                s += note_xml(e, spec, voice=2, beam=bm2[i], stem='down',
+                s += note_xml(e, spec, voice=2, beam=bm2[i],
+                              stem='up' if m in flipped else 'down',
+                              tie_attrs=v2_tie if (m in crossed and v2_tie) else None,
                               lyr_num=2 if two_lines else 1,
                               fermata=(m in spec.fermata_bars))
                 cur = pos + e['dur']

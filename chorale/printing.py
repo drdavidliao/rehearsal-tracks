@@ -143,11 +143,69 @@ class Print:
             root.remove(cr)
         return head + etree.tostring(root, encoding='unicode')
 
+    @staticmethod
+    def close_extenders(xml):
+        """End every lyric extender explicitly, for Verovio only.
+
+        A plain `<extend/>` leaves the reader to infer where the line stops, and
+        Verovio infers badly: it runs the line THROUGH rests to the next
+        lyric-less note in the same voice, however far away.  On a shared staff
+        voice 2 can vanish for bars at a time, so a melisma in one phrase grew a
+        line that crossed three systems to reach an unrelated note seven bars
+        later.  The fix is the spec's own: `<lyric><extend type="stop"/></lyric>`
+        on the last note of each melisma — the last note before a rest, a new
+        syllable on that line, or the end of the part.
+
+        The file handed to a notation program keeps plain `<extend/>`, which is
+        what MuseScore writes too; only the renderer sees this.
+        """
+        if '<extend' not in xml:
+            return xml
+        from lxml import etree
+        head, _, rest = xml.partition('<score-partwise')
+        root = etree.fromstring(('<score-partwise' + rest).encode())
+
+        def stop(note, num):
+            ly = etree.SubElement(note, 'lyric')
+            ly.set('number', num)
+            etree.SubElement(ly, 'extend').set('type', 'stop')
+
+        for part in root.findall('part'):
+            voices = {}
+            for note in part.iter('note'):
+                if note.find('chord') is not None:
+                    continue
+                voices.setdefault(note.findtext('voice') or '1', []).append(note)
+            for notes in voices.values():
+                open_ = {}                    # lyric number -> [start note, last note]
+                for note in notes:
+                    if note.find('rest') is not None:
+                        for num, (a, b) in open_.items():
+                            if b is not a:
+                                stop(b, num)
+                        open_.clear()
+                        continue
+                    sung = {ly.get('number', '1'): ly for ly in note.findall('lyric')
+                            if ly.findtext('text')}
+                    for num in list(open_):
+                        if num in sung:
+                            del open_[num]    # a new syllable ends the line by itself
+                        else:
+                            open_[num][1] = note
+                    for num, ly in sung.items():
+                        ext = ly.find('extend')
+                        if ext is not None and ext.get('type') in (None, 'start'):
+                            open_[num] = [note, note]
+                for num, (a, b) in open_.items():
+                    if b is not a:
+                        stop(b, num)
+        return head + etree.tostring(root, encoding='unicode')
+
     def toolkit(self, xml):
         import verovio
         tk = verovio.toolkit()
         tk.setOptions(self.options())
-        tk.loadData(self.expand_credit_blocks(xml))
+        tk.loadData(self.close_extenders(self.expand_credit_blocks(xml)))
         return tk
 
     def credit_xml(self, title, lines, title_size=22, size=10,
