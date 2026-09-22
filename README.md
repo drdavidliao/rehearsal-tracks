@@ -88,10 +88,19 @@ export goes wrong: a silent file, a file that copies another staff, a voice
 that comes in late, and a voice that goes quiet partway through and never comes
 back (Cantai stops rendering it). Anything like that gets reported with the
 time it happens, so you can re-export that staff before any tracks are made.
-The checks read the audio only, not the score, so a part that really does rest
-until the end is flagged as a question for you rather than as an error. Then
-Claude writes three kinds of mp3 beside the originals, named for Chorus
-Connection:
+On their own the checks read the audio only, so a part that really does rest
+until the end is flagged as a question for you rather than as an error. To
+settle those questions, attach the MusicXML the audio was rendered from as
+well:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder. The attached MusicXML is what they were rendered from.
+```
+
+Claude then checks every stem against the score and reports, by bar number,
+any phrase the score has that the audio leaves silent, and any rest in the
+score that the audio fills (audio leaked in from another staff). Then Claude
+writes three kinds of mp3 beside the originals, named for Chorus Connection:
 
 - one **predominant** track per part, with that part loud, the other voices
   faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
@@ -107,13 +116,14 @@ Connection:
 
 | File | What it does | Needs |
 |---|---|---|
-| `SKILL.md` | The whole method, start to finish. The five scripts below are printed inside it in full, so it is self-contained. | — |
+| `SKILL.md` | The whole method, start to finish. The six scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
 | `musicxml_qc.py` | Pre-synthesis QC: bar lengths, lyrics, octave jumps, clef flips. | stdlib |
 | `cantai_mode.py` | Post-processes a finished file so Cantai sings every note. Not for printing. | stdlib |
 | `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
+| `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 
 ## Setup
 
@@ -132,6 +142,7 @@ python3 find_performer_instructions.py score.pdf --all-text
 python3 musicxml_qc.py score.musicxml
 python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
 python3 lyric_collisions.py score-laid-out.musicxml 7.0
+python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
 ```
