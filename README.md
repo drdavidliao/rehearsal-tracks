@@ -97,28 +97,6 @@ originals, named for Chorus Connection:
 
 ---
 
-## How the whole thing fits together
-
-**Sheet-music PDF → Claude → Sibelius + Cantai**
-
-1. Start from a PDF that a notation program exported (Sibelius, Finale, Dorico,
-   MuseScore). Its noteheads, slurs and lyrics are vector objects with exact
-   coordinates, so they can be *read*, not recognised. A scan or photo is a
-   different, worse job — `check_pdf_type.py` tells you which you have. For a scan,
-   OMR is the only route in, and it is worth keeping mainly for the accompaniment:
-   the vocal staves are usually faster to transcribe by hand against 300-dpi crops
-   than to audit.
-2. Claude extracts the notes, rhythms, lyrics, ties and slurs from the glyph stream,
-   explodes the condensed choral staves into one monophonic part per voice, applies
-   the "who sings here" instructions by hand, and verifies the result (XSD, bar
-   lengths, ranges, lyric checks, render-and-compare).
-3. Open the MusicXML in Sibelius, put the vocal staves on Cantai voices, export
-   one audio file per staff, and have Claude mix them into rehearsal tracks.
-
-Steps 7 and 8 of the skill cover the other common ask: re-voicing a piece for a
-different ensemble under a director's instructions, collapsing two voices onto one
-staff, and laying the result out to be printed and sung from.
-
 ## What is here
 
 | File | What it does | Needs |
