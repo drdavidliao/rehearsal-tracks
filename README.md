@@ -8,7 +8,7 @@ down in `SKILL.md`. You attach a file and type a sentence. You do not have to ru
 any of the scripts in this repository yourself — Claude does that. The four
 sentences below are the ones worth knowing.
 
-Typing `MENU` to Claude prints this same list back to you.
+Typing `README` to Claude prints this same list back to you.
 
 ---
 
@@ -74,21 +74,26 @@ Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 
 ### 🎧 &nbsp;Make part-predominant practice tracks
 
-To make one practice track per part, with that part loud, the other voices
-faint, and the piano as written, first export one audio file per staff from
-Sibelius: solo each staff in turn and use **File > Export > Audio**. Put the
-files in one folder, connect that folder to Claude (or attach the files), and
-write something like:
+To make practice tracks for each part, first export one audio file per staff
+from Sibelius: solo each staff in turn and use **File > Export > Audio**. Put
+the files in one folder, connect that folder to Claude (or attach the files),
+and write something like:
 
 ```
 Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
 ```
 
 Claude checks every file first for silent exports, accidental copies of another
-staff, and voices that come in late, then writes one mp3 per part beside the
-originals, named for Chorus Connection, e.g. `Shenandoah - (Tenor 2)
-predominant.mp3`, plus a `Shenandoah - Balanced.mp3` with every part at the
-same level.
+staff, and voices that come in late, then writes three kinds of mp3 beside the
+originals, named for Chorus Connection:
+
+- one **predominant** track per part, with that part loud, the other voices
+  faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
+- one **part-left** track per part, with that part hard left, the other voices
+  hard right and the piano in the middle, e.g. `Shenandoah - (Tenor 2)
+  part-left.mp3`. Take out one earbud, or turn the balance knob, to hear just
+  your part and the piano, or just the piano and everyone else;
+- one `Shenandoah - Balanced.mp3`, with every part at the same level.
 
 ---
 

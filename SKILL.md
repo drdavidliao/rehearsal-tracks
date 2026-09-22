@@ -5,9 +5,9 @@ description: "Turn a choral PDF into MusicXML correct enough to sing or drive si
 
 # Choral PDF → singable MusicXML
 
-## MENU
+## README
 
-When the user types `MENU` — on its own, in any case — print the block below
+When the user types `README` — on its own, in any case — print the block below
 back to them and stop. Do not start work, do not ask a clarifying question.
 It is a reminder card for someone who does not handle these files every day,
 and the whole value of it is that it comes back the same every time.
@@ -56,8 +56,8 @@ connect or attach it, and write something like:
 Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
 ```
 
-That is Step 9: check every stem, then one mp3 per part plus a Balanced track,
-named for Chorus Connection.
+That is Step 9: check every stem, then per part one predominant mp3 and one
+part-left mp3, plus a Balanced track, named for Chorus Connection.
 
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
@@ -957,8 +957,10 @@ guessing twice about the same thing.
 ## Step 9 — Stems and part-predominant learning tracks
 
 What a chorus actually rehearses from is one mp3 per part with that part on
-top: the part loud, the other voices faint, the piano as written, plus one
-Balanced track with every part at the same level. Sibelius does not make these.
+top: the part loud, the other voices faint, the piano as written. Each set also
+gets one part-left mp3 per part (that part hard left, the other voices hard
+right, the piano centred) and one Balanced track with every part at the same
+level. Sibelius does not make these.
 Export one audio stem per staff, check every stem, and mix in ffmpeg.
 Everything in this step was worked out on the solo-and-TTBB piece
 (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
@@ -1044,20 +1046,45 @@ ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i 
 **Always make a Balanced track as well:** every voice and the piano at 0 dB,
 nothing featured. It is part of every set, not an extra.
 
+**Always make a part-left track for every part as well.** The featured voice
+goes hard left, every other voice hard right, and the piano (or whatever the
+accompaniment stem holds) stays centred as exported. All at 0 dB: the panning
+does the separating. A singer can take out one earbud, or turn the balance, to
+hear their own part with the piano, or the piano and everyone else to sing
+against. Fold each voice stem to mono and send it to one side:
+
+```
+# featured voice -> left only; every other voice -> right only; piano untouched
+[1:a]pan=stereo|c0=0.5*c0+0.5*c1|c1=0*c0[a1]      # featured
+[0:a]pan=stereo|c0=0*c0|c1=0.5*c0+0.5*c1[a0]      # each of the others
+[4:a]volume=0dB[a4]                               # piano
+[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0
+```
+
+Averaging the two channels leaves a centred voice at the level it already had
+in each channel, so it does not get louder by moving to one side. Check the
+result: the left channel minus the right should correlate with the featured
+stem minus the others (the centred piano cancels). On the scanned SATB octavo it came out 0.998
+for all four parts.
+
 `normalize=0` matters. By default amix scales every input down to share the
 headroom and re-scales when a stem ends early, so a track's level would depend
 on how many stems went into it and would jump where one ran out. Measure every
 mix's peak before encoding (`astats`, as above; `volumedetect` cannot read past
-0.0). Only if one goes over 0 dBFS, trim all of them by the same amount, so the
-tracks keep their loudness relative to one another. The Balanced track is
-usually the one that goes over, because nothing in it is turned down: on the 2008 Sibelius TTBB it reached +2.06 dBFS (686 clipped samples), so all five tracks
-were trimmed 3 dB and the Balanced track landed at −1.2 dBFS after encoding.
+0.0), part-left tracks included. Only if one goes over 0 dBFS, trim all of them
+by the same amount, so the tracks keep their loudness relative to one another.
+The Balanced track is usually the one that goes over, because nothing in it is
+turned down: on the 2008 Sibelius TTBB it reached +2.06 dBFS (686 clipped samples),
+so all five tracks were trimmed 3 dB and the Balanced track landed at −1.2 dBFS
+after encoding.
 Do not otherwise even out the tracks' loudness.
 
 **Filenames for Chorus Connection:** put the section in parentheses —
 `Shenandoah - (Tenor 2) predominant.mp3`. A Solo track gets no parentheses;
 Chorus Connection has no Solo section to file it under. Nor does the Balanced
-track, which belongs to no section: `Shenandoah - Balanced.mp3`.
+track, which belongs to no section: `Shenandoah - Balanced.mp3`. Part-left
+tracks follow the same pattern: `Shenandoah - (Tenor 2) part-left.mp3`,
+`Shenandoah - Solo part-left.mp3`.
 
 ## Scripts
 
@@ -1660,7 +1687,8 @@ the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
 session; its ffmpeg checks and mix command were re-run on synthetic stems
 before being written here. The Balanced track, the above-full-scale peak
 measurement, the −21 dB default and the entrance-pattern note come from mixing
-the set for the 2008 Sibelius TTBB.
+the set for the 2008 Sibelius TTBB. The part-left
+tracks come from the set for the scanned SATB octavo.
 
 The voice-explosion requirements (one part per voice, no chords, `<extend/>`
 melismas, the `<note>` element order that Sibelius enforces, and the
