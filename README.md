@@ -83,9 +83,15 @@ and write something like:
 Make rehearsal tracks from the audio files in the Shenandoah folder.
 ```
 
-Claude checks every file first for silent exports, accidental copies of another
-staff, and voices that come in late, then writes three kinds of mp3 beside the
-originals, named for Chorus Connection:
+Claude first runs simple checks on every file for the obvious ways a Cantai
+export goes wrong: a silent file, a file that copies another staff, a voice
+that comes in late, and a voice that goes quiet partway through and never comes
+back (Cantai stops rendering it). Anything like that gets reported with the
+time it happens, so you can re-export that staff before any tracks are made.
+The checks read the audio only, not the score, so a part that really does rest
+until the end is flagged as a question for you rather than as an error. Then
+Claude writes three kinds of mp3 beside the originals, named for Chorus
+Connection:
 
 - one **predominant** track per part, with that part loud, the other voices
   faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
