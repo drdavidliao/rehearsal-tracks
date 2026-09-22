@@ -1,6 +1,6 @@
 # rehearsal-tracks
 
-Turning sheet music into files a community chorus can rehearse from — part-learning
+Turning sheet music into files a community chorus can rehearse from — rehearsal
 tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
@@ -72,15 +72,15 @@ faithful file as well.
 Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 [Cantai](https://cantai.app).
 
-### 🎧 &nbsp;Make part-predominant practice tracks
+### 🎧 &nbsp;Make rehearsal tracks
 
-To make practice tracks for each part, first export one audio file per staff
+To make rehearsal tracks for each part, first export one audio file per staff
 from Sibelius: solo each staff in turn and use **File > Export > Audio**. Put
 the files in one folder, connect that folder to Claude (or attach the files),
 and write something like:
 
 ```
-Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
+Make rehearsal tracks from the audio files in the Shenandoah folder.
 ```
 
 Claude checks every file first for silent exports, accidental copies of another
@@ -112,8 +112,8 @@ originals, named for Chorus Connection:
    explodes the condensed choral staves into one monophonic part per voice, applies
    the "who sings here" instructions by hand, and verifies the result (XSD, bar
    lengths, ranges, lyric checks, render-and-compare).
-3. Open the MusicXML in Sibelius, put the vocal staves on Cantai voices, and export
-   the part-learning tracks.
+3. Open the MusicXML in Sibelius, put the vocal staves on Cantai voices, export
+   one audio file per staff, and have Claude mix them into rehearsal tracks.
 
 Steps 7 and 8 of the skill cover the other common ask: re-voicing a piece for a
 different ensemble under a director's instructions, collapsing two voices onto one

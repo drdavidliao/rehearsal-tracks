@@ -1,6 +1,6 @@
 ---
 name: "choral-pdf-to-singable-musicxml"
-description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for practice tracks, part-dominant recordings, or MusicXML/MIDI from sheet music."
+description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant, part-left and balanced mp3s from Sibelius audio stems), or MusicXML/MIDI from sheet music."
 ---
 
 # Choral PDF → singable MusicXML
@@ -48,12 +48,12 @@ handling. Never print from it.
 Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
 (cantai.app).
 
-**Make part-predominant practice tracks.** Export one audio file per staff from
-Sibelius (solo each staff, File > Export > Audio), put them in one folder,
-connect or attach it, and write something like:
+**Make rehearsal tracks.** Export one audio file per staff from Sibelius
+(solo each staff, File > Export > Audio), put them in one folder, connect or
+attach it, and write something like:
 
 ```
-Make a set of part-predominant tracks using the audio files in the Shenandoah folder.
+Make rehearsal tracks from the audio files in the Shenandoah folder.
 ```
 
 That is Step 9: check every stem, then per part one predominant mp3 and one
@@ -75,7 +75,7 @@ engraving and for most synths. Step 6 is a separate, opt-in post-process that
 rewrites lyrics so Sibelius's Cantai singer sounds every note; its output is *not*
 for printing. Steps 7–8 are for the other common ask: re-voicing the piece for a
 different ensemble and laying it out to be printed and sung from. Step 9 turns
-the finished score into part-predominant learning tracks. Never mix the
+the finished score into rehearsal tracks. Never mix the
 Cantai file with the rest — deliver the faithful file always, and the Cantai file
 in addition when asked for learning tracks.
 
@@ -954,13 +954,14 @@ differently-encoded credits, each labelled with the encoding that produced it,
 answered every question in a single import. Build the probe the moment you are
 guessing twice about the same thing.
 
-## Step 9 — Stems and part-predominant learning tracks
+## Step 9 — Stems and rehearsal tracks
 
-What a chorus actually rehearses from is one mp3 per part with that part on
-top: the part loud, the other voices faint, the piano as written. Each set also
-gets one part-left mp3 per part (that part hard left, the other voices hard
-right, the piano centred) and one Balanced track with every part at the same
-level. Sibelius does not make these.
+A set of **rehearsal tracks** is three kinds of mp3, and "make rehearsal
+tracks" means all three (so do older requests for "part-predominant tracks" or
+"practice tracks"): per part, one predominant track (the part loud, the other
+voices faint, the piano as written) and one part-left track (the part hard
+left, the other voices hard right, the piano centred); and one Balanced track
+with every part at the same level. Sibelius does not make these.
 Export one audio stem per staff, check every stem, and mix in ffmpeg.
 Everything in this step was worked out on the solo-and-TTBB piece
 (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
@@ -1682,7 +1683,7 @@ an arranger's and an adapter's names on that same scanned-octavo score. The
 crossed-parts rules (7.6), the tie-stays-in-its-voice rule (7.4) and the
 barline rule (8.5) come from proofreading its TTBB print layout in Sibelius.
 
-Step 9 comes from exporting Cantai stems and mixing part-predominant tracks for
+Step 9 comes from exporting Cantai stems and mixing rehearsal tracks for
 the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
 session; its ffmpeg checks and mix command were re-run on synthetic stems
 before being written here. The Balanced track, the above-full-scale peak
