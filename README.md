@@ -167,6 +167,14 @@ python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
 ```
 
+## Song titles stay out
+
+Nothing committed here names a commercial song: not its title, its composer or
+arranger, its catalogue number or its lyrics. Pieces are described by what they
+are ("the unaccompanied TTBB"), and examples use *Shenandoah*. Scores, stems,
+bench pages and mp3s belong in each song's own folder, outside this repo;
+`.gitignore` refuses them here as a backstop.
+
 ## Licence
 
 `LICENSE.txt` — the Unlicense, a public-domain dedication. It covers the tooling

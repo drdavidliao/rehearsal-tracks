@@ -108,6 +108,20 @@ pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brot
 # and poppler-utils for pdftoppm / pdftotext
 ```
 
+**No song titles in this repository.** The pieces this method is used on are
+commercial, and their names stay out of the repo: out of SKILL.md, README.md,
+the scripts and their comments, commit messages, and any file committed here.
+That covers the title, the composer, lyricist and arranger names that identify
+the piece, publisher catalogue numbers, and quoted lyric fragments longer than
+a generic word or two. When a lesson goes into this file, describe the piece by
+what it is — "the unaccompanied TTBB", "the scanned SATB octavo", "a TTBB
+with two soloists and piano" — and write examples with a public-domain title
+(*Shenandoah*) or none. The piece's own folder is a different matter: PDFs,
+MusicXML, stems, bench pages and mp3s are named after the song as usual, and
+never live in or get committed to this repo (`.gitignore` refuses score, audio
+and bench files as a backstop). Before committing a change to this repo, search
+the diff for the titles of the pieces worked on in the session.
+
 The only thing fetched from the network is the MusicXML schema, at verification
 time (Step 5).
 
@@ -3102,6 +3116,8 @@ chord-symbol accidentals are `<text font-family="Leipzig">` at private-use code
 points — sharp `U+EA66`. See 8.4.
 
 ## Credits
+
+Pieces are described, not named (see *No song titles in this repository*).
 
 The Cantai section, the extension-line-as-source rule, the shared-hyphen rule,
 the Helsinki appendix, the clap-part encoding and checks 8–11 come from
