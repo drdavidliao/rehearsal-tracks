@@ -116,13 +116,14 @@ writes three kinds of mp3 beside the originals, named for Chorus Connection:
 
 | File | What it does | Needs |
 |---|---|---|
-| `SKILL.md` | The whole method, start to finish. The six scripts below are printed inside it in full, so it is self-contained. | — |
+| `SKILL.md` | The whole method, start to finish. The seven scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
 | `musicxml_qc.py` | Pre-synthesis QC: bar lengths, lyrics, octave jumps, clef flips. | stdlib |
 | `cantai_mode.py` | Post-processes a finished file so Cantai sings every note. Not for printing. | stdlib |
 | `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
+| `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 
 ## Setup
@@ -140,6 +141,7 @@ network is the MusicXML schema, at verification time.
 python3 check_pdf_type.py score.pdf
 python3 find_performer_instructions.py score.pdf --all-text
 python3 musicxml_qc.py score.musicxml
+python3 verify.py score.musicxml --pdf score.pdf --lanes "0a=Tenor,0b=Lead,1a=Baritone,1b=Bass"
 python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
 python3 lyric_collisions.py score-laid-out.musicxml 7.0
 python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"

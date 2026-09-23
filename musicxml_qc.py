@@ -67,7 +67,7 @@ def qc(path):
                     w=t.text.strip()
                     if not OK_CHARS.match(w):
                         issues['garbled lyric'].append(f"{pid} m{num}: {w!r}")
-                    elif re.fullmatch(r'(\w+)\1', w, re.I):
+                    elif re.fullmatch(r'(\w{2,})\1', w, re.I):   # 'songsong'; not 'Oo'
                         issues['doubled lyric'].append(f"{pid} m{num}: {w!r}")
                 p=n.find('pitch')
                 if p is None or n.find('chord') is not None: continue
