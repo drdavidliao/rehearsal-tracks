@@ -86,11 +86,11 @@ the finished score into rehearsal tracks. Never mix the
 Cantai file with the rest — deliver the faithful file always, and the Cantai file
 in addition when asked for learning tracks.
 
-**This file is self-contained.** The seven scripts it refers to are printed in
+**This file is self-contained.** The eight scripts it refers to are printed in
 full under *Scripts* near the end. Write them out to disk verbatim before you
 start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
-`cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `verify.py`. There
-are no other files to obtain.
+`cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `verify.py`,
+`rehearsal_mix.py`. There are no other files to obtain.
 
 **Nothing is delivered until `verify.py` has run on it** (Step 5), and its table
 goes into the handback as printed. The rules in this file are prose, and prose
@@ -100,7 +100,7 @@ missing hyphen in "long-in'" by eye. A check that exists as a script that fails
 out loud does not get skipped.
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab
 # and poppler-utils for pdftoppm / pdftotext
 ```
 
@@ -1018,13 +1018,16 @@ guessing twice about the same thing.
 
 ## Step 9 — Stems and rehearsal tracks
 
-A set of **rehearsal tracks** is three kinds of mp3, and "make rehearsal
-tracks" means all three (so do older requests for "part-predominant tracks" or
+A set of **rehearsal tracks** is five kinds of mp3, and "make rehearsal
+tracks" means all five (so do older requests for "part-predominant tracks" or
 "practice tracks"): per part, one predominant track (the part loud, the other
 voices faint, the piano as written) and one part-left track (the part hard
-left, the other voices hard right, the piano centred); and one Balanced track
-with every part at the same level. Sibelius does not make these.
-Export one audio stem per staff, check every stem, and mix in ffmpeg.
+left, the other voices hard right, the piano centred); and three Balanced
+tracks with every part at the same level: plain (no panning), panned (the
+voices spread across the stereo field) and 3D (the voices placed around the
+listener, for headphones). Sibelius does not make these.
+Export one audio stem per staff, check every stem, and mix with
+`rehearsal_mix.py`, which makes the whole set in one run (9.4).
 Everything in this step was worked out on the solo-and-TTBB piece
 (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
 observations from that session, not documented behaviour.
@@ -1105,6 +1108,37 @@ Tenor 1 rest came back as `EXTRA 1:16.3-1:19.2 (bars 28-29)`. It cannot tell two
 staves with the same rhythm apart (the Baritone stem filed as Bass passed), and
 it does not expand repeats.
 
+**The line-up is anchored at the first entrances.** It used to be fitted to
+every phrase onset, and on the unaccompanied TTBB, which is built from repeated "doo doot"
+figures, that fit locked on 1.5 bars (2.7 s) late: every stem "matched", and
+the one flag it raised, an EXTRA at the Tenor's entrance, was false. It now
+takes the offset from where each part first sounds against where the score
+brings it in, refines only the tempo, and prints each part's first entrance.
+A part that misses the line-up by more than `--tol` is reported LATE — the
+ensemble-voice bug of 9.3, which the old fit absorbed into its offset. Tested on
+the unaccompanied TTBB's stems: clean stems match with the line-up at −0.05 s; Tenor pushed
+5 s late came back `LATE by 5.0 s` (the old fit blamed bars 12–15); Lead
+silenced from 1:20 came back `SILENT 1:24.6-1:55.5 (bars 48-65)`, the phrase
+already under way at 1:20 still sounding enough to pass; four seconds of Bass
+copied into the Tenor's rest in bars 57–58 came back `EXTRA` — only after
+`--gap` went from 2.0 to 1.0 s, because a 4.4 s rest less 1.5 s of slack at
+each end was too short to judge.
+
+**Which stem is which part, when rhythm cannot tell.** Stems named for the
+chorus's sections (Tenor 1, Tenor 2) need not match the score's part names
+(Tenor, Lead), and two parts in the same rhythm pass `stem_vs_score.py` either
+way round. Settle it with the first entrances (the script prints them) and the
+median sung pitch of each stem; on the unaccompanied TTBB, Tenor 1 sat near G4 and Tenor 2 near
+C4, so Tenor 1 was the Tenor and Tenor 2 the Lead.
+
+**Stems rendered at different levels.** On the unaccompanied TTBB the Bass stem sang about
+9 dB hotter than the other three (median level while sounding), which would
+have made the Balanced track mostly Bass. Measure each stem's level while
+sounding, not its mean (a part that rests less has a higher mean), and where
+one stem is off by several dB, trim that stem before the mix gains and say so
+in the handback. That is balancing in the mix (9.1), not evening out the
+tracks' loudness (9.4).
+
 ### 9.3 What went wrong in Cantai exports
 
 - **The plug-in leaks the previous staff's audio.** The stem exported right
@@ -1125,6 +1159,17 @@ it does not expand repeats.
 
 ### 9.4 Mix
 
+```
+python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" \
+  "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav" [--accomp "Piano=Piano.wav"] [--trim "Bass=-9"]
+```
+
+List the voices **lowest first**: the order sets the panned and 3D layouts. It
+prints every stem's level while sounding and suggests a `--trim` for a stem
+several dB off the others; apply it and rerun. It writes 2 × parts + 3 mp3s and
+prints each one's peak and the gain applied. For the unaccompanied TTBB (four voices, no
+accompaniment) that was eleven tracks. What it does, and why:
+
 For each featured part: the featured voice +3 dB, every other voice −21 dB, the
 piano at 0 dB, summed without normalising, then encoded. These are the defaults;
 use others only when the user asks. The other voices were at −18 dB until
@@ -1141,7 +1186,43 @@ ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i 
 ```
 
 **Always make a Balanced track as well:** every voice and the piano at 0 dB,
-nothing featured. It is part of every set, not an extra.
+nothing featured, as exported. It is part of every set, not an extra.
+
+**Always make a panned Balanced track and a 3D Balanced track as well.** Cantai
+single voices come out nearly centred with a little reverb, so the plain
+Balanced track puts four singers in one spot. The layouts below are the ones the
+user settled on, by ear, on the unaccompanied TTBB (TTBB). Both are standard; change them only
+when the user asks.
+
+- **Panned** (`Title - Balanced panned.mp3`): the voices evenly from 45% left
+  (lowest) to 45% right (highest) — four voices at 45% left, 15% left, 15%
+  right, 45% right. Constant-power pan, scaled so a centred voice keeps its
+  level: at 45% the voice is 6.7 dB louder in the near channel, at 15% 2.1 dB.
+  Accompaniment centred.
+- **3D** (`Title - Balanced 3D, use headphones.mp3`): each voice folded to mono
+  and convolved with the head-related impulse response for its direction, at
+  ear height, listener facing north. The lowest voice is rear-left (135°) and
+  the highest rear-right (225°); the others are spread evenly across the front
+  between 10° left and 10° right — four voices: Bass rear-left, Baritone 10°
+  left, Tenor 2 10° right, Tenor 1 rear-right. Accompaniment straight ahead.
+  The set is the MIT KEMAR dummy head, measured with "a Realistic Optimus Pro 7
+  loudspeaker mounted 1.4 meters from the KEMAR"
+  (https://sound.media.mit.edu/resources/KEMAR.html), every 5° at ear height,
+  and shipped inside the `slab` package (`pip install slab`; the script stubs
+  out slab's audio-playback import, which needs PortAudio). The set is exactly
+  left/right symmetric, so a right-hand direction is the left-hand filter with
+  the ears swapped. It is loudness-matched to the panned track and then turned
+  down on its own if it would clip.
+
+  Headphones only; on speakers it is coloured and the positions collapse. A
+  generic dummy head gives clear left/right but unreliable front/back, so a
+  rear voice may be heard beside or even ahead of the listener. The HRTF barely
+  changes past about a metre and this set has no distance setting: distance
+  would come from level, direct-to-reverberant ratio and treble, and a stem's
+  baked-in reverb means a voice can be pushed back but not brought closer.
+
+Name them without parentheses: a parenthesised word is how Chorus Connection
+knows a section, and there is no section called "3D".
 
 **Always make a part-left track for every part as well.** The featured voice
 goes hard left, every other voice hard right, and the piano (or whatever the
@@ -1178,21 +1259,33 @@ Do not otherwise even out the tracks' loudness.
 
 **Filenames for Chorus Connection:** put the section in parentheses —
 `Shenandoah - (Tenor 2) predominant.mp3`. A Solo track gets no parentheses;
-Chorus Connection has no Solo section to file it under. Nor does the Balanced
-track, which belongs to no section: `Shenandoah - Balanced.mp3`. Part-left
-tracks follow the same pattern: `Shenandoah - (Tenor 2) part-left.mp3`,
-`Shenandoah - Solo part-left.mp3`.
+Chorus Connection has no Solo section to file it under. Nor do the Balanced
+tracks, which belong to no section: `Shenandoah - Balanced.mp3`,
+`Shenandoah - Balanced panned.mp3`, `Shenandoah - Balanced 3D, use
+headphones.mp3`. Part-left tracks follow the same pattern:
+`Shenandoah - (Tenor 2) part-left.mp3`, `Shenandoah - Solo part-left.mp3`.
+
+**Check what landed, not what was sent.** On the unaccompanied TTBB a file written to the
+user's computer, reported as written, turned out to hold the previous version
+of the same filename: the 3D track the user was told had its front voices at
+10° still had them at 22.5°. File sizes and checksums do not settle it (the
+mp3s written to the user's computer that night each arrived about 5.8 KB larger
+than they left, with the audio intact). After delivering, measure the
+audio in the file on the user's computer — for a panned or 3D track, each
+voice's left/right balance — and resend from a new source path if it is the old
+one.
 
 ## Scripts
 
-All seven are complete and standalone. Write them out as-is; nothing else is
+All eight are complete and standalone. Write them out as-is; nothing else is
 needed. `check_pdf_type.py` and `find_performer_instructions.py` need only
 `pdfplumber`; `musicxml_qc.py` and `cantai_mode.py` need only the standard
 library; `lyric_collisions.py` needs `verovio` and `lxml`; `stem_vs_score.py`
 needs `numpy` and `ffmpeg`; `verify.py` needs `lxml`, plus `pdfplumber` with
 `--pdf` and `verovio` and `cairosvg` with `--render`, and calls
 `musicxml_qc.py`, `find_performer_instructions.py` and `lyric_collisions.py`, so
-keep all three beside it.
+keep all three beside it; `rehearsal_mix.py` needs `numpy`, `ffmpeg` with
+libmp3lame, and `slab` for the 3D track.
 
 
 ### check_pdf_type.py
@@ -1704,7 +1797,7 @@ if __name__ == '__main__':
 """Check exported audio stems against the MusicXML they were rendered from.
 
     python3 stem_vs_score.py score.musicxml "Tenor 1=T1.wav" "Tenor 2=T2.wav" ...
-        [--thresh -50] [--gap 2.0] [--tol 1.5]
+        [--thresh -50] [--gap 1.0] [--tol 1.5]
 
 Each argument after the score pairs a part name (as in <part-name>) with its
 stem. For every part the script lists where the score has notes and where it
@@ -1716,6 +1809,8 @@ up with the audio, and reports, by bar number:
   EXTRA   - a written rest (at least --gap s long once the slack is taken
             off) that mostly sounds in the stem: audio leaked in from another
             staff
+  LATE    - a part whose first entrance misses the line-up by more than --tol:
+            the late-entrance bug of an ensemble Cantai voice
 
 It cannot tell apart two staves that sing the same rhythm (a stem filed under
 the wrong name in homophonic writing passes); the checksum comparison in the
@@ -1723,9 +1818,12 @@ stem checks catches exact copies. Repeats, D.S. and D.C. are not expanded, so
 a score that uses them reports everything after the first jump; check against
 a copy with the repeats written out.
 
-Alignment: a straight-line map from score seconds to audio seconds, fitted to
-the onsets of every part's phrases. That absorbs the lead-in silence and a
-uniformly faster or slower playback, but not a ritard or fermata that playback
+Alignment: a straight-line map from score seconds to audio seconds, anchored at
+the parts' first entrances (the median of stem entrance minus score entrance),
+with only the tempo refined on the onsets of every part's phrases. A part whose
+first entrance misses the anchor by more than --tol is reported LATE or EARLY:
+that is the late-entrance bug of an ensemble Cantai voice. The map absorbs the
+lead-in silence and a uniformly faster or slower playback, but not a ritard or fermata that playback
 stretches more than the file says; --tol (seconds of slack at every phrase edge)
 covers most of that. A phrase counts as missing only when under 10% of its
 middle sounds, and a rest as leaked only when over 30% of its middle sounds,
@@ -1828,7 +1926,7 @@ def main():
     ap.add_argument('score')
     ap.add_argument('pairs', nargs='+', help='"Part name=stem.wav"')
     ap.add_argument('--thresh', type=float, default=-50.0, help='dBFS; quieter counts as silent')
-    ap.add_argument('--gap', type=float, default=2.0, help='shortest rest (after slack) worth judging (s)')
+    ap.add_argument('--gap', type=float, default=1.0, help='shortest rest (after slack) worth judging (s)')
     ap.add_argument('--tol', type=float, default=1.5, help='slack at every phrase edge (s)')
     a = ap.parse_args()
 
@@ -1843,12 +1941,16 @@ def main():
     # phrase onsets: score (seconds at the written tempo) and audio
     sc = {n: [(beats_to_sec(x, tempos), beats_to_sec(y, tempos)) for x, y in parts[n]] for n in stems}
     au = {n: [r for r in runs(stems[n]) if r[1] - r[0] >= 0.3] for n in stems}
-    firsts = [(sc[n][0][0], au[n][0][0]) for n in stems if sc[n] and au[n]]
+    # Anchor the line-up at the first entrances: where each part first sounds in its stem
+    # against where the score says it comes in. Fitting on phrase onsets alone can lock on a
+    # bar or two late in music built from repeated figures (one piece: 2.7 s late, a false EXTRA
+    # at the Tenor entrance), because every "doo doot" looks like its neighbour.
+    firsts = {n: (sc[n][0][0], au[n][0][0]) for n in stems if sc[n] and au[n]}
     if not firsts:
         sys.exit('no part has both notes in the score and sound in its stem')
-    off = float(np.median([y - x for x, y in firsts]))
-    scale = 1.0
-    for _ in range(3):                       # refit on phrase onsets that pair up
+    off = float(np.median([y - x for x, y in firsts.values()]))
+    scale, pairs = 1.0, []
+    for win in (1.5, 1.0, 0.75):             # refine the tempo only; the anchor stays put
         pairs = []
         for n in stems:
             ons = np.array([r[0] for r in au[n]])
@@ -1857,11 +1959,12 @@ def main():
             for x, _y in sc[n]:
                 g = off + scale * x
                 k = int(np.argmin(np.abs(ons - g)))
-                if abs(ons[k] - g) < 3.0:
+                if abs(ons[k] - g) < win:
                     pairs.append((x, ons[k]))
         if len(pairs) >= 4:
             X = np.array(pairs)
-            scale, off = np.polyfit(X[:, 0], X[:, 1], 1)
+            s = float(np.dot(X[:, 0], X[:, 1] - off) / max(np.dot(X[:, 0], X[:, 0]), 1e-9))
+            scale = min(max(s, 0.9), 1.1)
     to_audio = lambda s: off + scale * s
 
     bar_sec = [(to_audio(beats_to_sec(b, tempos)), num) for b, num in bars]
@@ -1871,11 +1974,19 @@ def main():
             if s <= t + 1e-6 and num != 'end':
                 cur = num
         return cur
-    fmt = lambda t: f'{int(t // 60)}:{t % 60:04.1f}'
+    fmt = lambda t: ('-' if t < 0 else '') + f'{int(abs(t) // 60)}:{abs(t) % 60:04.1f}'
 
     print(f'alignment: audio = {off:+.2f} s + {scale:.4f} x score time '
-          f'({len(pairs) if len(pairs) >= 4 else 0} phrase onsets fitted)')
+          f'(anchored at the first entrances; {len(pairs) if len(pairs) >= 4 else 0} phrase onsets fitted)')
     problems = 0
+    print('\nfirst entrances (score -> audio):')
+    for n, (x, y) in firsts.items():
+        late = y - to_audio(x)
+        flag = ''
+        if abs(late) > a.tol:
+            flag = f'   <- {"LATE" if late > 0 else "EARLY"} by {abs(late):.1f} s'
+            problems += 1
+        print(f'   {n}: bar {bar_at(to_audio(x))}, {fmt(to_audio(x))} expected, {fmt(y)} in the stem{flag}')
     for n in stems:
         mask = stems[n]
         L = len(mask)
@@ -2632,6 +2743,204 @@ if __name__ == '__main__':
     main()
 ```
 
+### rehearsal_mix.py
+
+```python
+#!/usr/bin/env python3
+"""Mix a full set of rehearsal tracks from per-staff stems (SKILL.md Step 9.4).
+
+    python3 rehearsal_mix.py TITLE OUT_DIR "Bass=bass.wav" "Baritone=bari.wav" "Tenor 2=t2.wav" "Tenor 1=t1.wav"
+                             [--accomp "Piano=piano.wav"] [--trim "Bass=-9"] [--featured 3] [--others -21]
+
+List the voices from the LOWEST to the HIGHEST: the order sets the stereo and 3D
+layouts. An accompaniment stem (--accomp, repeatable) is never featured and stays
+at 0 dB.
+
+Writes, for every voice V (parentheses around the section name, for Chorus
+Connection; a voice named Solo... gets none):
+    TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment 0 dB
+    TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment as exported
+and once:
+    TITLE - Balanced.mp3                everything at 0 dB, as exported (no panning)
+    TITLE - Balanced panned.mp3         voices spread across the stereo field, lowest on the left
+    TITLE - Balanced 3D, use headphones.mp3
+                                        voices placed around the listener with a dummy-head HRTF
+
+Layouts, from a TTBB set the user settled on (TTBB: Bass, Baritone, Tenor 2, Tenor 1):
+  panned  lowest to highest evenly from 45% left to 45% right (four voices: -45, -15, +15, +45),
+          constant-power pan scaled so a centred voice keeps its level; accompaniment centred.
+  3D      listener facing north; lowest voice rear-left (135 deg), highest rear-right (225 deg),
+          the rest evenly across the front between 10 deg left and 10 deg right (four voices:
+          Bass 135, Baritone 10 left, Tenor 2 10 right, Tenor 1 225); accompaniment straight
+          ahead (0 deg). Ear height. MIT KEMAR dummy head, measured at 1.4 m, from the `slab`
+          package (pip install slab). Loudness matched to the panned Balanced track.
+
+Stem levels: every stem's median level while sounding is printed. A stem several dB off
+the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
+
+Peaks: every mix is measured before encoding. Only if one goes over 0 dBFS are ALL of them
+turned down by the same amount (the loudest lands at -1 dBFS), so the tracks keep their
+loudness relative to one another. The 3D track, a headphone extra, is loudness-matched to
+the panned Balanced track and then turned down on its own if it would clip.
+
+Needs numpy and ffmpeg (with libmp3lame); slab for the 3D track (without it the 3D track is
+not made, the script says so and exits 1).
+"""
+import sys, os, types, argparse, subprocess
+import numpy as np
+
+SR = 44100
+
+
+def load(path):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-ar', str(SR), '-ac', '2', '-f', 'f64le', '-'],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.float64).reshape(-1, 2).copy()
+
+
+def sounding_level(x):
+    m = x.mean(1); w = SR // 10; n = len(m) // w
+    r = 20 * np.log10(np.sqrt((m[:n * w].reshape(n, w) ** 2).mean(1)) + 1e-12)
+    s = r[r > -45]
+    return float(np.median(s)) if len(s) else float('-inf'), len(s) / 10
+
+
+def pad(x, n):
+    return np.vstack([x, np.zeros((n - len(x), 2))]) if len(x) < n else x[:n]
+
+
+def db(g):
+    return 10 ** (g / 20)
+
+
+def mono(x):
+    return x.mean(1)
+
+
+def pan_positions(k):
+    return [0.0] if k == 1 else list(np.linspace(-0.45, 0.45, k))
+
+
+def azimuths(k):
+    """degrees counterclockwise from straight ahead (90 = left), lowest voice first"""
+    if k == 1: return [0.0]
+    if k == 2: return [135.0, 225.0]
+    front = [0.0] if k == 3 else list(np.linspace(10, -10, k - 2))
+    return [135.0] + [a % 360 for a in front] + [225.0]
+
+
+def hrir_bank():
+    sys.modules.setdefault('sounddevice', types.ModuleType('sounddevice'))   # slab imports it; playback unused
+    import slab
+    h = slab.HRTF.kemar()
+    src = np.asarray(h.sources.vertical_polar, float)
+
+    def left_side(az):                       # 0..180, measured every 5 deg at ear height
+        near = sorted(range(len(src)), key=lambda i: abs(src[i, 0] - az) + 1000 * abs(src[i, 1]))[:2]
+        a, b = near
+        if abs(src[a, 0] - az) < 0.01: return np.asarray(h.data[a].data, float)
+        wa = abs(src[b, 0] - az) / abs(src[b, 0] - src[a, 0])       # blend the two measured neighbours
+        return wa * np.asarray(h.data[a].data, float) + (1 - wa) * np.asarray(h.data[b].data, float)
+
+    def hrir(az):
+        az = az % 360
+        if az <= 180: return left_side(az)
+        return left_side(360 - az)[:, ::-1]  # the set is left/right symmetric: mirror the left side
+    return hrir
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('title'); ap.add_argument('out')
+    ap.add_argument('voices', nargs='+', help='"Name=stem.wav", lowest voice first')
+    ap.add_argument('--accomp', action='append', default=[])
+    ap.add_argument('--trim', action='append', default=[], help='"Name=-9": dB applied to that stem first')
+    ap.add_argument('--featured', type=float, default=3.0)
+    ap.add_argument('--others', type=float, default=-21.0)
+    a = ap.parse_args()
+    os.makedirs(a.out, exist_ok=True)
+    trims = {k: float(v) for k, v in (t.split('=', 1) for t in a.trim)}
+    V = [tuple(s.split('=', 1)) for s in a.voices]
+    A = [tuple(s.split('=', 1)) for s in a.accomp]
+    for n in trims:
+        if n not in {x for x, _ in V + A}: sys.exit(f'--trim names {n!r}, which is not a stem')
+    st = {n: load(p) for n, p in V + A}
+    N = max(len(x) for x in st.values())
+    st = {n: pad(x, N) * db(trims.get(n, 0.0)) for n, x in st.items()}
+    names = [n for n, _ in V]; acc = [n for n, _ in A]
+
+    print('stem levels while sounding (after --trim):')
+    lv = {n: sounding_level(st[n]) for n in names + acc}
+    ref = np.median([lv[n][0] for n in names])
+    for n in names + acc:
+        l, secs = lv[n]
+        flag = f'   <- {l - ref:+.1f} dB from the other voices: consider --trim "{n}={-(l - ref):.0f}"' \
+            if n in names and abs(l - ref) >= 4 else ''
+        print(f'   {n:12s} {l:6.1f} dBFS over {secs:5.1f} s{flag}')
+
+    label = lambda n: n if n.lower().startswith('solo') else f'({n})'
+    accsum = sum((st[n] for n in acc), np.zeros((N, 2)))
+    mixes = {}
+    for v in names:
+        mixes[f'{a.title} - {label(v)} predominant'] = accsum + sum(
+            st[n] * db(a.featured if n == v else a.others) for n in names)
+        L = mono(st[v]); R = sum((mono(st[n]) for n in names if n != v), np.zeros(N))
+        mixes[f'{a.title} - {label(v)} part-left'] = accsum + np.stack([L, R], 1)
+    mixes[f'{a.title} - Balanced'] = accsum + sum(st[n] for n in names)
+    panned = np.outer(mono(accsum), [1, 1])
+    for n, p in zip(names, pan_positions(len(names))):
+        th = (p + 1) * np.pi / 4
+        panned = panned + np.outer(mono(st[n]), [np.sqrt(2) * np.cos(th), np.sqrt(2) * np.sin(th)])
+    mixes[f'{a.title} - Balanced panned'] = panned
+    print('\npanned: ' + ', '.join(f'{n} ' + ('centre' if abs(p) < 1e-9 else f'{abs(p)*100:g}% {"left" if p < 0 else "right"}')
+                                   for n, p in zip(names, pan_positions(len(names)))))
+
+    missing3d = None
+    try:
+        hrir = hrir_bank()
+    except Exception as ex:
+        missing3d = f'{ex.__class__.__name__}: {ex}'
+    if missing3d is None:
+        out = np.zeros((N + 1024, 2))
+        place = list(zip(names, azimuths(len(names)))) + [(n, 0.0) for n in acc]
+        for n, az in place:
+            f = hrir(az); m = mono(st[n])
+            for ch in (0, 1):
+                y = np.convolve(m, f[:, ch]); out[:len(y), ch] += y
+        out = out[:N]
+        rms = lambda x: np.sqrt((x ** 2).mean())
+        out *= rms(panned) / rms(out)
+        mixes[f'{a.title} - Balanced 3D, use headphones'] = out
+        side = lambda az: 'ahead' if az == 0 else (f'{az:g} deg left' if az <= 180 else f'{360 - az:g} deg right')
+        print('3D: ' + ', '.join(f'{n} {side(az)}' for n, az in place))
+
+    # Peaks. The tracks singers switch between keep their loudness relative to one another: only if
+    # one of them goes over 0 dBFS are all of them turned down, by the same amount. The 3D track is
+    # a headphone extra: loudness-matched to the panned Balanced track, then turned down on its
+    # own if it would clip (one piece: +1.1 dBFS, taken to -1).
+    three_d = f'{a.title} - Balanced 3D, use headphones'
+    peaks = {k: 20 * np.log10(np.abs(x).max() + 1e-12) for k, x in mixes.items()}
+    worst = max(v for k, v in peaks.items() if k != three_d)
+    gains = {k: (-(worst + 1.0) if worst > 0 else 0.0) for k in mixes}
+    if three_d in mixes:
+        gains[three_d] = min(gains[three_d], -(peaks[three_d] + 1.0)) if peaks[three_d] + gains[three_d] > 0 else gains[three_d]
+    print('\npeaks before encoding, and the gain applied:')
+    for k in mixes: print(f'   {peaks[k]:+6.2f} dBFS  {gains[k]:+5.2f} dB  {k}')
+    for k, x in mixes.items():
+        y = (x * db(gains[k])).astype(np.float32)
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                        '-c:a', 'libmp3lame', '-b:a', '192k', '-joint_stereo', '1', os.path.join(a.out, k + '.mp3')],
+                       input=y.tobytes(), check=True)
+    print(f'\n{len(mixes)} tracks written to {a.out}')
+    if missing3d:
+        print(f'3D track NOT made: the HRTF set could not be loaded ({missing3d}); pip install slab')
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
+```
+
 ## Appendix — Sibelius "Opus" font glyph codes
 
 Empirically determined. **Other engravers use other fonts** (Finale = Maestro,
@@ -2726,6 +3035,11 @@ measurement, the −21 dB default and the entrance-pattern note come from mixing
 the set for the 2008 Sibelius TTBB. The part-left
 tracks come from the set for the scanned SATB octavo; `stem_vs_score.py` was
 tested on its stems. The stop-for-good dropouts come from exports of the two-soloist TTBB and the solo-and-TTBB piece.
+
+The panned and 3D Balanced tracks, `rehearsal_mix.py`, the anchored line-up in
+`stem_vs_score.py` and the check-what-landed rule (9.4) come from mixing the
+the unaccompanied TTBB set, where the front pair of the 3D layout went from 45° to 22.5° to
+10° by ear.
 
 `verify.py`, the page-over-notes rules for extension lines (2.5) and the
 Finale ledger-line note come from the unaccompanied TTBB (unaccompanied TTBB in closed score, a Finale/Maestro vector PDF from

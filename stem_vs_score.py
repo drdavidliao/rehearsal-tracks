@@ -2,7 +2,7 @@
 """Check exported audio stems against the MusicXML they were rendered from.
 
     python3 stem_vs_score.py score.musicxml "Tenor 1=T1.wav" "Tenor 2=T2.wav" ...
-        [--thresh -50] [--gap 2.0] [--tol 1.5]
+        [--thresh -50] [--gap 1.0] [--tol 1.5]
 
 Each argument after the score pairs a part name (as in <part-name>) with its
 stem. For every part the script lists where the score has notes and where it
@@ -14,6 +14,8 @@ up with the audio, and reports, by bar number:
   EXTRA   - a written rest (at least --gap s long once the slack is taken
             off) that mostly sounds in the stem: audio leaked in from another
             staff
+  LATE    - a part whose first entrance misses the line-up by more than --tol:
+            the late-entrance bug of an ensemble Cantai voice
 
 It cannot tell apart two staves that sing the same rhythm (a stem filed under
 the wrong name in homophonic writing passes); the checksum comparison in the
@@ -21,9 +23,12 @@ stem checks catches exact copies. Repeats, D.S. and D.C. are not expanded, so
 a score that uses them reports everything after the first jump; check against
 a copy with the repeats written out.
 
-Alignment: a straight-line map from score seconds to audio seconds, fitted to
-the onsets of every part's phrases. That absorbs the lead-in silence and a
-uniformly faster or slower playback, but not a ritard or fermata that playback
+Alignment: a straight-line map from score seconds to audio seconds, anchored at
+the parts' first entrances (the median of stem entrance minus score entrance),
+with only the tempo refined on the onsets of every part's phrases. A part whose
+first entrance misses the anchor by more than --tol is reported LATE or EARLY:
+that is the late-entrance bug of an ensemble Cantai voice. The map absorbs the
+lead-in silence and a uniformly faster or slower playback, but not a ritard or fermata that playback
 stretches more than the file says; --tol (seconds of slack at every phrase edge)
 covers most of that. A phrase counts as missing only when under 10% of its
 middle sounds, and a rest as leaked only when over 30% of its middle sounds,
@@ -126,7 +131,7 @@ def main():
     ap.add_argument('score')
     ap.add_argument('pairs', nargs='+', help='"Part name=stem.wav"')
     ap.add_argument('--thresh', type=float, default=-50.0, help='dBFS; quieter counts as silent')
-    ap.add_argument('--gap', type=float, default=2.0, help='shortest rest (after slack) worth judging (s)')
+    ap.add_argument('--gap', type=float, default=1.0, help='shortest rest (after slack) worth judging (s)')
     ap.add_argument('--tol', type=float, default=1.5, help='slack at every phrase edge (s)')
     a = ap.parse_args()
 
@@ -141,12 +146,16 @@ def main():
     # phrase onsets: score (seconds at the written tempo) and audio
     sc = {n: [(beats_to_sec(x, tempos), beats_to_sec(y, tempos)) for x, y in parts[n]] for n in stems}
     au = {n: [r for r in runs(stems[n]) if r[1] - r[0] >= 0.3] for n in stems}
-    firsts = [(sc[n][0][0], au[n][0][0]) for n in stems if sc[n] and au[n]]
+    # Anchor the line-up at the first entrances: where each part first sounds in its stem
+    # against where the score says it comes in. Fitting on phrase onsets alone can lock on a
+    # bar or two late in music built from repeated figures (one piece: 2.7 s late, a false EXTRA
+    # at the Tenor entrance), because every "doo doot" looks like its neighbour.
+    firsts = {n: (sc[n][0][0], au[n][0][0]) for n in stems if sc[n] and au[n]}
     if not firsts:
         sys.exit('no part has both notes in the score and sound in its stem')
-    off = float(np.median([y - x for x, y in firsts]))
-    scale = 1.0
-    for _ in range(3):                       # refit on phrase onsets that pair up
+    off = float(np.median([y - x for x, y in firsts.values()]))
+    scale, pairs = 1.0, []
+    for win in (1.5, 1.0, 0.75):             # refine the tempo only; the anchor stays put
         pairs = []
         for n in stems:
             ons = np.array([r[0] for r in au[n]])
@@ -155,11 +164,12 @@ def main():
             for x, _y in sc[n]:
                 g = off + scale * x
                 k = int(np.argmin(np.abs(ons - g)))
-                if abs(ons[k] - g) < 3.0:
+                if abs(ons[k] - g) < win:
                     pairs.append((x, ons[k]))
         if len(pairs) >= 4:
             X = np.array(pairs)
-            scale, off = np.polyfit(X[:, 0], X[:, 1], 1)
+            s = float(np.dot(X[:, 0], X[:, 1] - off) / max(np.dot(X[:, 0], X[:, 0]), 1e-9))
+            scale = min(max(s, 0.9), 1.1)
     to_audio = lambda s: off + scale * s
 
     bar_sec = [(to_audio(beats_to_sec(b, tempos)), num) for b, num in bars]
@@ -169,11 +179,19 @@ def main():
             if s <= t + 1e-6 and num != 'end':
                 cur = num
         return cur
-    fmt = lambda t: f'{int(t // 60)}:{t % 60:04.1f}'
+    fmt = lambda t: ('-' if t < 0 else '') + f'{int(abs(t) // 60)}:{abs(t) % 60:04.1f}'
 
     print(f'alignment: audio = {off:+.2f} s + {scale:.4f} x score time '
-          f'({len(pairs) if len(pairs) >= 4 else 0} phrase onsets fitted)')
+          f'(anchored at the first entrances; {len(pairs) if len(pairs) >= 4 else 0} phrase onsets fitted)')
     problems = 0
+    print('\nfirst entrances (score -> audio):')
+    for n, (x, y) in firsts.items():
+        late = y - to_audio(x)
+        flag = ''
+        if abs(late) > a.tol:
+            flag = f'   <- {"LATE" if late > 0 else "EARLY"} by {abs(late):.1f} s'
+            problems += 1
+        print(f'   {n}: bar {bar_at(to_audio(x))}, {fmt(to_audio(x))} expected, {fmt(y)} in the stem{flag}')
     for n in stems:
         mask = stems[n]
         L = len(mask)

@@ -100,7 +100,7 @@ Make rehearsal tracks from the audio files in the Shenandoah folder. The attache
 Claude then checks every stem against the score and reports, by bar number,
 any phrase the score has that the audio leaves silent, and any rest in the
 score that the audio fills (audio leaked in from another staff). Then Claude
-writes three kinds of mp3 beside the originals, named for Chorus Connection:
+writes five kinds of mp3 beside the originals, named for Chorus Connection:
 
 - one **predominant** track per part, with that part loud, the other voices
   faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
@@ -108,7 +108,12 @@ writes three kinds of mp3 beside the originals, named for Chorus Connection:
   hard right and the piano in the middle, e.g. `Shenandoah - (Tenor 2)
   part-left.mp3`. Take out one earbud, or turn the balance knob, to hear just
   your part and the piano, or just the piano and everyone else;
-- one `Shenandoah - Balanced.mp3`, with every part at the same level.
+- one `Shenandoah - Balanced.mp3`, with every part at the same level;
+- one `Shenandoah - Balanced panned.mp3`, the same with the voices spread
+  across the stereo field, lowest on the left;
+- one `Shenandoah - Balanced 3D, use headphones.mp3`, with the voices placed
+  around you (lowest behind-left, highest behind-right, the middle voices just
+  either side of straight ahead). Headphones only.
 
 ---
 
@@ -116,7 +121,7 @@ writes three kinds of mp3 beside the originals, named for Chorus Connection:
 
 | File | What it does | Needs |
 |---|---|---|
-| `SKILL.md` | The whole method, start to finish. The seven scripts below are printed inside it in full, so it is self-contained. | — |
+| `SKILL.md` | The whole method, start to finish. The eight scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
@@ -124,12 +129,13 @@ writes three kinds of mp3 beside the originals, named for Chorus Connection:
 | `cantai_mode.py` | Post-processes a finished file so Cantai sings every note. Not for printing. | stdlib |
 | `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
 | `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
+| `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 
 ## Setup
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab
 ```
 
 Plus `poppler-utils` for `pdftoppm` / `pdftotext`. The only thing fetched from the
@@ -145,6 +151,7 @@ python3 verify.py score.musicxml --pdf score.pdf --lanes "0a=Tenor,0b=Lead,1a=Ba
 python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
 python3 lyric_collisions.py score-laid-out.musicxml 7.0
 python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
+python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
 ```
