@@ -1412,9 +1412,14 @@ how much, and everything after it runs that much late: on the two-soloist TTBB
 0.28 s after bar 34 and 0.76 s after bar 123, which the user heard at 4:03.
 The script measures each hold by aligning the score's pitch content with the
 audio's (chroma every 50 ms, dynamic time warping within ±3 s of the straight
-line), then refines each stretch between fermatas on its onsets. The two holds
-came out 278/483 ms from the Balanced mp3 and 270/478 ms from a predominant one.
-A fermata's own note and syllable stay lit through the hold.
+line), then fits the tempo and every hold together by least squares on the
+onsets that the lights now land near. Fitted one after the other, a hold left in
+the tempo fit spreads over the whole piece: a synthetic 0.6 s hold over a
+barline measured 0.49 s that way, and 0.605 s fitted together. On the
+two-soloist TTBB the holds came out 265 and 473 ms, the same from every mp3 to
+within a few ms. A fermata counts wherever it is printed: on a note, on a rest
+(bar 34 there has it on the soloists' rests and the piano's notes) or over a
+barline. A fermata's own note and syllable stay lit through the hold.
 
 **Measure drift against pitch, not against the nearest onset.** The first
 version matched every light to the nearest onset in the audio within 0.35 s and
@@ -1423,8 +1428,8 @@ piano in sixteenths there is always an onset near enough, and the same check on
 the finished mp4s was fooled the same way. Matching the onset pattern over a few
 seconds fails too: a steady groove matches itself a beat away. Pitch content
 tells repeated bars apart. The report now gives each fermata's hold and the
-lights against the pitch alignment per 15 s (within 72 ms everywhere on the
-two-soloist TTBB, about one 50 ms step), naming the bar of any stretch 100 ms
+lights against the pitch alignment per 15 s (within 85 ms everywhere on the
+two-soloist TTBB, under two 50 ms steps), naming the bar of any stretch 100 ms
 out; ignore the last few seconds, where only reverb is left. Each finished mp4
 is checked for what the file itself can go wrong on: its audio against the mp3
 (0.0 ms) and every frame's time against the time it was meant for (exact).
@@ -3260,8 +3265,9 @@ Accompaniment staves are shown as written.
 Timing, as stem_vs_score.py does it: beats become seconds with the score's tempo marks,
 and the line-up is anchored where the audio first sounds against where the score first
 has a note; only the tempo is refined, on note onsets found in the audio. Then it is
-re-anchored after every fermata: playback holds a fermata longer than written, by an
-amount the file does not say, and everything after it runs that much late. Each hold is
+re-anchored after every fermata (on a note, a rest or a barline): playback holds a
+fermata longer than written, by an amount the file does not say, and everything after
+it runs that much late. Each hold is
 measured by aligning the score's pitch content with the audio's (chroma, dynamic time
 warping) and refined on the onsets that follow; the report gives each fermata's hold and
 checks every 15 s of the lights against the pitch alignment, naming the bar of any stretch
@@ -3793,12 +3799,32 @@ class Timing:
                 X, Y = so[ok], near[ok] - self.off
                 scale = float(np.clip(np.dot(X, Y) / max(np.dot(X, X), 1e-9), 0.9, 1.1))
         self.scale = scale
-        # coarse: where the pitch content says each moment of the score is in the audio
+        self.breaks = np.array(sorted(breaks))
+        self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
+        self.fit_holds(A, notes, so)
+        # then the tempo and every hold together, by least squares on the onsets each lands near:
+        # fitted one after the other, a hold left in the tempo spreads over the whole piece (a
+        # 0.6 s hold measured 0.49 s), and the tempo refitted round the holds overshoots
+        if len(self.breaks):
+            for win in (0.15, 0.1, 0.06):
+                H = (so[:, None] >= self.breaks[None, :]).astype(float)
+                g = self(so)
+                ok, near = self.nearest(g, win)
+                if ok.sum() < len(self.breaks) + 8:
+                    break
+                X = np.column_stack([so, H])[ok]
+                sol = np.linalg.lstsq(X, near[ok] - self.off, rcond=None)[0]
+                self.scale = float(np.clip(sol[0], 0.9, 1.1))
+                self.steps = [float(v) for v in sol[1:]]     # one column per fermata: its hold
+                self.cum = np.concatenate([[0.0], np.cumsum(self.steps)])
+            # the check in the report is against a pitch alignment on the final straight line
+            self.dtw = dtw_offset(A, chroma_score(notes, self.straight, len(A)), band=int(3.0 / HOP_C))
+
+    def fit_holds(self, A, notes, so):
+        """One offset per stretch between fermatas: coarse from the pitch alignment, fine from onsets."""
         S = chroma_score(notes, self.straight, len(A))
         self.dtw = dtw_offset(A, S, band=int(3.0 / HOP_C))
-        # one offset per stretch between fermatas: coarse from the chroma, fine from the onsets
-        self.breaks = np.array(sorted(breaks))
         edges = [-1e9] + list(self.breaks) + [1e9]
         # the alignment's own ends are loose: judge from 5 s in to 5 s before the last written note
         self.lo = 5.0
@@ -4554,13 +4580,24 @@ def main():
     # every sounding note with its pitch, for the pitch alignment; and where each fermata ends
     pitched = [(sec(n['on']), sec(n['on'] + n['dur']), n['midi']) for ns_ in notes_by_part for n in ns_
                if not n['rest'] and not n['grace'] and n['dur'] > 0 and n['midi'] is not None]
-    breaks = []
+    # a fermata on a note or a rest ends where the note or rest does; one printed over a barline
+    # (a pause on the bar line itself) ends at that barline
+    breaks, fermata_at = [], []
     for ns_ in notes_by_part:
         for n in ns_:
             if n['el'].find('.//fermata') is not None and n['dur'] > 0:
-                b = sec(n['on'] + n['dur'])
-                if all(abs(b - x) > 0.05 for x in breaks):
-                    breaks.append(b)
+                fermata_at.append(sec(n['on'] + n['dur']))
+    last = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
+    for p in parts:
+        for mi, m in enumerate(p.findall('measure')):
+            for bl in m.findall('barline'):
+                if bl.find('fermata') is not None and mi < len(starts):
+                    left = bl.get('location') == 'left'
+                    q = starts[mi] if left else (starts[mi + 1] if mi + 1 < len(starts) else last)
+                    fermata_at.append(sec(q))
+    for b in sorted(fermata_at):
+        if all(abs(b - x) > 0.05 for x in breaks):
+            breaks.append(b)
 
     # engrave
     import verovio
