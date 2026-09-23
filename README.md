@@ -76,26 +76,37 @@ Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 
 To make rehearsal tracks for each part, first export one audio file per staff
 from Sibelius: solo each staff in turn and use **File > Export > Audio**. Put
-the files in one folder, connect that folder to Claude (or attach the files),
-and write something like:
+the files in one folder **together with the MusicXML the audio was rendered
+from**, connect that folder to Claude (or attach the files), and write
+something like:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder. The MusicXML there is what they were rendered from.
+```
+
+**Include the MusicXML. It is optional, but strongly advised.** Cantai's worst
+failures are a voice that stops singing partway through and never comes back,
+and a voice that comes in late or never starts. From the audio alone those look
+exactly like a part that is resting, so Claude can only report them as
+questions ("Solo 1 is silent from 1:04 — is that right?"). With the MusicXML,
+every silence is checked against the score, bar by bar, and a voice that stops
+early is reported as an error, with the bars it misses. On one piece, Cantai
+stopped rendering Solo 1 at 1:04 while Solo 2 sang on to 1:13;
+the folder had no MusicXML, so the tracks went out with a phrase missing and
+were remade after the gap was noticed.
+
+Without the MusicXML, write:
 
 ```
 Make rehearsal tracks from the audio files in the Shenandoah folder.
 ```
 
-Claude first runs simple checks on every file for the obvious ways a Cantai
-export goes wrong: a silent file, a file that copies another staff, a voice
-that comes in late, and a voice that goes quiet partway through and never comes
-back (Cantai stops rendering it). Anything like that gets reported with the
-time it happens, so you can re-export that staff before any tracks are made.
-On their own the checks read the audio only, so a part that really does rest
-until the end is flagged as a question for you rather than as an error. To
-settle those questions, attach the MusicXML the audio was rendered from as
-well:
-
-```
-Make rehearsal tracks from the audio files in the Shenandoah folder. The attached MusicXML is what they were rendered from.
-```
+Claude then asks once whether you can add the MusicXML. If you can't, it goes
+ahead with the audio-only checks: a silent file, a file that copies another
+staff, a voice that comes in late against its section, and a voice that goes
+quiet and never comes back. Each is reported with its time, as a question for
+you rather than an error, so you can re-export that staff before any tracks are
+made.
 
 Claude then checks every stem against the score and reports, by bar number,
 any phrase the score has that the audio leaves silent, and any rest in the

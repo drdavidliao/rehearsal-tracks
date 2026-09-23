@@ -14,7 +14,7 @@ Every check ends as one of
 
 Paste the table into the handback as printed. A check that did not run is
 reported as NOT RUN, never left out: an empty result and a check nobody ran look
-the same in the output, and that is how check 10 was skipped on the unaccompanied TTBB.
+the same in the output, and that is how check 10 was once skipped.
 
 --pdf enables the checks that compare against the engraving (6, 10, 11, 12).
 --lanes says which part each lyric line of the PDF belongs to: `<staff>a` is

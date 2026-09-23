@@ -2,7 +2,8 @@
 """Mix a full set of rehearsal tracks from per-staff stems (SKILL.md Step 9.4).
 
     python3 rehearsal_mix.py TITLE OUT_DIR "Bass=bass.wav" "Baritone=bari.wav" "Tenor 2=t2.wav" "Tenor 1=t1.wav"
-                             [--accomp "Piano=piano.wav"] [--trim "Bass=-9"] [--featured 3] [--others -21]
+                             [--accomp "Piano=piano.wav"] [--trim "Bass=-9"] [--place "Solo=0"]
+                             [--only 3d] [--featured 3] [--others -21]
 
 List the voices from the LOWEST to the HIGHEST: the order sets the stereo and 3D
 layouts. An accompaniment stem (--accomp, repeatable) is never featured and stays
@@ -18,7 +19,7 @@ and once:
     TITLE - Balanced 3D, use headphones.mp3
                                         voices placed around the listener with a dummy-head HRTF
 
-Layouts, from a TTBB set the user settled on (TTBB: Bass, Baritone, Tenor 2, Tenor 1):
+Layouts, the ones the user settled on by ear for a TTBB set (Bass, Baritone, Tenor 2, Tenor 1):
   panned  lowest to highest evenly from 45% left to 45% right (four voices: -45, -15, +15, +45),
           constant-power pan scaled so a centred voice keeps its level; accompaniment centred.
   3D      listener facing north; lowest voice rear-left (135 deg), highest rear-right (225 deg),
@@ -26,6 +27,12 @@ Layouts, from a TTBB set the user settled on (TTBB: Bass, Baritone, Tenor 2, Ten
           Bass 135, Baritone 10 left, Tenor 2 10 right, Tenor 1 225); accompaniment straight
           ahead (0 deg). Ear height. MIT KEMAR dummy head, measured at 1.4 m, from the `slab`
           package (pip install slab). Loudness matched to the panned Balanced track.
+
+Soloists: the layouts are for the choral parts. Put a solo where it belongs with --place
+("Solo=0" straight ahead; "Solo 1=5R", "Solo 2=5L"); the choral parts keep the standard
+layout, and in the panned track a placed voice sits proportionally (135 deg = 45%).
+Chosen for a TTBB piece with one solo (Solo ahead) and one with two soloists (Solo 2 5 deg left,
+Solo 1 5 deg right), without listening; the user may move them.
 
 Stem levels: every stem's median level while sounding is printed. A stem several dB off
 the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
@@ -101,24 +108,43 @@ def hrir_bank():
     return hrir
 
 
+def parse_az(txt):
+    """'0', '5L', '10R', '135L' -> degrees counterclockwise from ahead (90 = left)"""
+    t = txt.strip().upper()
+    if t in ('0', 'AHEAD', 'C'): return 0.0
+    if t[-1] in 'LR': return float(t[:-1]) % 360 if t[-1] == 'L' else (-float(t[:-1])) % 360
+    return float(t) % 360
+
+
+def fftconv(x, h):
+    n = len(x) + len(h) - 1
+    size = 1 << (n - 1).bit_length()
+    return np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(h, size), size)[:n]
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('title'); ap.add_argument('out')
     ap.add_argument('voices', nargs='+', help='"Name=stem.wav", lowest voice first')
     ap.add_argument('--accomp', action='append', default=[])
     ap.add_argument('--trim', action='append', default=[], help='"Name=-9": dB applied to that stem first')
+    ap.add_argument('--place', action='append', default=[],
+                    help='"Solo=0", "Solo 1=5R", "Solo 2=5L": put a voice (or accompaniment) at a fixed '
+                         'direction instead of the automatic layout; the other voices keep theirs')
+    ap.add_argument('--only', choices=['all', '3d'], default='all', help='write every track, or only the 3D one')
     ap.add_argument('--featured', type=float, default=3.0)
     ap.add_argument('--others', type=float, default=-21.0)
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     trims = {k: float(v) for k, v in (t.split('=', 1) for t in a.trim)}
+    placed = {k: parse_az(v) for k, v in (t.split('=', 1) for t in a.place)}
     V = [tuple(s.split('=', 1)) for s in a.voices]
     A = [tuple(s.split('=', 1)) for s in a.accomp]
-    for n in trims:
-        if n not in {x for x, _ in V + A}: sys.exit(f'--trim names {n!r}, which is not a stem')
-    st = {n: load(p) for n, p in V + A}
+    for n in list(trims) + list(placed):
+        if n not in {x for x, _ in V + A}: sys.exit(f'{n!r} is not a stem')
+    st = {n: load(p).astype(np.float32) for n, p in V + A}
     N = max(len(x) for x in st.values())
-    st = {n: pad(x, N) * db(trims.get(n, 0.0)) for n, x in st.items()}
+    st = {n: (pad(x, N) * db(trims.get(n, 0.0))).astype(np.float32) for n, x in st.items()}
     names = [n for n, _ in V]; acc = [n for n, _ in A]
 
     print('stem levels while sounding (after --trim):')
@@ -130,60 +156,87 @@ def main():
             if n in names and abs(l - ref) >= 4 else ''
         print(f'   {n:12s} {l:6.1f} dBFS over {secs:5.1f} s{flag}')
 
+    # layouts: placed voices where they were put; the rest spread as usual, lowest first
+    auto = [n for n in names if n not in placed]
+    az = dict(zip(auto, azimuths(len(auto)))); az.update({n: placed.get(n, 0.0) for n in acc}); az.update(placed)
+    signed = lambda d: d if d <= 180 else d - 360                    # + left, - right
+    pan = dict(zip(auto, pan_positions(len(auto))))
+    pan.update({n: float(np.clip(-signed(placed[n]) / 135 * 0.45, -0.45, 0.45)) for n in placed})
+    pan.update({n: pan.get(n, 0.0) if n in placed else 0.0 for n in acc})
+    side = lambda d: 'ahead' if d == 0 else (f'{d:g} deg left' if d <= 180 else f'{360 - d:g} deg right')
+    print('\npanned: ' + ', '.join(f'{n} ' + ('centre' if abs(pan[n]) < 1e-9 else
+                                   f'{round(abs(pan[n])*100, 1):g}% {"left" if pan[n] < 0 else "right"}') for n in names + acc))
+    print('3D: ' + ', '.join(f'{n} {side(az[n])}' for n in names + acc))
+
     label = lambda n: n if n.lower().startswith('solo') else f'({n})'
-    accsum = sum((st[n] for n in acc), np.zeros((N, 2)))
-    mixes = {}
-    for v in names:
-        mixes[f'{a.title} - {label(v)} predominant'] = accsum + sum(
-            st[n] * db(a.featured if n == v else a.others) for n in names)
-        L = mono(st[v]); R = sum((mono(st[n]) for n in names if n != v), np.zeros(N))
-        mixes[f'{a.title} - {label(v)} part-left'] = accsum + np.stack([L, R], 1)
-    mixes[f'{a.title} - Balanced'] = accsum + sum(st[n] for n in names)
-    panned = np.outer(mono(accsum), [1, 1])
-    for n, p in zip(names, pan_positions(len(names))):
-        th = (p + 1) * np.pi / 4
-        panned = panned + np.outer(mono(st[n]), [np.sqrt(2) * np.cos(th), np.sqrt(2) * np.sin(th)])
-    mixes[f'{a.title} - Balanced panned'] = panned
-    print('\npanned: ' + ', '.join(f'{n} ' + ('centre' if abs(p) < 1e-9 else f'{abs(p)*100:g}% {"left" if p < 0 else "right"}')
-                                   for n, p in zip(names, pan_positions(len(names)))))
+    accsum = sum((st[n] for n in acc), np.zeros((N, 2), np.float32))
+    mono_ = {n: mono(st[n]) for n in names + acc}
+
+    def predominant(v):
+        return accsum + sum(st[n] * np.float32(db(a.featured if n == v else a.others)) for n in names)
+
+    def part_left(v):
+        R = sum((mono_[n] for n in names if n != v), np.zeros(N, np.float32))
+        return accsum + np.stack([mono_[v], R], 1)
+
+    def balanced():
+        return accsum + sum(st[n] for n in names)
+
+    def panned():
+        out = np.zeros((N, 2), np.float32)
+        for n in names + acc:
+            if n in acc and n not in placed:
+                out += st[n]; continue                                  # accompaniment as exported
+            th = (pan[n] + 1) * np.pi / 4
+            out += np.outer(mono_[n], np.float32([np.sqrt(2) * np.cos(th), np.sqrt(2) * np.sin(th)]))
+        return out
 
     missing3d = None
     try:
         hrir = hrir_bank()
     except Exception as ex:
         missing3d = f'{ex.__class__.__name__}: {ex}'
-    if missing3d is None:
-        out = np.zeros((N + 1024, 2))
-        place = list(zip(names, azimuths(len(names)))) + [(n, 0.0) for n in acc]
-        for n, az in place:
-            f = hrir(az); m = mono(st[n])
+    rms = lambda x: float(np.sqrt((x.astype(np.float64) ** 2).mean()))
+    pan_rms = rms(panned())
+
+    def three_d():
+        out = np.zeros((N, 2))
+        for n in names + acc:
+            f = hrir(az[n])
             for ch in (0, 1):
-                y = np.convolve(m, f[:, ch]); out[:len(y), ch] += y
-        out = out[:N]
-        rms = lambda x: np.sqrt((x ** 2).mean())
-        out *= rms(panned) / rms(out)
-        mixes[f'{a.title} - Balanced 3D, use headphones'] = out
-        side = lambda az: 'ahead' if az == 0 else (f'{az:g} deg left' if az <= 180 else f'{360 - az:g} deg right')
-        print('3D: ' + ', '.join(f'{n} {side(az)}' for n, az in place))
+                out[:, ch] += fftconv(mono_[n].astype(np.float64), f[:, ch])[:N]
+        return (out * (pan_rms / rms(out))).astype(np.float32)
+
+    builders = {}
+    for v in names:
+        builders[f'{a.title} - {label(v)} predominant'] = (lambda v=v: predominant(v))
+        builders[f'{a.title} - {label(v)} part-left'] = (lambda v=v: part_left(v))
+    builders[f'{a.title} - Balanced'] = balanced
+    builders[f'{a.title} - Balanced panned'] = panned
+    three = f'{a.title} - Balanced 3D, use headphones'
+    if missing3d is None:
+        builders[three] = three_d
 
     # Peaks. The tracks singers switch between keep their loudness relative to one another: only if
     # one of them goes over 0 dBFS are all of them turned down, by the same amount. The 3D track is
     # a headphone extra: loudness-matched to the panned Balanced track, then turned down on its
-    # own if it would clip (one piece: +1.1 dBFS, taken to -1).
-    three_d = f'{a.title} - Balanced 3D, use headphones'
-    peaks = {k: 20 * np.log10(np.abs(x).max() + 1e-12) for k, x in mixes.items()}
-    worst = max(v for k, v in peaks.items() if k != three_d)
-    gains = {k: (-(worst + 1.0) if worst > 0 else 0.0) for k in mixes}
-    if three_d in mixes:
-        gains[three_d] = min(gains[three_d], -(peaks[three_d] + 1.0)) if peaks[three_d] + gains[three_d] > 0 else gains[three_d]
+    # own if it would clip (one set: +1.1 dBFS, taken to -1). Two passes: measure every mix, then
+    # write, building one mix at a time so long pieces fit in memory.
+    peaks = {k: 20 * np.log10(float(np.abs(f()).max()) + 1e-12) for k, f in builders.items()}
+    worst = max(v for k, v in peaks.items() if k != three)
+    gains = {k: (-(worst + 1.0) if worst > 0 else 0.0) for k in builders}
+    if three in builders and peaks[three] + gains[three] > 0:
+        gains[three] = -(peaks[three] + 1.0)
+    write = [k for k in builders if a.only == 'all' or k == three]
     print('\npeaks before encoding, and the gain applied:')
-    for k in mixes: print(f'   {peaks[k]:+6.2f} dBFS  {gains[k]:+5.2f} dB  {k}')
-    for k, x in mixes.items():
-        y = (x * db(gains[k])).astype(np.float32)
+    for k in builders:
+        print(f'   {peaks[k]:+6.2f} dBFS  {gains[k]:+5.2f} dB  {k}' + ('' if k in write else '   (not written: --only 3d)'))
+    for k in write:
+        y = (builders[k]() * np.float32(db(gains[k]))).astype(np.float32)
         subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
                         '-c:a', 'libmp3lame', '-b:a', '192k', '-joint_stereo', '1', os.path.join(a.out, k + '.mp3')],
                        input=y.tobytes(), check=True)
-    print(f'\n{len(mixes)} tracks written to {a.out}')
+    print(f'\n{len(write)} track(s) written to {a.out}')
     if missing3d:
         print(f'3D track NOT made: the HRTF set could not be loaded ({missing3d}); pip install slab')
         sys.exit(1)

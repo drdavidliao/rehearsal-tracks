@@ -1,7 +1,7 @@
 # Handoff: stems and beams must not be assigned to staves by proximity
 
-Found while converting a 12/8 TTBB score (TTBB + piano,
-MuseScore/Leland vector PDF, 47 bars, 12/8, 6 staves per system). Affects
+Found while converting a 12/8 TTBB + piano score (MuseScore/Leland vector PDF,
+47 bars, 6 staves per system). Affects
 SKILL.md §2.2 and §2.3.
 
 ## The rule that is wrong
