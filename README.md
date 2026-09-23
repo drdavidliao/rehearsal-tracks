@@ -5,7 +5,7 @@ tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
 down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
-any of the scripts in this repository yourself — Claude does that. The four
+any of the scripts in this repository yourself — Claude does that. The five
 sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
@@ -126,13 +126,30 @@ writes five kinds of mp3 beside the originals, named for Chorus Connection:
   around you (lowest behind-left, highest behind-right, the middle voices just
   either side of straight ahead). Headphones only.
 
+### 🎬 &nbsp;Make follow-along videos
+
+Once the rehearsal tracks are made, write something like:
+
+```
+Make follow-along videos for the Shenandoah folder.
+```
+
+If the MusicXML there is the Cantai learning version, put the print version in
+the folder too and say which is which, so the videos show the normal words and
+slurs. You get one video per part and one for everyone, named like the mp3s
+(`Shenandoah - (Tenor 2) predominant.mp4`, `Shenandoah - Balanced.mp4`). The
+score is the closed score the singers hold, two parts to a staff. Each note and
+its word lights up in the part's colour while it sounds. Each rest lights up
+too, with a bar that fills beat by beat, so nobody has to count. In a part's
+own video, only that part lights up and everyone else is grey.
+
 ---
 
 ## What is here
 
 | File | What it does | Needs |
 |---|---|---|
-| `SKILL.md` | The whole method, start to finish. The eight scripts below are printed inside it in full, so it is self-contained. | — |
+| `SKILL.md` | The whole method, start to finish. The nine scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
@@ -141,6 +158,7 @@ writes five kinds of mp3 beside the originals, named for Chorus Connection:
 | `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
 | `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
 | `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
+| `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 
 ## Setup
@@ -163,6 +181,7 @@ python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
 python3 lyric_collisions.py score-laid-out.musicxml 7.0
 python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
 python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
+python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant.mp3" --display Shenandoah.musicxml
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
 ```
