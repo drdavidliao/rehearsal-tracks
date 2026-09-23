@@ -5,7 +5,7 @@
         "Shenandoah - (Tenor 1) predominant.mp3" "Shenandoah - (Tenor 2) predominant.mp3" ...
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
-        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--fps 30] [--warp]
+        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--warp] [--jobs N] [--check-all]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -48,14 +48,19 @@ median per stretch of the piece, so a ritardando or fermata that playback stretc
 shows up as the bar where the lights start to lag. --warp follows such drift with a
 piecewise line through the measured stretches instead of a single straight line. After
 each mp4 is written, its own audio is checked against the mp3 (an offset would shift
-everything) and sync is measured on the finished file: when each light comes on in the
-picture against the nearest onset in the file's audio.
+everything); the first mp4 of a run also gets its sync measured on the finished file: when
+each light comes on in the picture against the nearest onset in its audio (--check-all:
+every mp4). The video has a variable frame rate: one frame per change of lights or page,
+each shown from the exact millisecond of the change, so nothing is rounded to a frame grid
+and nothing is encoded twice. With several mp3s, each renders in its own process, one per
+CPU core (--jobs).
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
 8.4) and ffmpeg with libx264; stem_vs_score.py beside it. Repeats are not expanded (the
-same limit as stem_vs_score.py). A 4:48 piece at 1920x1080 takes a few minutes per video.
+same limit as stem_vs_score.py). Seven videos of a 4:48 piece took 9 minutes on 2 cores.
 """
-import sys, os, io, re, copy, math, argparse, subprocess, zipfile
+import sys, os, io, re, copy, math, argparse, subprocess, zipfile, tempfile, shutil
+from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction as Fr
 import numpy as np
 from lxml import etree
@@ -561,7 +566,8 @@ def install_smufl_font():
     chord-symbol accidentals) print as boxes unless Leipzig is installed for fontconfig
     (SKILL.md 8.4). Needs fonttools and brotli; without them the boxes stay."""
     import verovio, base64
-    dest = os.path.expanduser('~/.fonts/Leipzig.ttf')
+    # fontconfig reads ~/.fonts; cairo on a Mac finds fonts through the system, in ~/Library/Fonts
+    dest = os.path.expanduser('~/Library/Fonts/Leipzig.ttf' if sys.platform == 'darwin' else '~/.fonts/Leipzig.ttf')
     if os.path.exists(dest):
         return
     try:
@@ -704,31 +710,43 @@ class Page:
         n = len(self.elems)
         K = max(1, int(math.ceil(math.log2(n + 2))))
         top = root
-        def plane(bits, invert=False):
+        def plane(group):
+            """group None: every piece black (the ink). Otherwise every piece drawn in a colour that
+            spells three bits of its index (red, green, blue = bits 3g, 3g+1, 3g+2): where pieces
+            overlap the one on top wins, as on the screen, so no bits mix."""
             top.set('visibility', 'hidden')
             for j, (_, _, g) in enumerate(self.elems):
-                on = bits is None or bool(((j + 1) >> bits) & 1) != invert
-                g.set('visibility', 'visible' if on else 'hidden')
-                g.set('fill', '#000000')
-                g.set('color', '#000000')
+                g.set('visibility', 'visible')
+                if group is None:
+                    col = '#000000'
+                else:
+                    b = ((j + 1) >> (3 * group)) & 7
+                    col = '#' + ''.join('00' if b >> c & 1 else 'ff' for c in range(3))
+                g.set('fill', col)
+                g.set('color', col)
             img = render_png(etree.tostring(root), W, H)
             for _, _, g in self.elems:
                 for a in ('visibility', 'fill', 'color'):
                     g.attrib.pop(a, None)
             top.attrib.pop('visibility', None)
-            return 1.0 - img[..., 0].astype(np.float32) / 255.0
-        au = plane(None)
+            return img
+        # coverage per channel: cairosvg antialiases text with colour fringes, so a letter's edge
+        # covers red, green and blue by different amounts
+        au3 = 1.0 - plane(None).astype(np.float32) / 255.0
+        au = au3.max(2)
         owner = np.zeros(au.shape, np.int32)
         unsure = au <= 0.06
-        for k in range(K):
-            r = plane(k) / np.maximum(au, 1e-6)
-            ri = plane(k, invert=True) / np.maximum(au, 1e-6)
-            owner |= (r > 0.5).astype(np.int32) << k
-            # where two pieces overlap (antialiased edges, or two noteheads drawn on the same
-            # spot: a unison between the voices of a divided bar) the bits of both would OR
-            # into some third piece's id; such a pixel belongs to neither
-            unsure |= ((r > 0.2) & (r < 0.8)) | ((r > 0.5) & (ri > 0.5))
+        cov = np.maximum(au3, 1e-6)
+        for grp in range((K + 2) // 3):
+            # a channel at 255 is a 0 bit; one darkened by the ink's own coverage is a 1 bit;
+            # anything in between is an edge where two pieces blend: it belongs to neither
+            r = (1.0 - plane(grp).astype(np.float32) / 255.0) / cov
+            bits = r > 0.5
+            unsure |= (((r > 0.25) & (r < 0.75)) | (au3 < 0.03) & (au[..., None] > 0.06)).any(2)
+            for c in range(3):
+                owner |= bits[..., c].astype(np.int32) << (3 * grp + c)
         owner[unsure] = 0
+        owner[owner > n] = 0
         flat = owner.ravel()
         order = np.argsort(flat, kind='stable')
         sorted_ids = flat[order]
@@ -945,12 +963,25 @@ def label_band(img, items, px):
     return np.asarray(im).copy()
 
 
-def measure_output(mp4, fps, W, H):
+def vfr_flag(passthrough=False):
+    """ffmpeg 5 renamed -vsync to -fps_mode."""
+    v = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True).stdout
+    m = re.search(r'version n?(\d+)', v)
+    new = not m or int(m.group(1)) >= 5
+    mode = 'passthrough' if passthrough else 'vfr'
+    return ['-fps_mode', mode] if new else ['-vsync', mode]
+
+
+def measure_output(mp4, W, H):
     """Sync measured on the finished file: when a light comes on in the picture against the
     nearest onset in the file's own audio."""
     w, h = 240, int(240 * H / W)
-    ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-i', mp4, '-vf', f'scale={w}:{h}:flags=area',
-                           '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], stdout=subprocess.PIPE)
+    pts = np.array([float(v) for v in subprocess.run(
+        ['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0',
+         mp4], capture_output=True, text=True).stdout.replace(',', '').split()])
+    ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-i', mp4, *vfr_flag(passthrough=True),
+                           '-vf', f'scale={w}:{h}:flags=area', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
+                          stdout=subprocess.PIPE)
     on, prev, k = [], None, 0                  # a frame at a time: a whole song would not fit in memory
     while True:
         buf = ff.stdout.read(w * h * 3)
@@ -965,8 +996,8 @@ def measure_output(mp4, fps, W, H):
                 on.append(k)
         prev, k = (v, sat), k + 1
     ff.wait()
-    on = np.array(on)
-    t_on = on / fps
+    on = np.array(on, int)
+    t_on = pts[on[on < len(pts)]]
     aon = audio_onsets(decode(mp4))
     if not len(t_on) or not len(aon):
         print('   measured in the mp4: nothing to compare')
@@ -981,7 +1012,7 @@ def measure_output(mp4, fps, W, H):
         return
     q = len(r) // 3 or 1
     print(f'   measured in the mp4: {len(r)} of {len(t_on)} lights coming on matched an audio onset; '
-          f'median {1000 * np.median(r):+.0f} ms (a frame is {1000 / fps:.0f} ms), first third '
+          f'median {1000 * np.median(r):+.0f} ms, first third '
           f'{1000 * np.median(r[:q]):+.0f} ms, last third {1000 * np.median(r[-q:]):+.0f} ms')
 
 
@@ -1009,7 +1040,6 @@ def use_display(path, root, parts, names, notes_by_part, tempos):
     """Show `path` instead of the file the audio was rendered from, after checking that it
     has the same parts, bars, notes and tempo marks (words, slurs and ties may differ: the
     Cantai learning file re-sings tied notes that the print file ties)."""
-    import tempfile
     droot = read_xml(path)
     dparts = droot.findall('part')
     dsps = {sp.get('id'): sp for sp in droot.find('part-list').findall('score-part')}
@@ -1047,6 +1077,42 @@ def use_display(path, root, parts, names, notes_by_part, tempos):
     return droot, dparts, dnames, dnotes, dstarts, sung
 
 
+def run_parallel(a):
+    """One process per mp3, as many at a time as there are cores: each renders its own
+    screens and encodes its own video. The sync is measured in the first only (every video
+    shares one timing). Each process's report is printed whole, in the order given."""
+    import time
+    rest = [x for x in sys.argv[1:] if x not in a.mp3s]
+    n = a.jobs or os.cpu_count() or 2
+    todo = list(enumerate(a.mp3s))
+    running, done, nxt, failed, t0 = {}, {}, 0, 0, time.time()
+    while todo or running:
+        while todo and len(running) < n:
+            k, mp3 = todo.pop(0)
+            cmd = [sys.executable, os.path.abspath(__file__), *rest, mp3, '--jobs', '1']
+            if k and not a.check_all:
+                cmd.append('--no-sync-check')
+            log = tempfile.TemporaryFile('w+')      # a pipe could fill and stall the process
+            running[k] = (subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, text=True), log)
+        for k, (pr, log) in list(running.items()):
+            if pr.poll() is not None:
+                log.seek(0)
+                out = log.read()
+                log.close()
+                done[k] = (pr.returncode, '\n'.join(l for l in out.splitlines() if not l.startswith('[Warning]')))
+                del running[k]
+        while nxt in done:
+            code, text = done.pop(nxt)
+            print(text if nxt == 0 else text.split('\n\n', 1)[-1], flush=True)   # parts and staves once
+            if code:
+                print(f'   ^ failed: {a.mp3s[nxt]}', flush=True)
+                failed += 1
+            nxt += 1
+        time.sleep(0.5)
+    print(f'{len(a.mp3s) - failed} of {len(a.mp3s)} videos in {time.time() - t0:.0f} s')
+    return 1 if failed else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('score')
@@ -1059,7 +1125,10 @@ def main():
     ap.add_argument('--stills', help='comma-separated times (s): write PNG frames instead of a video')
     ap.add_argument('--size', default='1920x1080')
     ap.add_argument('--staff-px', type=float, default=44.0, help='staff height in pixels')
-    ap.add_argument('--fps', type=int, default=30)
+    ap.add_argument('--check-all', action='store_true', help='measure sync in every mp4, not only the first')
+    ap.add_argument('--jobs', type=int, default=0,
+                    help='mp3s rendered at once, each in its own process (default: one per CPU core)')
+    ap.add_argument('--no-sync-check', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
     ap.add_argument('--warp', action='store_true', help='follow measured drift piecewise')
     ap.add_argument('--crf', type=int, default=20)
@@ -1070,6 +1139,8 @@ def main():
                     'default: per part, the coarsest value 95%% of its sung bars keep to')
     ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
     a = ap.parse_args()
+    if len(a.mp3s) > 1 and a.jobs != 1 and not a.stills:
+        sys.exit(run_parallel(a))
     set_theme(a.dark)
     palette = PALETTE_DARK if a.dark else PALETTE
     W, H = (int(v) for v in a.size.lower().split('x'))
@@ -1093,7 +1164,6 @@ def main():
         sys.exit('no part has lyrics; nothing to follow')
 
     # tempo map and bars, exactly as stem_vs_score.py reads them
-    import tempfile
     tmp = tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False)
     tmp.write(etree.tostring(root))
     tmp.close()
@@ -1277,6 +1347,7 @@ def main():
 
     bar_sec = [(sec(q), b.get('number')) for q, b in zip(starts, parts[0].findall('measure'))]
 
+    measured = False
     for mp3, view, stem in jobs:
         pages, page_first, page_last = layout(view)
         T = Timing(a.score, mp3, all_onsets, first_score, warp=a.warp)
@@ -1351,8 +1422,8 @@ def main():
             pages[p].lights.apply(fr.reshape(-1, 3), list(lit))
             return fr
 
+        from PIL import Image
         if a.stills:
-            from PIL import Image
             for tv in a.stills.split(','):
                 tv = float(tv)
                 path = f'{stem} @{tv:.0f}s.png'
@@ -1361,31 +1432,56 @@ def main():
             continue
 
         out = stem + ('' if not a.clip else f' clip {int(t_start)}-{int(t_start + t_len)}s') + '.mp4'
-        nfr = int(round(t_len * a.fps))
-        cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', f'{W}x{H}',
-               '-r', str(a.fps), '-i', '-', '-ss', f'{t_start:.3f}', '-t', f'{t_len:.3f}', '-i', mp3,
-               '-map', '0:v', '-map', '1:a', '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'stillimage',
-               '-crf', str(a.crf), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k',
-               '-movflags', '+faststart', '-shortest', out]
-        ff = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-        # sweep: windows are sorted by start; keep an active list
-        wi, active, prev_key, buf = 0, [], None, None
-        changes = 0
-        for f in range(nfr):
-            t = t_start + (f + 0.5) / a.fps
+        t_end = t_start + t_len
+        # Variable frame rate: one frame per change of lights or page, shown from the exact
+        # moment of the change (to the millisecond) until the next. No frame grid, so no rounding
+        # of a light to the nearest frame, and nothing encoded twice.
+        ev = {t_start, t_end}
+        for w in wins:
+            ev.update(v for v in (w[0], w[1]) if t_start < v < t_end)
+            if w[8]:
+                ev.update(float(T(b)) for b in w[8] if t_start < float(T(b)) < t_end)
+        ev.update(v for v in turns if t_start < v < t_end)
+        ev = sorted(ev)
+        segs = []                                  # (start ms, key)
+        wi, active = 0, []
+        for e0, e1 in zip(ev[:-1], ev[1:]):
+            t = (e0 + e1) / 2
             while wi < len(wins) and wins[wi][0] <= t:
                 active.append(wins[wi])
                 wi += 1
             active = [w for w in active if w[1] > t]
-            p = page_at(t)
-            key = lit_key(p, active, t)
-            if key != prev_key:
-                buf = compose(key).tobytes()
-                prev_key = key
-                changes += 1
-            ff.stdin.write(buf)
-        ff.stdin.close()
-        if ff.wait():
+            key = lit_key(page_at(t), active, t)
+            ms = int(round(1000 * (e0 - t_start)))
+            if segs and (segs[-1][1] == key or segs[-1][0] == ms):
+                if segs[-1][1] != key:
+                    segs[-1] = (ms, key)           # under a millisecond: the later state wins
+                continue
+            segs.append((ms, key))
+        end_ms = int(round(1000 * t_len))
+        tmpd = tempfile.mkdtemp(prefix='score_video_')
+        lines = ['ffconcat version 1.0']
+        with ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
+            jobs_ = []
+            for k, (ms, key) in enumerate(segs):
+                fn = os.path.join(tmpd, f'{k:06d}.png')
+                jobs_.append(pool.submit(lambda im, fn: Image.fromarray(im).save(fn, compress_level=1),
+                                         compose(key), fn))
+                nxt = segs[k + 1][0] if k + 1 < len(segs) else end_ms
+                lines += [f"file '{fn}'", 'option framerate 1000', f'duration {(nxt - ms) / 1000:.3f}']
+            for jb in jobs_:
+                jb.result()
+        lines += [f"file '{os.path.join(tmpd, f'{len(segs) - 1:06d}.png')}'", 'option framerate 1000']
+        lst = os.path.join(tmpd, 'frames.ffconcat')
+        open(lst, 'w').write('\n'.join(lines) + '\n')
+        cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst,
+               '-ss', f'{t_start:.3f}', '-t', f'{t_len:.3f}', '-i', mp3, '-map', '0:v', '-map', '1:a',
+               *vfr_flag(), '-video_track_timescale', '1000', '-c:v', 'libx264', '-preset', 'veryfast',
+               '-tune', 'stillimage', '-g', '30', '-crf', str(a.crf), '-pix_fmt', 'yuv420p',
+               '-c:a', 'aac', '-b:a', '192k', '-t', f'{t_len:.3f}', '-movflags', '+faststart', out]
+        r = subprocess.run(cmd)
+        shutil.rmtree(tmpd, ignore_errors=True)
+        if r.returncode:
             sys.exit(f'ffmpeg failed on {out}')
         # check the audio that landed against the mp3 (an AAC priming delay would shift everything)
         y = decode(out)
@@ -1397,9 +1493,12 @@ def main():
             cc = np.fft.irfft(np.fft.rfft(seg_y, 2 * n) * np.conj(np.fft.rfft(seg_x, 2 * n)))
             k = int(np.argmax(np.concatenate([cc[-2205:], cc[:2206]]))) - 2205
             lag = k / 22.05
-        print(f'   wrote {out}: {nfr} frames, {changes} changes of lights or page; '
+        print(f'   wrote {out}: {len(segs)} frames, one per change of lights or page; '
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
-        measure_output(out, a.fps, W, H)
+        # every video shares one timing, so the sync is measured on the first (--check-all: each)
+        if a.check_all or (not measured and not a.no_sync_check):
+            measure_output(out, W, H)
+            measured = True
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
 
