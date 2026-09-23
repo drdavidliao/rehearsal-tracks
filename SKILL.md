@@ -1404,21 +1404,39 @@ What the user settled on, on the two-soloist TTBB:
 - **Pages turn up to a second before the next page's first note**, never before
   the last note on the old page has started.
 
-**Timing is anchored the way `stem_vs_score.py` does it**: its tempo map, the
+**Timing is anchored the way `stem_vs_score.py` does it** (its tempo map, the
 offset from where the audio first sounds against the score's first note, only
-the tempo refined on onsets. Then drift is measured and printed: every score
-onset against the nearest spectral-flux onset in the mp3, as a median per 15 s
-with its bar number. A playback that stretches a fermata or ritardando shows as
-the bar where the medians start to move; `--warp` follows it piecewise. On the
-two-soloist TTBB, eleven fermatas and all, the per-stretch medians stayed
-between −41 and +43 ms across 4:48 and no warp was needed. After writing each
-mp4 the script also checks the file itself: its audio against the mp3 (an AAC
-offset would shift everything; it measured 0.0 ms) and, in the first video of a
-run, when each light comes on in the picture against the onsets in the file's
-audio (medians 20–27 ms early
-across the seven videos, under one 33 ms frame). Report both lines in the handback.
+the tempo refined on onsets) **and re-anchored after every fermata.** Sibelius
+holds a fermata longer than written on playback, the MusicXML does not say by
+how much, and everything after it runs that much late: on the two-soloist TTBB
+0.28 s after bar 34 and 0.76 s after bar 123, which the user heard at 4:03.
+The script measures each hold by aligning the score's pitch content with the
+audio's (chroma every 50 ms, dynamic time warping within ±3 s of the straight
+line), then refines each stretch between fermatas on its onsets. The two holds
+came out 278/483 ms from the Balanced mp3 and 270/478 ms from a predominant one.
+A fermata's own note and syllable stay lit through the hold.
 
-Five things that cost time:
+**Measure drift against pitch, not against the nearest onset.** The first
+version matched every light to the nearest onset in the audio within 0.35 s and
+reported the median per 15 s; it read the 0.76 s lag as −2 ms, because with a
+piano in sixteenths there is always an onset near enough, and the same check on
+the finished mp4s was fooled the same way. Matching the onset pattern over a few
+seconds fails too: a steady groove matches itself a beat away. Pitch content
+tells repeated bars apart. The report now gives each fermata's hold and the
+lights against the pitch alignment per 15 s (within 72 ms everywhere on the
+two-soloist TTBB, about one 50 ms step), naming the bar of any stretch 100 ms
+out; ignore the last few seconds, where only reverb is left. Each finished mp4
+is checked for what the file itself can go wrong on: its audio against the mp3
+(0.0 ms) and every frame's time against the time it was meant for (exact).
+Report all of it in the handback.
+
+**Shared notes and words split top to bottom.** A notehead, rest or syllable
+two parts share gets its halo and its ink in stacked bands, the higher part's
+colour on top, like the parts on the staff. Split side by side, as first built,
+it read as one part singing the first half of the note and the other the
+second. A shared rest's bar is striped the same way.
+
+Six things that cost time:
 
 - **Verovio's `condense` does nothing for MusicXML.** Hiding empty staves works
   only for MEI with `<scoreDef optimize="true">`: load the MusicXML, take
@@ -1464,10 +1482,11 @@ one per CPU core, and only the first video's sync is measured (they share one
 timing). The seven videos of the two-soloist TTBB took 35 minutes the first
 way and 9 minutes this way, on 2 cores.
 
-**Run it where there is time.** A desktop bridge that kills background jobs and
-stops each command at three minutes cannot render a whole song. Render on the
-user's own Mac from Terminal (give the command as a block to paste), or in a
-container and copy the mp4s back (11–13 MB each for 4:48 at 1920×1080). Copies
+**Render in Claude's own workspace and copy the mp4s back** (11–13 MB each for
+4:48 at 1920×1080). A desktop bridge that kills background jobs and stops each
+command at three minutes cannot render a whole song, and the people this repo
+is for should never be asked to install Homebrew packages or paste Terminal
+commands. Running it on the user's own machine is only for someone who asks. Copies
 arrive a few KB larger; compare the streams, not the files:
 `ffmpeg -i x.mp4 -map 0:a -c copy -f md5 -` (and `0:v`) on both sides.
 
@@ -3202,7 +3221,7 @@ if __name__ == '__main__':
         "Shenandoah - (Tenor 1) predominant.mp3" "Shenandoah - (Tenor 2) predominant.mp3" ...
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
-        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--warp] [--jobs N] [--check-all]
+        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -3217,7 +3236,8 @@ beside it (or in OUT_DIR):
 
 A note lights (its colour, and a soft halo) while it sounds; its syllable stays lit from its
 note until the next syllable or rest, so a melisma or a tie keeps its word lit. A note or
-word two parts share gets a halo split in both colours. A rest lights the same way, and a
+word two parts share gets its halo and ink in stacked bands, the higher part's colour on
+top (side by side would read as one part singing the first half, the other the second). A rest lights the same way, and a
 bar under it (above the staff for the upper of two voices) runs from where the rest starts
 to where it ends as the other staves print that time, filling in jumps of one pulse: each
 part's pulse is the coarsest note value that 95% of the bars it sings keep to (eighths in a
@@ -3239,15 +3259,17 @@ Accompaniment staves are shown as written.
 
 Timing, as stem_vs_score.py does it: beats become seconds with the score's tempo marks,
 and the line-up is anchored where the audio first sounds against where the score first
-has a note; only the tempo is refined, on note onsets found in the audio. Then the drift
-is measured: every score onset against the nearest onset in the audio, reported as a
-median per stretch of the piece, so a ritardando or fermata that playback stretches
-shows up as the bar where the lights start to lag. --warp follows such drift with a
-piecewise line through the measured stretches instead of a single straight line. After
-each mp4 is written, its own audio is checked against the mp3 (an offset would shift
-everything); the first mp4 of a run also gets its sync measured on the finished file: when
-each light comes on in the picture against the nearest onset in its audio (--check-all:
-every mp4). The video has a variable frame rate: one frame per change of lights or page,
+has a note; only the tempo is refined, on note onsets found in the audio. Then it is
+re-anchored after every fermata: playback holds a fermata longer than written, by an
+amount the file does not say, and everything after it runs that much late. Each hold is
+measured by aligning the score's pitch content with the audio's (chroma, dynamic time
+warping) and refined on the onsets that follow; the report gives each fermata's hold and
+checks every 15 s of the lights against the pitch alignment, naming the bar of any stretch
+more than 100 ms out. (Matching each light to the nearest onset in the audio cannot catch
+this: with a piano in sixteenths there is always an onset near enough, and a 0.75 s lag
+measured as -2 ms.) Each finished mp4 is checked too: its audio against the mp3, and its
+frames against the times they were meant for.
+The video has a variable frame rate: one frame per change of lights or page,
 each shown from the exact millisecond of the change, so nothing is rounded to a frame grid
 and nothing is encoded twice. With several mp3s, each renders in its own process, one per
 CPU core (--jobs).
@@ -3670,8 +3692,88 @@ def audio_onsets(x, sr=22050, n=1024, hop=128):
     return np.array(keep)
 
 
+HOP_C = 0.05          # seconds per chroma frame
+
+
+def chroma_audio(x, sr=22050):
+    """Pitch-class profile of the audio every HOP_C s (55 Hz - 2 kHz, log magnitude)."""
+    n, h = 4096, int(sr * HOP_C)
+    nfr = max(0, (len(x) - n) // h)
+    f = np.fft.rfftfreq(n, 1 / sr)
+    sel = (f > 55) & (f < 2000)
+    pc = ((np.round(12 * np.log2(f[sel] / 440)) + 9) % 12).astype(int)
+    M = np.zeros((12, sel.sum()), np.float32)
+    M[pc, np.arange(sel.sum())] = 1
+    win = np.hanning(n).astype(np.float32)
+    A = np.zeros((nfr, 12), np.float32)
+    for c0 in range(0, nfr, 1000):
+        idx = np.arange(c0, min(nfr, c0 + 1000))[:, None] * h + np.arange(n)[None, :]
+        A[c0:c0 + len(idx)] = np.log1p(1000 * np.abs(np.fft.rfft(x[idx] * win, axis=1))[:, sel]) @ M.T
+    return A / (np.linalg.norm(A, axis=1, keepdims=True) + 1e-9)
+
+
+def chroma_score(notes, to_audio, nfr):
+    """The same profile built from the score's notes (with a little of each note's fifth and third,
+    as a voice's overtones put there), placed on the audio timeline by `to_audio`."""
+    S = np.zeros((nfr, 12), np.float32)
+    for a, b, m in notes:
+        i0 = int(to_audio(a) / HOP_C)
+        i1 = max(i0 + 1, int(to_audio(b) / HOP_C))
+        for hh, w in ((0, 1.0), (7, 0.35), (4, 0.15)):
+            S[max(i0, 0):min(i1, nfr), (m + hh) % 12] += w
+    return S / (np.linalg.norm(S, axis=1, keepdims=True) + 1e-9)
+
+
+def dtw_offset(A, S, band):
+    """Dynamic time warping of the score's profile S against the audio's A, within +-band frames of
+    the straight line. Returns, per frame of S, how far (s) the audio has it from the straight line."""
+    n = min(len(A), len(S))
+    W = 2 * band + 1
+    D = np.full(W, np.inf)
+    P = np.zeros((n, W), np.int8)
+    ks = np.arange(W)
+    for i in range(n):
+        c = 1.0 - A[np.clip(i + ks - band, 0, len(A) - 1)] @ S[i]
+        if i == 0:
+            row = c.copy()
+        else:
+            up = np.append(D[1:], np.inf)        # the audio holds while the score moves on
+            best = np.minimum(D, up)
+            P[i] = np.where(D <= up, 0, 1)
+            row = c + best
+        for k in range(1, W):                    # the audio moves on while the score holds
+            v = row[k - 1] + c[k]
+            if v < row[k]:
+                row[k] = v
+                P[i, k] = 2
+        D = row
+    k, i, off = int(np.argmin(D)), n - 1, np.zeros(n)
+    seen = np.zeros(n, bool)
+    while i > 0:
+        if not seen[i]:
+            off[i], seen[i] = (k - band) * HOP_C, True
+        p = P[i, k]
+        if p == 0:
+            i -= 1
+        elif p == 1:
+            i, k = i - 1, k + 1
+        else:
+            k -= 1
+    return off
+
+
 class Timing:
-    def __init__(self, score_path, mp3, score_onsets, first_score, warp=False, seg=12.0):
+    """Score seconds -> audio seconds.
+
+    Anchored as stem_vs_score.py does it: the offset from where the audio first sounds against the
+    score's first note, only the tempo refined on onsets. Then re-anchored after every fermata:
+    playback holds a fermata longer than written, by an amount the file does not say (Sibelius
+    held the two-soloist TTBB's by 0.25 s and 0.45 s), and everything after it runs that much
+    late. The hold is measured by aligning the score's pitch content with the audio's (chroma,
+    dynamic time warping), which a steady groove cannot fool, and refined to the millisecond on
+    the onsets of the stretch that follows."""
+
+    def __init__(self, mp3, notes, first_score, breaks):
         self.x = decode(mp3)
         self.dur = len(self.x) / 22050
         env = envelope(mp3, -50.0)
@@ -3681,79 +3783,94 @@ class Timing:
         self.first_audio = sounding[0][0]
         self.off = self.first_audio - first_score           # anchored at the first entrance
         self.aon = audio_onsets(self.x)
-        so = np.array(sorted(set(round(s, 3) for s in score_onsets)))
+        so = np.array(sorted(set(round(a, 3) for a, _, _ in notes)))
         self.so = so
         scale = 1.0
         for win in (0.5, 0.3, 0.15):                         # refine the tempo only; the anchor stays put
             g = self.off + scale * so
-            k = np.clip(np.searchsorted(self.aon, g), 1, len(self.aon) - 1)
-            near = np.where(np.abs(self.aon[k - 1] - g) < np.abs(self.aon[k] - g), self.aon[k - 1], self.aon[k])
-            ok = np.abs(near - g) < win
+            ok, near = self.nearest(g, win)
             if ok.sum() >= 8:
                 X, Y = so[ok], near[ok] - self.off
                 scale = float(np.clip(np.dot(X, Y) / max(np.dot(X, X), 1e-9), 0.9, 1.1))
         self.scale = scale
-        self.knots = None
-        self.residuals = self.measure()
-        if warp:
-            self.fit_warp(seg)
-            self.residuals_warped = self.measure()
+        # coarse: where the pitch content says each moment of the score is in the audio
+        A = chroma_audio(self.x)
+        S = chroma_score(notes, self.straight, len(A))
+        self.dtw = dtw_offset(A, S, band=int(3.0 / HOP_C))
+        # one offset per stretch between fermatas: coarse from the chroma, fine from the onsets
+        self.breaks = np.array(sorted(breaks))
+        edges = [-1e9] + list(self.breaks) + [1e9]
+        # the alignment's own ends are loose: judge from 5 s in to 5 s before the last written note
+        self.lo = 5.0
+        self.hi = min(self.dur, float(self.straight(max(b for _, b, _ in notes)))) - 5.0
+        lo, hi = self.lo, self.hi
+        seg = []
+        for a, b in zip(edges[:-1], edges[1:]):
+            t0, t1 = max(float(self.straight(a)) + 1.0, lo), min(float(self.straight(b)) - 1.0, hi)
+            if t1 - t0 < 2.0:
+                seg.append(None)
+                continue
+            coarse = float(np.median(self.dtw[int(t0 / HOP_C):int(t1 / HOP_C)]))
+            inside = so[(so >= a) & (so < b)]
+            g = self.straight(inside) + coarse
+            g = g[(g > t0) & (g < t1)]
+            ok, near = self.nearest(g, 0.1)
+            seg.append(coarse + float(np.median(near[ok] - g[ok])) if ok.sum() >= 6 else coarse)
+        base = seg[0] if seg[0] is not None else 0.0
+        self.steps, prev = [], base
+        for v in seg[1:]:
+            v = prev if v is None else v
+            self.steps.append(v - prev)
+            prev = v
+        self.cum = np.concatenate([[0.0], np.cumsum(self.steps)])
+
+    def nearest(self, g, win):
+        g = np.asarray(g, float)
+        if not len(g) or len(self.aon) < 2:
+            return np.zeros(len(g), bool), g
+        k = np.clip(np.searchsorted(self.aon, g), 1, len(self.aon) - 1)
+        near = np.where(np.abs(self.aon[k - 1] - g) < np.abs(self.aon[k] - g), self.aon[k - 1], self.aon[k])
+        return np.abs(near - g) < win, near
 
     def straight(self, s):
         return self.off + self.scale * np.asarray(s, float)
 
     def __call__(self, s):
-        if self.knots is None:
-            return self.straight(s)
-        ks, kd = self.knots
-        return self.straight(s) + np.interp(np.asarray(s, float), ks, kd)
-
-    def measure(self, win=0.35):
-        g = self(self.so)
-        k = np.clip(np.searchsorted(self.aon, g), 1, len(self.aon) - 1)
-        near = np.where(np.abs(self.aon[k - 1] - g) < np.abs(self.aon[k] - g), self.aon[k - 1], self.aon[k])
-        r = near - g
-        ok = np.abs(r) < win
-        return g[ok], r[ok], len(g)
-
-    def fit_warp(self, seg):
-        g, r, _ = self.residuals
-        s = (g - self.off) / self.scale
-        edges = np.arange(0, s.max() + seg, seg)
-        ks, kd = [], []
-        for a, b in zip(edges[:-1], edges[1:]):
-            sel = (s >= a) & (s < b)
-            if sel.sum() >= 6:
-                ks.append((a + b) / 2)
-                kd.append(float(np.median(r[sel])))
-        if ks:
-            self.knots = (np.array(ks), np.array(kd))
+        s = np.asarray(s, float)
+        return self.straight(s) + self.cum[np.searchsorted(self.breaks, s, side='right')]
 
     def report(self, bar_at, label, seg=15.0):
         fmt = lambda t: f'{int(t // 60)}:{t % 60:04.1f}'
         print(f'\n{label}')
         print(f'   anchor: audio first sounds at {fmt(self.first_audio)}; audio = {self.off:+.3f} s + '
               f'{self.scale:.4f} x score time')
-        for tag, res in (('straight line', self.residuals),) + \
-                        ((('warped', self.residuals_warped),) if self.knots is not None else ()):
-            g, r, n = res
-            if not len(r):
-                print(f'   {tag}: no audio onsets near the score onsets; drift not measured')
-                continue
-            print(f'   drift, {tag}: {len(r)} of {n} score onsets matched an audio onset within 0.35 s; '
-                  f'median {1000 * np.median(r):+.0f} ms, median |error| {1000 * np.median(np.abs(r)):.0f} ms, '
-                  f'90th percentile |error| {1000 * np.percentile(np.abs(r), 90):.0f} ms')
-            rows = []
-            for a in np.arange(0, g.max() + seg, seg):
-                sel = (g >= a) & (g < a + seg)
-                if sel.sum() >= 4:
-                    rows.append((a, int(sel.sum()), float(np.median(r[sel]))))
-            print('   ' + '  '.join(f'{fmt(a)} bar {bar_at(a)}: {1000 * m:+.0f} ms' for a, _, m in rows))
-            worst = max(rows, key=lambda x: abs(x[2])) if rows else None
-            if worst and abs(worst[2]) > 0.12:
-                print(f'   <- lights and audio part by {1000 * worst[2]:+.0f} ms around {fmt(worst[0])} '
-                      f'(bar {bar_at(worst[0])}); positive = the audio is later than the lights'
-                      + ('' if self.knots is not None else '; --warp follows it'))
+        for b, d in zip(self.breaks, self.steps):
+            print(f'   fermata ending at {fmt(float(self.straight(b)))} (bar {bar_at(float(self(b)))}): playback '
+                  f'holds it {1000 * d:+.0f} ms beyond the written length; the lights after it follow')
+        # the check: the pitch alignment against the lights, per stretch
+        t = np.arange(len(self.dtw)) * HOP_C
+        s_of_t = (t - self.off) / self.scale
+        model = self.cum[np.searchsorted(self.breaks, s_of_t, side='right')]
+        err = self.dtw - model
+        rows = []
+        for a in np.arange(self.lo, self.hi, seg):
+            sel = (t >= a) & (t < min(a + seg, self.hi))
+            if sel.sum() > 20:
+                rows.append((a, float(np.median(err[sel]))))
+        g = self(self.so)
+        ok, near = self.nearest(g, 0.1)
+        r = (near - g)[ok]
+        print(f'   check against the pitch alignment, per {seg:.0f} s (to its {1000 * HOP_C:.0f} ms step): ' +
+              '  '.join(f'{fmt(a)} {1000 * m:+.0f}' for a, m in rows))
+        bad = [(a, m) for a, m in rows if abs(m) >= 0.1]
+        for a, m in bad:
+            print(f'   <- the lights are {1000 * abs(m):.0f} ms {"ahead of" if m > 0 else "behind"} the audio around '
+                  f'{fmt(a)} (bar {bar_at(a)}), with no fermata to explain it')
+        if not bad:
+            print('   every stretch within 100 ms of the pitch alignment')
+        if len(r):
+            print(f'   onsets within 100 ms of a light: {len(r)} of {len(g)}; median {1000 * np.median(r):+.0f} ms '
+                  f'(positive = the sound comes after the light)')
 
 
 # ----------------------------------------------------------------------------- rendering
@@ -4072,12 +4189,17 @@ class Lights:
             in_halo = np.isin(pix, halo)
             hy, hx = halo // W, halo % W
             self.geom[gk] = (pix, self.page.alpha[pix][:, None], in_halo[:, None], halo,
-                             (int(hx.min()), int(hx.max()), int(hy.max())))
+                             (int(hx.min()), int(hx.max()), int(hy.max())), (int(hy.min()), int(hy.max())))
 
     def key(self, kind, nid):
         if kind in ('body', 'head', 'note'):
             return ('note', self.page.alias.get(nid, nid))
         return (kind, nid)
+
+    def band(self, gk, ys, n):
+        """Which of n stacked bands each row is in, over the height of the halo."""
+        y0, y1 = self.geom[gk][5]
+        return np.clip(((ys - y0) * n) // max(y1 - y0 + 1, 1), 0, n - 1)
 
     def tints(self, gk, cols):
         """Halo pixel values; a note or word two parts share gets a halo split in their colours."""
@@ -4089,9 +4211,10 @@ class Lights:
             if len(cols) == 1:
                 v = np.broadcast_to(ts[0], (len(halo), 3))
             else:
-                xs = halo % self.page.W
-                k = np.clip(((xs - xs.min()) * len(cols)) // (xs.max() - xs.min() + 1), 0, len(cols) - 1)
-                v = ts[k]
+                # stacked, not side by side: side by side would read as one part singing the
+                # first half of the note and the other the second. Top to bottom in part order,
+                # which on a shared staff is high to low
+                v = ts[self.band(gk, halo // self.page.W, len(cols))]
             self.cache[key] = v
         return v
 
@@ -4129,15 +4252,16 @@ class Lights:
             key = (gk, cols)
             v = self.cache.get(key)
             if v is None:
-                c = hexrgb(cols[0])
-                c = c + (255 - c) * THEME['lift']        # lit ink a shade lighter than its halo
+                cs = np.array([hexrgb(col) for col in cols])
+                cs = cs + (255 - cs) * THEME['lift']      # lit ink a shade lighter than its halo
+                c = cs[self.band(gk, g[0] // W, len(cols))]   # ink banded like its halo
                 t = self.tints(gk, cols).astype(np.float32)
                 bg = np.tile(THEME['bg'], (len(g[0]), 1))
                 inside = g[2][:, 0]
                 if inside.any():
                     pos = np.searchsorted(g[3], g[0][inside]) if np.all(np.diff(g[3]) > 0) else None
                     bg[inside] = t[pos] if pos is not None else t[0]
-                v = (bg * (1 - g[1]) + c[None, :] * g[1]).astype(np.uint8)
+                v = (bg * (1 - g[1]) + c * g[1]).astype(np.uint8)
                 self.cache[key] = v
             frame_flat[g[0]] = v
 
@@ -4169,48 +4293,16 @@ def vfr_flag(passthrough=False):
     return ['-fps_mode', mode] if new else ['-vsync', mode]
 
 
-def measure_output(mp4, W, H):
-    """Sync measured on the finished file: when a light comes on in the picture against the
-    nearest onset in the file's own audio."""
-    w, h = 240, int(240 * H / W)
-    pts = np.array([float(v) for v in subprocess.run(
+def check_frames(mp4, planned_ms):
+    """Each frame of the finished file against the moment it was meant to appear."""
+    pts = [float(v) for v in subprocess.run(
         ['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0',
-         mp4], capture_output=True, text=True).stdout.replace(',', '').split()])
-    ff = subprocess.Popen(['ffmpeg', '-loglevel', 'error', '-i', mp4, *vfr_flag(passthrough=True),
-                           '-vf', f'scale={w}:{h}:flags=area', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'],
-                          stdout=subprocess.PIPE)
-    on, prev, k = [], None, 0                  # a frame at a time: a whole song would not fit in memory
-    while True:
-        buf = ff.stdout.read(w * h * 3)
-        if len(buf) < w * h * 3:
-            break
-        v = np.frombuffer(buf, np.uint8).reshape(h, w, 3).astype(np.int16)
-        sat = (v.max(2) - v.min(2)) > 40                       # coloured pixels: the lights
-        if prev is not None:
-            grew = np.logical_and(sat, ~prev[1]).sum()
-            big = np.abs(v - prev[0]).mean() > 20              # a page turn changes everything
-            if grew >= 2 and not big:
-                on.append(k)
-        prev, k = (v, sat), k + 1
-    ff.wait()
-    on = np.array(on, int)
-    t_on = pts[on[on < len(pts)]]
-    aon = audio_onsets(decode(mp4))
-    if not len(t_on) or not len(aon):
-        print('   measured in the mp4: nothing to compare')
+         mp4], capture_output=True, text=True).stdout.replace(',', '').split()]
+    if len(pts) != len(planned_ms):
+        print(f'   frames: {len(pts)} in the file, {len(planned_ms)} planned')
         return
-    k = np.clip(np.searchsorted(aon, t_on), 1, max(1, len(aon) - 1))
-    near = np.where(np.abs(aon[k - 1] - t_on) < np.abs(aon[np.minimum(k, len(aon) - 1)] - t_on),
-                    aon[k - 1], aon[np.minimum(k, len(aon) - 1)])
-    r = near - t_on
-    r = r[np.abs(r) < 0.35]
-    if not len(r):
-        print('   measured in the mp4: no light matched an audio onset within 0.35 s')
-        return
-    q = len(r) // 3 or 1
-    print(f'   measured in the mp4: {len(r)} of {len(t_on)} lights coming on matched an audio onset; '
-          f'median {1000 * np.median(r):+.0f} ms, first third '
-          f'{1000 * np.median(r[:q]):+.0f} ms, last third {1000 * np.median(r[-q:]):+.0f} ms')
+    err = np.abs(np.array(pts) * 1000 - np.array(planned_ms))
+    print(f'   frames: all {len(pts)} where planned, to within {err.max():.0f} ms')
 
 
 # ----------------------------------------------------------------------------- main
@@ -4276,8 +4368,7 @@ def use_display(path, root, parts, names, notes_by_part, tempos):
 
 def run_parallel(a):
     """One process per mp3, as many at a time as there are cores: each renders its own
-    screens and encodes its own video. The sync is measured in the first only (every video
-    shares one timing). Each process's report is printed whole, in the order given."""
+    screens and encodes its own video. Each process's report is printed whole, in the order given."""
     import time
     rest = [x for x in sys.argv[1:] if x not in a.mp3s]
     n = a.jobs or os.cpu_count() or 2
@@ -4287,8 +4378,6 @@ def run_parallel(a):
         while todo and len(running) < n:
             k, mp3 = todo.pop(0)
             cmd = [sys.executable, os.path.abspath(__file__), *rest, mp3, '--jobs', '1']
-            if k and not a.check_all:
-                cmd.append('--no-sync-check')
             log = tempfile.TemporaryFile('w+')      # a pipe could fill and stall the process
             running[k] = (subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, text=True), log)
         for k, (pr, log) in list(running.items()):
@@ -4322,12 +4411,9 @@ def main():
     ap.add_argument('--stills', help='comma-separated times (s): write PNG frames instead of a video')
     ap.add_argument('--size', default='1920x1080')
     ap.add_argument('--staff-px', type=float, default=44.0, help='staff height in pixels')
-    ap.add_argument('--check-all', action='store_true', help='measure sync in every mp4, not only the first')
     ap.add_argument('--jobs', type=int, default=0,
                     help='mp3s rendered at once, each in its own process (default: one per CPU core)')
-    ap.add_argument('--no-sync-check', action='store_true', help=argparse.SUPPRESS)
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
-    ap.add_argument('--warp', action='store_true', help='follow measured drift piecewise')
     ap.add_argument('--crf', type=int, default=20)
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
@@ -4465,6 +4551,16 @@ def main():
         for p in ps:
             table[nid].append((p, t0, t1))
     first_score = min(all_onsets)
+    # every sounding note with its pitch, for the pitch alignment; and where each fermata ends
+    pitched = [(sec(n['on']), sec(n['on'] + n['dur']), n['midi']) for ns_ in notes_by_part for n in ns_
+               if not n['rest'] and not n['grace'] and n['dur'] > 0 and n['midi'] is not None]
+    breaks = []
+    for ns_ in notes_by_part:
+        for n in ns_:
+            if n['el'].find('.//fermata') is not None and n['dur'] > 0:
+                b = sec(n['on'] + n['dur'])
+                if all(abs(b - x) > 0.05 for x in breaks):
+                    breaks.append(b)
 
     # engrave
     import verovio
@@ -4544,10 +4640,9 @@ def main():
 
     bar_sec = [(sec(q), b.get('number')) for q, b in zip(starts, parts[0].findall('measure'))]
 
-    measured = False
     for mp3, view, stem in jobs:
         pages, page_first, page_last = layout(view)
-        T = Timing(a.score, mp3, all_onsets, first_score, warp=a.warp)
+        T = Timing(mp3, pitched, first_score, breaks)
         def bar_at(t_audio):
             s = (t_audio - T.off) / T.scale
             cur = bar_sec[0][1]
@@ -4692,10 +4787,7 @@ def main():
             lag = k / 22.05
         print(f'   wrote {out}: {len(segs)} frames, one per change of lights or page; '
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
-        # every video shares one timing, so the sync is measured on the first (--check-all: each)
-        if a.check_all or (not measured and not a.no_sync_check):
-            measure_output(out, W, H)
-            measured = True
+        check_frames(out, [ms for ms, _ in segs])
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
 
