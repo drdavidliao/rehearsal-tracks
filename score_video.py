@@ -286,13 +286,19 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 changed = True
     part = etree.Element('part', id=pid)
     lo_clef = None
-    # a line-2 extender runs on to the next syllable-less voice-2 note, and 7.4 moves the lower part's
-    # words to line 1 where both sing them: end it on its last held note (SKILL.md 7.6, Verovio only)
-    line2 = {'open': False, 'last': None}
+    # a lower-voice extender runs on to the next syllable-less note in its voice, and 7.4 moves the
+    # lower part's words to line 1 where both sing them: end it on its last held note (SKILL.md 7.6,
+    # Verovio only)
+    line2 = {'open': False, 'last': None, 'num': '2'}
+    up_el = {e.get('id'): e for e in up.iter('note')}
+
+    def extends(el):
+        return any(ly.find('extend') is not None and ly.find('extend').get('type') != 'stop'
+                   for ly in el.findall('lyric'))
 
     def close_line2():
         if line2['open'] and line2['last'] is not None:
-            ly = etree.SubElement(line2['last'], 'lyric', number='2')
+            ly = etree.SubElement(line2['last'], 'lyric', number=line2['num'])
             etree.SubElement(ly, 'extend', type='stop')
         line2['open'], line2['last'] = False, None
     for i, (mU, mL) in enumerate(zip(mu, ml)):
@@ -311,12 +317,22 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
         hb = [n['id'] for n in b if n['lyric']]
         for h in ha:
             syl_holder[(pu, h)] = h
+        # one line for both, but where only the lower part holds a syllable over more notes, print
+        # its copy, with the extender (SKILL.md 7.4): the upper part reads it from there
+        take = set()
+        if same_words and not merged[i]:
+            take = {y for x, y in zip(ha, hb) if extends(lo_el[y]) and not extends(up_el[x])}
         if merged[i] or same_words:
             for x, y in zip(ha, hb):
-                syl_holder[(pl, y)] = x
+                if y in take:
+                    syl_holder[(pu, x)] = y
+                    syl_holder[(pl, y)] = y
+                else:
+                    syl_holder[(pl, y)] = x
         else:
             for y in hb:
                 syl_holder[(pl, y)] = y
+        taken_up = {x for x, y in zip(ha, hb) if y in take}
         partner = {x['id']: y for x, y in zip(a, b)} if merged[i] else {}
         t = Fr(0)
         placed_clef = False
@@ -347,6 +363,8 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 t += int(c.findtext('duration') or 0)
             n_id = c.get('id')
             owners.setdefault(n_id, set()).add(pu)
+            if n_id in taken_up:
+                strip(c, 'lyric')
             if merged[i]:
                 set_child(c, 'voice', '1')
                 m.append(c)
@@ -401,18 +419,19 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 if c.find('rest') is None:
                     set_child(c, 'stem', 'down')
                 lys = c.findall('lyric')
-                if lys and same_words:
-                    close_line2()                   # its words are line 1's from here
+                num = '1' if c.get('id') in take else '2'
+                if lys and ((same_words and num == '2') or line2['num'] != num):
+                    close_line2()                   # its words are printed on the other line from here
                 for j, ly in enumerate(sorted(lys, key=lambda l: int(re.sub(r'\D', '', l.get('number') or '1') or 1))):
-                    if same_words or j > 0:
+                    if (same_words and num == '2') or j > 0:
                         c.remove(ly)
                     else:
-                        ly.set('number', '2')
+                        ly.set('number', num)
                         ly.attrib.pop('placement', None)
                         ly.attrib.pop('default-y', None)
                         ext = ly.find('extend')
                         line2['open'] = ext is not None and ext.get('type') != 'stop'
-                        line2['last'] = None
+                        line2['last'], line2['num'] = None, num
                 if not lys and c.find('rest') is None and c.find('chord') is None and line2['open']:
                     line2['last'] = c
             m.append(c)
