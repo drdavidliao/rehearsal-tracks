@@ -1469,6 +1469,18 @@ colour on top, like the parts on the staff. Split side by side, as first built,
 it read as one part singing the first half of the note and the other the
 second. A shared rest's bar is striped the same way.
 
+**One rest where both voices rest.** In a divided bar where both parts rest at
+the same moment for the same time, voice 2's copy is `print-object="no"` and the
+printed rest lights for both parts. The ballad TTBB had a bar sung in unison
+by Baritone and Bass that had to be divided only because a tie ran on into a
+divided bar, and it printed every rest twice, stacked.
+
+**Triplets with no bracket.** An OMR'd or exported file can give notes their
+triplet timing (`<time-modification>`) and no `<tuplet>` marking, and they print
+as plain eighths that do not add up (the ballad TTBB's exploded file: 28
+groups). The script groups each voice's run of such notes into tuplets and marks
+the ends, in the display copy only.
+
 **Ties light, and ties and slurs are greyed with their notes.** A tie lights
 while either of its notes sounds, so a held note reads as one lit shape. In a
 part's own video every other part's ties and slurs are grey like their notes;
@@ -3650,12 +3662,19 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
         if t:
             bk = etree.SubElement(m, 'backup')
             etree.SubElement(bk, 'duration').text = str(t)
+        # where both voices rest at the same moment for the same time, one rest is printed, lit
+        # for both parts: two stacked copies of every rest read as clutter
+        up_rests = {(x['rel'], x['dur']): x['id'] for x in a if x['rest'] and not x['chord']}
         for e in mL:
             if e.tag not in ('note', 'backup', 'forward'):
                 continue
             c = copy.deepcopy(e)
             if e.tag == 'note':
                 owners.setdefault(c.get('id'), set()).add(pl)
+                me = next((x for x in b if x['id'] == c.get('id')), None)
+                if me is not None and me['rest'] and (me['rel'], me['dur']) in up_rests:
+                    c.set('print-object', 'no')
+                    owners.setdefault(up_rests[(me['rel'], me['dur'])], set()).add(pl)
                 set_child(c, 'voice', str(2 * int(c.findtext('voice') or 1)))
                 if c.find('rest') is None:
                     set_child(c, 'stem', 'down')
@@ -3669,6 +3688,53 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                         ly.attrib.pop('default-y', None)
             m.append(c)
     return part, sum(merged), len(merged)
+
+
+def mark_tuplets(root):
+    """Notes timed as tuplets (<time-modification>) but with no <tuplet> marking print with no
+    bracket or number, so a triplet looks like a misprint. Group each voice's run of them into
+    tuplets (a group is complete when it fills its normal notes' worth) and mark the ends.
+    Returns how many groups were marked."""
+    count = 0
+    for part in root.findall('part'):
+        for m in part.findall('measure'):
+            notes = [e for e in m if e.tag == 'note' and e.find('chord') is None and e.find('grace') is None]
+            if any(e.find('.//tuplet') is not None for e in notes):
+                continue
+            by_voice = {}
+            for e in notes:
+                by_voice.setdefault((e.findtext('voice') or '1', e.findtext('staff') or '1'), []).append(e)
+            for vs in by_voice.values():
+                group, total, need = [], 0, None
+                for e in vs + [None]:
+                    tm = e.find('time-modification') if e is not None else None
+                    if tm is None:
+                        group, total, need = [], 0, None
+                        continue
+                    act, nor = int(tm.findtext('actual-notes') or 3), int(tm.findtext('normal-notes') or 2)
+                    d = int(e.findtext('duration') or 0)
+                    if not group:
+                        need = Fr(nor) * Fr(d * act, nor)       # the group's length: nor normal notes
+                    group.append(e)
+                    total += d
+                    if total >= need:
+                        if total == need and len(group) > 1:
+                            for el, kind in ((group[0], 'start'), (group[-1], 'stop')):
+                                nots = el.find('notations')
+                                if nots is None:
+                                    nots = etree.Element('notations')
+                                    at = len(el)
+                                    for i2, ch in enumerate(el):
+                                        if ch.tag in ('lyric', 'play', 'listen'):
+                                            at = i2
+                                            break
+                                    el.insert(at, nots)
+                                t = etree.SubElement(nots, 'tuplet', type=kind)
+                                if kind == 'start':
+                                    t.set('bracket', 'yes')
+                            count += 1
+                        group, total, need = [], 0, None
+    return count
 
 
 def default_pairs(names, sung):
@@ -4811,9 +4877,16 @@ def main():
     _phr, bars, tempos = load_score(tmp.name)
     os.unlink(tmp.name)
     src_parts, src_notes, src_starts = parts, notes_by_part, starts
+    k = mark_tuplets(root)
+    if k:
+        print(f'{k} tuplet group(s) had no bracket or number in the file; marked for the video')
 
     droot = read_xml(a.display) if a.display else None
     closed = droot is not None and len(droot.findall('part')) != len(parts)
+    if droot is not None:
+        k = mark_tuplets(droot)
+        if k:
+            print(f'{k} tuplet group(s) in the display file had no bracket or number; marked for the video')
     if a.display and not closed:
         root, parts, names, notes_by_part, starts, sung = use_display(
             a.display, root, parts, names, notes_by_part, tempos)
