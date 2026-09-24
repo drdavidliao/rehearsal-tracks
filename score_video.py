@@ -10,8 +10,14 @@
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
 --display: it is shown instead (normal words, slurs and ties), after a check that it has
-the same parts, bars, notes and tempo marks. Each mp3 gives one mp4 of the same name
-beside it (or in OUT_DIR):
+the same parts, bars, notes and tempo marks. --display can also be the closed score the
+singers hold (two parts to a staff, fewer parts than the open file): then it is shown as it
+is, and whose each notehead, rest and syllable is comes from the open file (the parts
+singing that pitch, resting, or starting a syllable at that moment; a second lyric line
+goes to the lower part), with voice 1 / voice 2 as the fallback. Repeat signs and first
+and second endings are unrolled: the lights follow the bars in the order they are played,
+turning back a screen for a repeat. Each mp3 gives one mp4 of the same name beside it (or
+in OUT_DIR):
 
   a Balanced mp3          -> every sung part lights up in its own colour
   "(Part) predominant", "(Part) part-left", "Solo ... " mp3s
@@ -62,10 +68,11 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
-8.4) and ffmpeg with libx264; stem_vs_score.py beside it. Repeats are not expanded (the
-same limit as stem_vs_score.py). Seven videos of a 4:48 piece took 9 minutes on 2 cores.
+8.4) and ffmpeg with libx264; stem_vs_score.py beside it. D.C., D.S. and codas are not
+followed (repeat signs and endings are). Seven videos of a 4:48 piece took 9 minutes on 2
+cores.
 """
-import sys, os, io, re, copy, math, argparse, subprocess, zipfile, tempfile, shutil
+import sys, os, io, re, copy, math, argparse, subprocess, zipfile, tempfile, shutil, bisect
 from concurrent.futures import ThreadPoolExecutor
 from fractions import Fraction as Fr
 import numpy as np
@@ -137,8 +144,8 @@ def ties(note):
     return 'start' in ts, 'stop' in ts
 
 
-def scan_part(pi, part):
-    """Assign an id to every note and return (notes, measure starts, measure lengths) in quarters."""
+def scan_part(pi, part, prefix='n'):
+    """Assign an id to every note and return (notes, measure starts) in quarters."""
     div, pos, notes, starts, k = 1, Fr(0), [], [], 0
     for mi, m in enumerate(part.findall('measure')):
         starts.append(pos)
@@ -151,7 +158,7 @@ def scan_part(pi, part):
             elif e.tag == 'forward':
                 t += Fr(int(e.findtext('duration')), div)
             elif e.tag == 'note':
-                nid = f'n{pi}x{k}'
+                nid = f'{prefix}{pi}x{k}'
                 k += 1
                 e.set('id', nid)
                 grace = e.find('grace') is not None
@@ -647,11 +654,14 @@ class Timing:
         return self.straight(s) + self.cum[np.searchsorted(self.breaks, s, side='right')]
 
     def report(self, bar_at, label, seg=15.0):
-        fmt = lambda t: f'{int(t // 60)}:{t % 60:04.1f}'
+        fmt = lambda t: (lambda r: f'{int(r // 60)}:{r % 60:04.1f}')(round(t, 1))
         print(f'\n{label}')
         print(f'   anchor: audio first sounds at {fmt(self.first_audio)}; audio = {self.off:+.3f} s + '
               f'{self.scale:.4f} x score time')
         for b, d in zip(self.breaks, self.steps):
+            if b >= self.so.max() - 1e-6:
+                print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor')
+                continue
             print(f'   fermata ending at {fmt(float(self.straight(b)))} (bar {bar_at(float(self(b)))}): playback '
                   f'holds it {1000 * d:+.0f} ms beyond the written length; the lights after it follow')
         # the check: the pitch alignment against the lights, per stretch
@@ -806,7 +816,8 @@ class Page:
                         x = first_x(e)
                         if x is not None:
                             pts.append((times[i], (x + mx) * kx))
-                bl = next((b for b in m if 'barLine' in cls(b)), None)
+                # the bar's right barline: a bar opening with a repeat sign has its left one too
+                bl = next((b for b in reversed(list(m)) if 'barLine' in cls(b)), None)
                 d = bl.find(ns + 'path') if bl is not None else None
                 if mend is not None and d is not None:
                     pts.append((mend, (float(re.findall(r'-?[\d.]+', d.get('d'))[0]) + mx) * kx))
@@ -1212,6 +1223,159 @@ def use_display(path, root, parts, names, notes_by_part, tempos):
     return droot, dparts, dnames, dnotes, dstarts, sung
 
 
+
+# ----------------------------------------------------------------------------- repeats
+
+def play_order(part):
+    """The bars in the order they are played: repeat signs (with times="n") and first/second
+    endings unrolled. D.C., D.S. and codas are not followed (a warning says so)."""
+    ms = part.findall('measure')
+    n = len(ms)
+    fwd, bwd, times, end_nums, end_stop = [False] * n, [False] * n, [2] * n, [None] * n, [False] * n
+    for i, m in enumerate(ms):
+        for bl in m.findall('barline'):
+            rp, en = bl.find('repeat'), bl.find('ending')
+            if rp is not None and rp.get('direction') == 'forward':
+                fwd[i] = True
+            if rp is not None and rp.get('direction') == 'backward':
+                bwd[i] = True
+                times[i] = int(rp.get('times') or 2)
+            if en is not None:
+                if en.get('type') == 'start':
+                    end_nums[i] = [int(x) for x in re.findall(r'\d+', en.get('number') or '1')]
+                if en.get('type') in ('stop', 'discontinue'):
+                    end_stop[i] = True
+    if any(s_.get('dacapo') or s_.get('dalsegno') or s_.get('tocoda') for s_ in part.iter('sound')):
+        print('warning: D.C., D.S. or a coda in the score is not followed; only repeat signs are')
+    order, i, start, passno, done = [], 0, 0, 1, {}
+    while i < n and len(order) < 20 * n:
+        if fwd[i] and start != i:
+            start, passno = i, 1
+        if end_nums[i] is not None and passno not in end_nums[i]:
+            j = i
+            while j < n - 1 and not end_stop[j]:
+                j += 1
+            i = j + 1
+            continue
+        order.append(i)
+        if bwd[i]:
+            k = done.get(i, 1)
+            if k < times[i]:
+                done[i] = k + 1
+                passno = k + 1
+                i = start
+                continue
+        i += 1
+    return order
+
+
+# ----------------------------------------------------------------------------- a closed score to show
+
+def closed_display(droot, src_names, src_notes, sung):
+    """Use a closed score (two parts to a staff, as printed) as the display. Whose each notehead,
+    rest and syllable is comes from the open score the audio was rendered from: a notehead is
+    the parts that sing that pitch at that moment, a rest the parts resting there, a syllable
+    the parts starting a syllable there (a second lyric line going to the lower part). What
+    the open score cannot settle falls back to the voices: voice 1 and the top of a chord to
+    the upper part, voice 2 and the bottom to the lower."""
+    dparts = droot.findall('part')
+    dsps = {sp.get('id'): sp for sp in droot.find('part-list').findall('score-part')}
+    dnames = [(dsps[p.get('id')].findtext('part-name') or p.get('id')) for p in dparts]
+    scans = [scan_part(j, p, prefix='d') for j, p in enumerate(dparts)]
+    dnotes, dstarts = [sc[0] for sc in scans], scans[0][1]
+    staff_parts = {}
+    for j, nm in enumerate(dnames):
+        flat = ' '.join(nm.lower().split())
+        hit = [i for i, sn in enumerate(src_names) if ' '.join(sn.lower().split()) in flat]
+        # a name found inside a longer one ("Tenor 1" in "Tenor 1 Tenor 2") is not also its own
+        hit = [i for i in hit if not any(i != k and src_names[i].lower() in src_names[k].lower()
+                                         and k in hit for k in hit)] or hit
+        staff_parts[j] = sorted(hit)
+    at, rests, syls = set(), set(), set()
+    for i, ns_ in enumerate(src_notes):
+        for n in ns_:
+            if n['grace']:
+                continue
+            if n['rest']:
+                rests.add((i, n['mi'], n['rel'], n['dur']))
+            else:
+                at.add((i, n['mi'], n['rel'], n['midi']))
+                if n['lyric']:
+                    syls.add((i, n['mi'], n['rel']))
+    owners, fall = {}, 0
+    for j, ns_ in enumerate(dnotes):
+        sp = [i for i in staff_parts[j] if i in sung]
+        if not sp:
+            continue
+        voices = {}
+        for n in ns_:
+            voices.setdefault(n['mi'], set()).add(n['voice'])
+        for n in ns_:
+            if n['grace']:
+                continue
+            if n['rest']:
+                c = {i for i in sp if (i, n['mi'], n['rel'], n['dur']) in rests}
+            else:
+                c = {i for i in sp if (i, n['mi'], n['rel'], n['midi']) in at}
+            if not c:
+                fall += 1
+                vs = sorted(voices[n['mi']], key=lambda v: int(v) if v.isdigit() else 0)
+                if n['rest'] and len(vs) == 1:
+                    c = set(sp)
+                else:
+                    c = {sp[0] if vs.index(n['voice']) == 0 else sp[-1]}
+            owners[n['id']] = c
+    # syllables: grouped by staff and moment; with two lines at one moment, line k is the
+    # k-th part (top down) that starts a syllable there in the open score
+    groups = {}
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ''.join(x.text or '' for x in ly.findall('text')).strip():
+                    num = int(re.sub(r'\D', '', ly.get('number') or '1') or 1)
+                    groups.setdefault((j, n['mi'], n['rel']), []).append((num, n['id']))
+    readers = {}
+    for (j, mi, rel), lst in groups.items():
+        sp = [i for i in staff_parts[j] if i in sung]
+        cand = [i for i in sp if (i, mi, rel) in syls]
+        lst.sort()
+        if len(lst) == 1:
+            readers.setdefault(lst[0][1], set()).update(cand or owners.get(lst[0][1], set()))
+        else:
+            for k, (_, hid) in enumerate(lst):
+                readers.setdefault(hid, set()).update(
+                    {cand[k]} if k < len(cand) else owners.get(hid, set()))
+    return dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts
+
+
+def part_windows(dnotes, owners, readers, part):
+    """One part's notes, rests and syllables in a closed display, in written quarters: a
+    syllable lit from its note through the part's following notes until its next syllable or
+    rest."""
+    evs = {}
+    for ns_ in dnotes:
+        for n in ns_:
+            if not n['grace'] and n['dur'] > 0 and part in owners.get(n['id'], ()):
+                evs.setdefault(n['on'], []).append(n)
+    syl_at = {}
+    for ns_ in dnotes:
+        for n in ns_:
+            if part in readers.get(n['id'], ()):
+                syl_at[n['on']] = n['id']
+    out, cur = {}, None
+    for on in sorted(evs):
+        ns_ = evs[on]
+        end = max(n['on'] + n['dur'] for n in ns_)
+        if all(n['rest'] for n in ns_):
+            cur = None
+        elif on in syl_at:
+            cur = syl_at[on]
+            out[cur] = [ns_[0]['mi'], on, end]
+        elif cur:
+            out[cur][2] = max(out[cur][2], end)
+    return out
+
+
 def run_parallel(a):
     """One process per mp3, as many at a time as there are cores: each renders its own
     screens and encodes its own video. Each process's report is printed whole, in the order given."""
@@ -1276,10 +1440,6 @@ def main():
     part_map = dict(p.split('=', 1) for p in a.part)
 
     root = read_xml(a.score)
-    if root.find('.//repeat') is not None or root.find('.//sound[@dacapo]') is not None or \
-            root.find('.//sound[@dalsegno]') is not None:
-        print('warning: the score has repeats or jumps; they are not expanded, so timing after the first '
-              'one will be wrong. Use a copy with the repeats written out.')
     parts = root.findall('part')
     sps = {sp.get('id'): sp for sp in root.find('part-list').findall('score-part')}
     names = [(sps[p.get('id')].findtext('part-name') or p.get('id')).strip() for p in parts]
@@ -1292,58 +1452,163 @@ def main():
     if not sung:
         sys.exit('no part has lyrics; nothing to follow')
 
-    # tempo map and bars, exactly as stem_vs_score.py reads them
+    # tempo map, as stem_vs_score.py reads it
     tmp = tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False)
     tmp.write(etree.tostring(root))
     tmp.close()
     _phr, bars, tempos = load_score(tmp.name)
     os.unlink(tmp.name)
-    sec = lambda q: beats_to_sec(float(q), tempos)
+    src_parts, src_notes, src_starts = parts, notes_by_part, starts
 
-    if a.display:
+    droot = read_xml(a.display) if a.display else None
+    closed = droot is not None and len(droot.findall('part')) != len(parts)
+    if a.display and not closed:
         root, parts, names, notes_by_part, starts, sung = use_display(
             a.display, root, parts, names, notes_by_part, tempos)
 
+    # ---- the order the music is played in: repeats unrolled. Every lit thing is placed by bar
+    # and position in the bar, then at each moment that bar is played
+    order = play_order(src_parts[0])
+    piece_q = max(n['on'] + n['dur'] for ns_ in src_notes for n in ns_)
+    blen = [b - a_ for a_, b in zip(src_starts, list(src_starts[1:]) + [piece_q])]
+    ubars, u = [], Fr(0)
+    for mi in order:
+        ubars.append((mi, u))
+        u += blen[mi]
+    occ = {}
+    for mi, us in ubars:
+        occ.setdefault(mi, []).append(us)
+    if len(order) != len(src_starts):
+        print(f'repeats: {len(order)} bars played from {len(src_starts)} written')
+
+    def bpm_at(q):
+        v = tempos[0][1]
+        for b, t in tempos:
+            if b <= q + 1e-9:
+                v = t
+        return v
+    utempos = []
+    for mi, us in ubars:
+        a0, a1 = src_starts[mi], src_starts[mi] + blen[mi]
+        utempos.append((float(us), bpm_at(float(a0))))
+        utempos += [(float(us) + b - float(a0), t) for b, t in tempos if float(a0) < b < float(a1)]
+    usec = lambda uq: beats_to_sec(float(uq), utempos)
+
+    def times_of(mi, q0, q1):
+        """Score seconds (s0, s1) of written quarters q0..q1 in bar mi, each time the bar is played."""
+        return [(usec(us + q0 - src_starts[mi]), usec(us + q1 - src_starts[mi])) for us in occ.get(mi, [])]
+
+    # ---- the timing's own material, from the file the audio came from: every sounding note with
+    # its pitch, and where each fermata ends (on a note or a rest where it does; over a barline, at
+    # that barline)
+    pitched, all_onsets, fermata_at = [], [], []
+    for ns_ in src_notes:
+        for n in ns_:
+            if n['grace'] or n['dur'] == 0:
+                continue
+            spans = times_of(n['mi'], n['on'], n['on'] + n['dur'])
+            if not n['rest']:
+                all_onsets += [s0 for s0, _ in spans]
+                if n['midi'] is not None:
+                    pitched += [(s0, s1, n['midi']) for s0, s1 in spans]
+            if n['el'].find('.//fermata') is not None:
+                fermata_at += [s1 for _, s1 in spans]
+    for mi, m in enumerate(src_parts[0].findall('measure')):
+        for bl in m.findall('barline'):
+            if bl.find('fermata') is not None:
+                q = src_starts[mi] + (0 if bl.get('location') == 'left' else blen[mi])
+                fermata_at += [s0 for s0, _ in times_of(mi, q, q)]
+    breaks = []
+    for b in sorted(fermata_at):
+        if all(abs(b - x) > 0.05 for x in breaks):
+            breaks.append(b)
+    first_score = min(all_onsets)
+
+    # ---- what is shown, and whose each thing on it is; windows in written quarters by bar
+    note_q, rest_q, syl_q = {}, {}, {}
+    if closed:
+        dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts = closed_display(
+            droot, names, notes_by_part, sung)
+        if len(dstarts) != len(src_starts) or any(x != y for x, y in zip(dstarts, src_starts)):
+            sys.exit('--display: the closed score\'s bars do not line up with the open score\'s')
+        disp, d_all = droot, [n for ns_ in dnotes for n in ns_]
+        pairs = [tuple(i for i in sp if i in sung) for sp in staff_parts.values()
+                 if len([i for i in sp if i in sung]) == 2]
+        staff_pid = {i: dparts[j].get('id') for j, sp in staff_parts.items() for i in sp}
+        print(f'display: {os.path.basename(a.display)}, a closed score: ' + ', '.join(
+            f'"{" ".join(dnames[j].split())}" = {" + ".join(names[i] for i in sp) or "?"}'
+            for j, sp in staff_parts.items()) +
+            f'; {fall} of {sum(1 for n in d_all if n["id"] in owners)} notes and rests placed by voice, the '
+            'rest matched to the open score')
+        for n in d_all:
+            for i in owners.get(n['id'], ()):
+                (rest_q if n['rest'] else note_q).setdefault(n['id'], []).append(
+                    (i, n['mi'], n['on'], n['on'] + n['dur']))
+        for i in sung:
+            for hid, (mi, q0, q1) in part_windows(dnotes, owners, readers, i).items():
+                syl_q.setdefault(hid, []).append((i, mi, q0, q1))
+        syl_holder = {(i, hid): hid for hid, ps in readers.items() for i in ps}
+        centre = dnotes
+    else:
+        if a.open:
+            pairs = []
+        elif a.staves:
+            idx = {n.lower(): i for i, n in enumerate(names)}
+            pairs = []
+            for grp in a.staves.split(','):
+                up, lo = (x.strip().lower() for x in grp.split('+'))
+                if up not in idx or lo not in idx:
+                    sys.exit(f'--staves: unknown part in {grp!r}; parts are {names}')
+                pairs.append((idx[up], idx[lo]))
+        else:
+            pairs = default_pairs(names, sung)
+        centre = notes_by_part
     # A rest that fills its bar alone is a bar rest, centred in the bar. Some files write it as a
     # plain whole rest on beat 1, which Verovio sets at the left edge of the bar; mark it as one.
-    piece_q = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
-    bar_len = [b - a_ for a_, b in zip(starts, list(starts[1:]) + [piece_q])]
-    for ns_ in notes_by_part:
+    for ns_ in centre:
         by_bar = {}
         for n in ns_:
             if not n['grace']:
                 by_bar.setdefault((n['mi'], n['voice'], n['el'].findtext('staff') or '1'), []).append(n)
         for (mi, _, _), evs in by_bar.items():
-            if len(evs) == 1 and evs[0]['rest'] and evs[0]['rel'] == 0 and mi < len(bar_len) \
-                    and evs[0]['dur'] == bar_len[mi]:
+            if len(evs) == 1 and evs[0]['rest'] and evs[0]['rel'] == 0 and mi < len(blen) \
+                    and evs[0]['dur'] == blen[mi]:
                 evs[0]['el'].find('rest').set('measure', 'yes')
-
-    # pairs
-    if a.open:
-        pairs = []
-    elif a.staves:
-        idx = {n.lower(): i for i, n in enumerate(names)}
-        pairs = []
-        for grp in a.staves.split(','):
-            u, l = (s.strip().lower() for s in grp.split('+'))
-            if u not in idx or l not in idx:
-                sys.exit(f'--staves: unknown part in {grp!r}; parts are {names}')
-            pairs.append((idx[u], idx[l]))
-    else:
-        pairs = default_pairs(names, sung)
+    if not closed:
+        disp, owners, syl_holder = display_score(root, parts, notes_by_part, pairs, sung)
+        d_all = [n for ns_ in notes_by_part for n in ns_]
+        pair_of = {x: pr for pr in pairs for x in pr}
+        staff_pid = {i: (f'PX{pair_of[i][0]}' if i in pair_of else parts[i].get('id')) for i in range(len(parts))}
+        mi_of = {n['id']: n['mi'] for n in d_all}
+        for i, ns_ in enumerate(notes_by_part):
+            if i not in sung:
+                continue
+            for n in ns_:
+                if not n['grace'] and n['dur'] > 0:
+                    (rest_q if n['rest'] else note_q).setdefault(n['id'], []).append(
+                        (i, n['mi'], n['on'], n['on'] + n['dur']))
+            for nid, (q0, q1) in syllable_windows(ns_).items():
+                h = syl_holder.get((i, nid))
+                if h:
+                    syl_q.setdefault(h, []).append((i, mi_of[nid], q0, q1))
+        # a unison notehead carries both parts; the lower part's own note id is not printed
+        for table in (note_q, rest_q):
+            for nid, ps in owners.items():
+                if nid in table:
+                    have = {w[0] for w in table[nid]}
+                    _, mi, q0, q1 = table[nid][0]
+                    table[nid] += [(p, mi, q0, q1) for p in ps if p not in have]
     colours = {}                           # the parts sharing staves get the four strongest colours
     for i in [x for pr in pairs for x in pr] + sorted(sung):
         if i in sung and i not in colours:
             colours[i] = palette[len(colours) % len(palette)]
     print('parts: ' + ', '.join(f'{names[i]}{" (sung, " + colours[i] + ")" if i in sung else ""}'
                                  for i in range(len(names))))
-    print('staves: ' + ('open score' if not pairs else
-                        ', '.join(f'{names[u]} + {names[l]}' for u, l in pairs)))
-    disp, owners, syl_holder = display_score(root, parts, notes_by_part, pairs, sung)
+    if not closed:
+        print('staves: ' + ('open score' if not pairs else
+                            ', '.join(f'{names[u_]} + {names[l_]}' for u_, l_ in pairs)))
     index_syl_holder(syl_holder)
 
-    # windows in score seconds
-    note_win, syl_win, rest_win, rest_q = {}, {}, {}, {}
     # each sung part's pulse: the coarsest note value that 95% of the bars it sings keep to
     # (every note starting and lasting a whole number of them; tuplets aside). A piece in
     # eighths with one bar of sixteenths pulses in eighths. A rest's bar fills in jumps of this
@@ -1351,15 +1616,15 @@ def main():
     pulse = {}
     for i in sung:
         bars_ = {}
-        for n in notes_by_part[i]:
+        for n in src_notes[i]:
             if not n['grace'] and not n['tmod'] and n['dur'] > 0:
                 bars_.setdefault(n['mi'], []).append(n)
         sung_bars = [ns_ for ns_ in bars_.values() if any(not n['rest'] for n in ns_)]
         pulse[i] = Fr(1, 8)
-        for u in (Fr(4), Fr(2), Fr(1), Fr(1, 2), Fr(1, 4), Fr(1, 8)):
-            fits = sum(all(n['rel'] % u == 0 and n['dur'] % u == 0 for n in ns_) for ns_ in sung_bars)
+        for u_ in (Fr(4), Fr(2), Fr(1), Fr(1, 2), Fr(1, 4), Fr(1, 8)):
+            fits = sum(all(n['rel'] % u_ == 0 and n['dur'] % u_ == 0 for n in ns_) for ns_ in sung_bars)
             if sung_bars and fits >= 0.95 * len(sung_bars):
-                pulse[i] = u
+                pulse[i] = u_
                 break
         if a.pulse:
             pulse[i] = Fr(4, a.pulse)
@@ -1368,70 +1633,36 @@ def main():
     print('rest bars jump in: ' + ', '.join(f'{names[i]} {note_name.get(pulse[i], str(pulse[i]) + " quarter")}s'
                                              for i in sorted(sung)))
 
-    def steps(nid, part):
+    def unroll(table):
+        """{id: [(part, bar, q0, q1)]} -> {id: [(part, s0, s1, q0, q1, bar)]}, once per playing."""
+        out = {}
+        for k, ws in table.items():
+            for p_, mi, q0, q1 in ws:
+                for s0, s1 in times_of(mi, q0, q1):
+                    out.setdefault(k, []).append((p_, s0, s1, q0, q1, mi))
+        return out
+    note_s, rest_s, syl_s = unroll(note_q), unroll(rest_q), unroll(syl_q)
+
+    def steps(part, s0, s1, q0, q1, mi):
         """Score seconds where a rest's bar jumps: the end of each pulse inside the rest."""
-        q0, q1, m0 = rest_q[nid]
-        u = pulse[part]
-        k = (q0 - m0) // u + 1
+        m0, u_ = src_starts[mi], pulse[part]
+        k = (q0 - m0) // u_ + 1
         out = []
-        while m0 + k * u < q1:
-            out.append(sec(m0 + k * u))
+        while m0 + k * u_ < q1:
+            out.append(s0 + float(m0 + k * u_ - q0) / float(q1 - q0) * (s1 - s0))
             k += 1
-        return tuple(out) + (sec(q1),)
-    all_onsets = []
-    for i, ns_ in enumerate(notes_by_part):
-        for n in ns_:
-            if not n['rest'] and not n['grace'] and n['dur'] > 0:
-                all_onsets.append(sec(n['on']))
-        if i not in sung:
-            continue
-        for n in ns_:
-            if n['grace'] or n['dur'] == 0:
-                continue
-            # a rest lights for as long as it lasts, like a note: a singer who cannot count
-            # rests watches the light move through them
-            (rest_win if n['rest'] else note_win).setdefault(n['id'], []).append(
-                (i, sec(n['on']), sec(n['on'] + n['dur'])))
-            if n['rest']:
-                rest_q[n['id']] = (n['on'], n['on'] + n['dur'], n['on'] - n['rel'])
-        for nid, (q0, q1) in syllable_windows(ns_).items():
-            h = syl_holder.get((i, nid))
-            if h:
-                syl_win.setdefault(h, []).append((i, sec(q0), sec(q1)))
-    # a unison notehead carries both parts; the lower part's own note id is not printed
-    unison_extra = {}
-    for table in (note_win, rest_win):
-        for nid, ps in owners.items():
-            for p in ps:
-                if nid in table and not any(w[0] == p for w in table[nid]):
-                    unison_extra.setdefault(nid, []).append(p)
-    for nid, ps in unison_extra.items():
-        table = note_win if nid in note_win else rest_win
-        _, t0, t1 = table[nid][0]
-        for p in ps:
-            table[nid].append((p, t0, t1))
-    first_score = min(all_onsets)
-    # every sounding note with its pitch, for the pitch alignment; and where each fermata ends
-    pitched = [(sec(n['on']), sec(n['on'] + n['dur']), n['midi']) for ns_ in notes_by_part for n in ns_
-               if not n['rest'] and not n['grace'] and n['dur'] > 0 and n['midi'] is not None]
-    # a fermata on a note or a rest ends where the note or rest does; one printed over a barline
-    # (a pause on the bar line itself) ends at that barline
-    breaks, fermata_at = [], []
-    for ns_ in notes_by_part:
-        for n in ns_:
-            if n['el'].find('.//fermata') is not None and n['dur'] > 0:
-                fermata_at.append(sec(n['on'] + n['dur']))
-    last = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
-    for p in parts:
-        for mi, m in enumerate(p.findall('measure')):
-            for bl in m.findall('barline'):
-                if bl.find('fermata') is not None and mi < len(starts):
-                    left = bl.get('location') == 'left'
-                    q = starts[mi] if left else (starts[mi + 1] if mi + 1 < len(starts) else last)
-                    fermata_at.append(sec(q))
-    for b in sorted(fermata_at):
-        if all(abs(b - x) > 0.05 for x in breaks):
-            breaks.append(b)
+        return tuple(out) + (s1,)
+
+    # where things are on the page, in written quarters: for the rest bars' time -> x maps, and
+    # which screen each bar is on
+    d_mi = {n['id']: n['mi'] for n in d_all}
+    x_q = {n['id']: float(n['on']) for n in d_all if not n['grace'] and not (
+        n['rest'] and (n['el'].find('rest').get('measure') == 'yes' or n['type'] in (None, 'whole') and n['rel'] == 0))}
+    bar_end = {n['id']: float(src_starts[n['mi']] + blen[n['mi']]) for n in d_all if n['mi'] < len(blen)}
+    last_on_q = {}
+    for n in d_all:
+        if not n['grace'] and not n['rest']:
+            last_on_q[n['mi']] = max(last_on_q.get(n['mi'], n['on']), n['on'])
 
     # engrave
     import verovio
@@ -1448,15 +1679,6 @@ def main():
     if not tk.loadData(etree.tostring(disp).decode()):
         sys.exit('verovio could not read the closed score')
     base_mei = tk.getMEI()
-    pair_of = {x: pr for pr in pairs for x in pr}
-    on_sec = {n['id']: sec(n['on']) for ns_ in notes_by_part for n in ns_ if not n['grace']}
-    piece_end = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
-    ends = [sec(q) for q in starts[1:]] + [sec(piece_end)]
-    bar_end = {n['id']: ends[n['mi']] for ns_ in notes_by_part for n in ns_ if n['mi'] < len(ends)}
-    # a whole-bar rest is printed mid-bar, so it says nothing about where in the bar a time falls
-    x_sec = {n['id']: on_sec[n['id']] for ns_ in notes_by_part for n in ns_
-             if n['id'] in on_sec and not (n['rest'] and (n['el'].find('rest').get('measure') == 'yes'
-                                                           or n['type'] in (None, 'whole') and n['rel'] == 0))}
     layouts = {}
 
     def layout(view):
@@ -1472,7 +1694,7 @@ def main():
             M = '{http://www.music-encoding.org/ns/mei}'
             r = etree.fromstring(re.sub(r'<scoreDef ', '<scoreDef optimize="true" ', mei, count=1).encode())
             if view != 'all':
-                pid = f'PX{pair_of[view][0]}' if view in pair_of else parts[view].get('id')
+                pid = staff_pid.get(view)
                 sd = next((d for d in r.iter(M + 'staffDef')
                            if d.get('{http://www.w3.org/XML/1998/namespace}id') == pid), None)
                 for st in (r.iter(M + 'staff') if sd is not None else []):
@@ -1510,16 +1732,16 @@ def main():
                 ends = [st, en] if tag == 'tie' else chord_of.get(st, [st]) + chord_of.get(en, [en])
                 ctrl[e.get(X)] = (tag, st, en, set().union(*[owners.get(i, set()) for i in ends]))
         pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
-                      x_sec, bar_end, ctrl)
+                      x_q, bar_end, ctrl)
                  for p in range(1, t.getPageCount() + 1)]
-        first, last = [], []
-        for pg in pages:
-            ts = [on_sec[i] for i in pg.ids_on_page if i in on_sec]
-            first.append(min(ts) if ts else None)
-            last.append(max(ts) if ts else None)
+        bar_page = {}                            # which screen each written bar is on
+        for pi_, pg in enumerate(pages):
+            for i in pg.ids_on_page:
+                if i in d_mi:
+                    bar_page.setdefault(d_mi[i], pi_)
         print(f'engraved for {"every part" if view == "all" else names[view]}: {len(pages)} screens of '
               f'{W}x{H}, staff {a.staff_px:.0f} px')
-        layouts[view] = (pages, first, last, ctrl)
+        layouts[view] = (pages, bar_page, ctrl)
         return layouts[view]
 
     jobs = []
@@ -1531,10 +1753,11 @@ def main():
         base = os.path.splitext(os.path.basename(mp3))[0]
         jobs.append((mp3, 'all' if f is None else f, os.path.join(out_dir, base)))
 
-    bar_sec = [(sec(q), b.get('number')) for q, b in zip(starts, parts[0].findall('measure'))]
+    numbers = [m.get('number') for m in src_parts[0].findall('measure')]
+    bar_sec = [(usec(us), numbers[mi]) for mi, us in ubars]
 
     for mp3, view, stem in jobs:
-        pages, page_first, page_last, ctrl = layout(view)
+        pages, bar_page, ctrl = layout(view)
         T = Timing(mp3, pitched, first_score, breaks)
         def bar_at(t_audio):
             s = (t_audio - T.off) / T.scale
@@ -1544,15 +1767,24 @@ def main():
                     cur = num
             return cur
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
-        # page turns (audio seconds)
-        turns = [0.0]
-        for p in range(1, len(pages)):
-            if page_first[p] is None:
-                turns.append(turns[-1])
+        # page turns (audio seconds), in the order the bars are played: a repeat turns back.
+        # Up to --lead s before the next screen's first bar, never before the last note on the old
+        # screen has begun
+        turns, pages_at, prev = [], [], None
+        for k, (mi, us) in enumerate(ubars):
+            pg_ = bar_page.get(mi)
+            if pg_ is None or pg_ == prev:
                 continue
-            start = float(T(page_first[p]))
-            prev_last = float(T(page_last[p - 1])) if page_last[p - 1] is not None else 0.0
-            turns.append(min(start, max(prev_last + 0.3, start - a.lead)))
+            start = float(T(usec(us)))
+            if prev is None:
+                tsw = 0.0
+            else:
+                pmi, pus = ubars[k - 1]
+                last_on = float(T(usec(pus + last_on_q.get(pmi, src_starts[pmi]) - src_starts[pmi])))
+                tsw = min(start, max(last_on + 0.3, start - a.lead))
+            turns.append(tsw)
+            pages_at.append(pg_)
+            prev = pg_
         # light windows per page: (t0, t1, page, group key, colour)
         wins = []
         page_of = {}                               # (kind, id) -> [(page, lit group)]
@@ -1568,19 +1800,20 @@ def main():
                 gk = ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk
                 if (pi_, gk) not in page_of.setdefault(kk, []):
                     page_of[kk].append((pi_, gk))
-        tie_win = {}
+        tie_s = {}
         for cid, (tag, st, en, ps) in ctrl.items():
             if tag == 'tie':
-                tie_win[cid] = [w for nid in (st, en) for w in note_win.get(nid, []) if w[0] in ps]
-        for kind, table in (('note', note_win), ('syl', syl_win), ('rest', rest_win), ('tie', tie_win)):
+                tie_s[cid] = [w for nid in (st, en) for w in note_s.get(nid, []) if w[0] in ps]
+        for kind, table in (('note', note_s), ('syl', syl_s), ('rest', rest_s), ('tie', tie_s)):
             for nid, ws in table.items():
                 if (kind, nid) not in page_of:
                     continue
                 for pi_, gk in page_of[(kind, nid)]:
-                    for part, s0, s1 in ws:
+                    for part, s0, s1, q0, q1, mi in ws:
                         if view == 'all' or part == view:
                             wins.append((float(T(s0)), float(T(s1)), pi_, gk, colours[part], part, s0, s1,
-                                         steps(nid, part) if kind == 'rest' else None))
+                                         steps(part, s0, s1, q0, q1, mi) if kind == 'rest' else None,
+                                         float(q0), float(q1)))
         wins.sort()
 
         t_start, t_len = 0.0, T.dur
@@ -1598,15 +1831,13 @@ def main():
                         ts, xs = pages[p].timemap[rb[0]]
                         s = w[6] + (t - w[0]) / max(w[1] - w[0], 1e-6) * (w[7] - w[6])
                         s = next((b for b in w[8] if b > s + 1e-9), w[7])   # through the current pulse
-                        prog[w[3]] = tuple(int(round(float(np.interp(v, ts, xs)))) for v in (w[6], w[7], s))
+                        q = w[9] + (s - w[6]) / max(w[7] - w[6], 1e-9) * (w[10] - w[9])   # where on the page
+                        prog[w[3]] = tuple(int(round(float(np.interp(v, ts, xs)))) for v in (w[9], w[10], q))
             return (p, tuple(sorted((k, tuple(c for _, c in sorted(v)), prog.get(k)) for k, v in lit.items())))
 
         def page_at(t):
-            p = 0
-            for k, tt in enumerate(turns):
-                if t >= tt:
-                    p = k
-            return p
+            k = bisect.bisect_right(turns, t) - 1
+            return pages_at[max(k, 0)]
 
         def frame_at(t):
             p = page_at(t)

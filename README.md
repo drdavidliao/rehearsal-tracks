@@ -135,8 +135,8 @@ Make follow-along videos for the Shenandoah folder.
 ```
 
 If the MusicXML there is the Cantai learning version, put the print version in
-the folder too and say which is which, so the videos show the normal words and
-slurs. You get one video per part and one for everyone, named like the mp3s
+the folder too, ideally the closed score the singers hold, and say which is
+which, so the videos show the music as printed. You get one video per part and one for everyone, named like the mp3s
 (`Shenandoah - (Tenor 2) predominant.mp4`, `Shenandoah - Balanced.mp4`). The
 score is the closed score the singers hold, two parts to a staff. Each note and
 its word lights up in the part's colour while it sounds. Each rest lights up
