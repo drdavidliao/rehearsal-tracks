@@ -824,7 +824,8 @@ matter. Attach them at the barline with an offset instead:
 This is the part that goes wrong. **Decide the number of lyric lines for a bar
 by comparing the two voices' syllable *sequences*, not their note positions.**
 
-- **Sequences equal → one lyric line.** Drop the lower voice's copies entirely.
+- **Sequences equal, each syllable starting at the same moment → one lyric
+  line.** Drop the lower voice's copies entirely.
   This is the common case: both parts sing the same words, one takes a two-note
   melisma where the other has a plain quarter. The merge cannot chord them, so
   the lower voice gets written out as voice 2 — and its duplicate syllable, the
@@ -839,7 +840,10 @@ by comparing the two voices' syllable *sequences*, not their note positions.**
   ended (7.6).
 - **Sequences differ → two lines,** line 1 the upper voice and line 2 the lower
   voice, *for every bar of the divergent passage*, including bars where one of
-  them is silent.
+  them is silent. So do the same words entering at different moments
+  (staggered entrances on one word, a beat or two apart): a shared copy lines
+  up with one entrance and not the other, so each voice gets its own under its
+  own note.
 
 A per-bar collision test — "does a voice-2 syllable start on the same beat as a
 voice-1 syllable?" — gets both cases wrong. It prints the duplicate in the first
@@ -3681,8 +3685,10 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
             lo_clef = copy.deepcopy(la.find('clef'))
             lo_clef.attrib.pop('number', None)
         clef_due = la is not None and la.find('clef') is not None
-        sa = [(n['lyric']) for n in a if n['lyric']]
-        sb = [(n['lyric']) for n in b if n['lyric']]
+        # one line only for the same words at the same moments: a staggered entrance needs its own
+        # copy under its own note (SKILL.md 7.4)
+        sa = [(n['rel'], n['lyric']) for n in a if n['lyric']]
+        sb = [(n['rel'], n['lyric']) for n in b if n['lyric']]
         same_words = sa == sb
         # which printed syllable each part reads in this bar
         ha = [n['id'] for n in a if n['lyric']]

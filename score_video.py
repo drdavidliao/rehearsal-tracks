@@ -309,8 +309,10 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
             lo_clef = copy.deepcopy(la.find('clef'))
             lo_clef.attrib.pop('number', None)
         clef_due = la is not None and la.find('clef') is not None
-        sa = [(n['lyric']) for n in a if n['lyric']]
-        sb = [(n['lyric']) for n in b if n['lyric']]
+        # one line only for the same words at the same moments: a staggered entrance needs its own
+        # copy under its own note (SKILL.md 7.4)
+        sa = [(n['rel'], n['lyric']) for n in a if n['lyric']]
+        sb = [(n['rel'], n['lyric']) for n in b if n['lyric']]
         same_words = sa == sb
         # which printed syllable each part reads in this bar
         ha = [n['id'] for n in a if n['lyric']]
