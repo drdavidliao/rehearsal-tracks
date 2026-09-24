@@ -440,6 +440,71 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
     return part, sum(merged), len(merged)
 
 
+ACC = {-2: 'flat-flat', -1: 'flat', 0: 'natural', 1: 'sharp', 2: 'double-sharp'}
+ACC_AFTER = ('type', 'dot', 'voice', 'instrument', 'footnote', 'level', 'unpitched', 'pitch', 'rest', 'chord',
+             'grace', 'cue', 'duration', 'tie')
+
+
+def mark_accidentals(root):
+    """Verovio prints only the accidentals a MusicXML writes as <accidental>; it does not work them
+    out from <alter>, and a file that leaves them to the reader (Sibelius does) shows B-flat for
+    B-natural (SKILL.md 8.1). Write the ones the score needs: per staff, both voices together,
+    against the key signature and what earlier notes in the bar have already altered; a note tied
+    over from the last bar shows none. Returns how many were added."""
+    added = 0
+    for part in root.findall('part'):
+        fifths, div = 0, 1
+        for m in part.findall('measure'):
+            key = {}
+            for e in m:
+                if e.tag == 'attributes':
+                    if e.find('key/fifths') is not None:
+                        fifths = int(e.findtext('key/fifths'))
+                    if e.find('divisions') is not None:
+                        div = int(e.findtext('divisions'))
+            order = 'FCGDAEB' if fifths >= 0 else 'BEADGCF'
+            key = {st: (1 if fifths > 0 else -1) for st in order[:abs(fifths)]}
+            evs, t, k = [], Fr(0), 0
+            for e in m:
+                if e.tag == 'backup':
+                    t -= Fr(int(e.findtext('duration')), div)
+                elif e.tag == 'forward':
+                    t += Fr(int(e.findtext('duration')), div)
+                elif e.tag == 'note':
+                    on = evs[-1][0] if (e.find('chord') is not None and evs) else t
+                    evs.append((on, k, e))
+                    k += 1
+                    if e.find('chord') is None and e.find('grace') is None:
+                        t += Fr(int(e.findtext('duration') or 0), div)
+            state = {}
+            for _, _, n in sorted(evs, key=lambda x: (x[0], x[1])):
+                p = n.find('pitch')
+                if p is None:
+                    continue
+                st, octv = p.findtext('step'), p.findtext('octave')
+                alt = int(float(p.findtext('alter') or 0))
+                held = any(x.get('type') == 'stop' for x in n.findall('tie'))
+                have = n.find('accidental')
+                now = state.get((st, octv), key.get(st, 0))
+                if have is not None:
+                    state[(st, octv)] = alt
+                    continue
+                if held or alt == now or alt not in ACC:
+                    if not held:
+                        state[(st, octv)] = alt
+                    continue
+                acc = etree.Element('accidental')
+                acc.text = ACC[alt]
+                at = 0
+                for j, ch in enumerate(n):
+                    if ch.tag in ACC_AFTER:
+                        at = j + 1
+                n.insert(at, acc)
+                state[(st, octv)] = alt
+                added += 1
+    return added
+
+
 def mark_tuplets(root):
     """Notes timed as tuplets (<time-modification>) but with no <tuplet> marking print with no
     bracket or number, so a triplet looks like a misprint. Group each voice's run of them into
@@ -1892,6 +1957,9 @@ def main():
             'pageMarginLeft': int(0.02 * W * z), 'pageMarginRight': int(0.02 * W * z),
             'breaks': 'auto', 'header': 'none', 'footer': 'none', 'adjustPageHeight': False,
             'justifyVertically': False, 'lyricSize': 5.0, 'spacingSystem': 10, 'svgViewBox': False}
+    k = mark_accidentals(disp)
+    if k:
+        print(f'{k} accidental(s) the file leaves to the reader written out for the video')
     # every lyric line stops where its melisma does (SKILL.md 7.6): verify.py's check 14, on what is shown
     dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
     # which notes sing words of their own: the open score whose words are shown (a closed display file
