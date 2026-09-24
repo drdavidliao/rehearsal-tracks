@@ -1452,7 +1452,7 @@ a chord two parts share (a merged bar) is both parts'. Pieces carried over a
 system break come without an id, as `class="tie id-<its id> spanning"`, like a
 syllable's extender.
 
-Six things that cost time:
+Seven things that cost time:
 
 - **Verovio's `condense` does nothing for MusicXML.** Hiding empty staves works
   only for MEI with `<scoreDef optimize="true">`: load the MusicXML, take
@@ -1464,7 +1464,12 @@ Six things that cost time:
   their lines, a whole-bar rest to above the staff: pin them, `loc="6"` for an
   `mRest` or a whole `<rest>` (some files write a bar's rest as a plain whole
   rest, and the first fix, on `mRest` only, left those floating in the Bass
-  video), `loc="4"` for any other rest. And a layer that holds only the
+  video), `loc="4"` for any other rest.
+- **A bar rest written as a plain whole rest sits at the left edge.** Verovio
+  centres only a rest marked `<rest measure="yes"/>`; the print file of the
+  two-soloist TTBB wrote many bar rests as whole rests on beat 1, and they sat
+  against the barline. Before engraving, the script marks every rest that fills
+  its bar alone (per voice and staff) as a bar rest. And a layer that holds only the
   invisible note is no voice: counting it put the Bass's rest bars above its
   staff, where the upper of two voices goes.
 - **Verovio keeps MusicXML note ids** (`<note id="…">`), rests included, but
@@ -4548,6 +4553,20 @@ def main():
     if a.display:
         root, parts, names, notes_by_part, starts, sung = use_display(
             a.display, root, parts, names, notes_by_part, tempos)
+
+    # A rest that fills its bar alone is a bar rest, centred in the bar. Some files write it as a
+    # plain whole rest on beat 1, which Verovio sets at the left edge of the bar; mark it as one.
+    piece_q = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
+    bar_len = [b - a_ for a_, b in zip(starts, list(starts[1:]) + [piece_q])]
+    for ns_ in notes_by_part:
+        by_bar = {}
+        for n in ns_:
+            if not n['grace']:
+                by_bar.setdefault((n['mi'], n['voice'], n['el'].findtext('staff') or '1'), []).append(n)
+        for (mi, _, _), evs in by_bar.items():
+            if len(evs) == 1 and evs[0]['rest'] and evs[0]['rel'] == 0 and mi < len(bar_len) \
+                    and evs[0]['dur'] == bar_len[mi]:
+                evs[0]['el'].find('rest').set('measure', 'yes')
 
     # pairs
     if a.open:

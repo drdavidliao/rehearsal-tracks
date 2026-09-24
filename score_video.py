@@ -1304,6 +1304,20 @@ def main():
         root, parts, names, notes_by_part, starts, sung = use_display(
             a.display, root, parts, names, notes_by_part, tempos)
 
+    # A rest that fills its bar alone is a bar rest, centred in the bar. Some files write it as a
+    # plain whole rest on beat 1, which Verovio sets at the left edge of the bar; mark it as one.
+    piece_q = max(n['on'] + n['dur'] for ns_ in notes_by_part for n in ns_)
+    bar_len = [b - a_ for a_, b in zip(starts, list(starts[1:]) + [piece_q])]
+    for ns_ in notes_by_part:
+        by_bar = {}
+        for n in ns_:
+            if not n['grace']:
+                by_bar.setdefault((n['mi'], n['voice'], n['el'].findtext('staff') or '1'), []).append(n)
+        for (mi, _, _), evs in by_bar.items():
+            if len(evs) == 1 and evs[0]['rest'] and evs[0]['rel'] == 0 and mi < len(bar_len) \
+                    and evs[0]['dur'] == bar_len[mi]:
+                evs[0]['el'].find('rest').set('measure', 'yes')
+
     # pairs
     if a.open:
         pairs = []
