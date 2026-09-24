@@ -633,18 +633,19 @@ class Timing:
         self.aon = audio_onsets(self.x)
         so = np.array(sorted(set(round(a, 3) for a, _, _ in notes)))
         self.so = so
-        scale = 1.0
-        for win in (0.5, 0.3, 0.15):                         # refine the tempo only; the anchor stays put
-            g = self.off + scale * so
-            ok, near = self.nearest(g, win)
-            if ok.sum() >= 8:
-                X, Y = so[ok], near[ok] - self.off
-                scale = float(np.clip(np.dot(X, Y) / max(np.dot(X, X), 1e-9), 0.9, 1.1))
-        self.scale = scale
+        self.fit_tempo(so)
         self.breaks = np.array(sorted(breaks))
         self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
         self.fit_holds(A, notes, so)
+        # the first entrance can be too quiet to trip the level threshold (a predominant mix with
+        # the entering voice 21 dB down started 0.1 s late): the pitch alignment of the first
+        # stretch overrules the anchor when they disagree by a frame or more
+        self.moved = 0.0
+        if abs(self.base) >= 0.03:
+            self.moved, self.off = self.base, self.off + self.base
+            self.fit_tempo(so)
+            self.fit_holds(A, notes, so)
         # then the tempo and every hold together, by least squares on the onsets each lands near:
         # fitted one after the other, a hold left in the tempo spreads over the whole piece (a
         # 0.6 s hold measured 0.49 s), and the tempo refitted round the holds overshoots
@@ -662,6 +663,16 @@ class Timing:
                 self.cum = np.concatenate([[0.0], np.cumsum(self.steps)])
             # the check in the report is against a pitch alignment on the final straight line
             self.dtw = dtw_offset(A, chroma_score(notes, self.straight, len(A)), band=int(3.0 / HOP_C))
+
+    def fit_tempo(self, so):
+        scale = 1.0
+        for win in (0.5, 0.3, 0.15):                         # refine the tempo only; the anchor stays put
+            g = self.off + scale * so
+            ok, near = self.nearest(g, win)
+            if ok.sum() >= 8:
+                X, Y = so[ok], near[ok] - self.off
+                scale = float(np.clip(np.dot(X, Y) / max(np.dot(X, X), 1e-9), 0.9, 1.1))
+        self.scale = scale
 
     def fit_holds(self, A, notes, so):
         """One offset per stretch between fermatas: coarse from the pitch alignment, fine from onsets."""
@@ -685,6 +696,7 @@ class Timing:
             ok, near = self.nearest(g, 0.1)
             seg.append(coarse + float(np.median(near[ok] - g[ok])) if ok.sum() >= 6 else coarse)
         base = seg[0] if seg[0] is not None else 0.0
+        self.base = base
         self.steps, prev = [], base
         for v in seg[1:]:
             v = prev if v is None else v
@@ -712,6 +724,9 @@ class Timing:
         print(f'\n{label}')
         print(f'   anchor: audio first sounds at {fmt(self.first_audio)}; audio = {self.off:+.3f} s + '
               f'{self.scale:.4f} x score time')
+        if self.moved:
+            print(f'   (moved {1000 * self.moved:+.0f} ms from where the audio first sounds, to agree with the '
+                  f'pitch alignment of the opening)')
         for b, d in zip(self.breaks, self.steps):
             if b >= self.so.max() - 1e-6:
                 print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor')
@@ -1504,6 +1519,34 @@ def part_windows(dnotes, owners, readers, part):
     return out
 
 
+def timing_source(mp3):
+    """The mp3 to time this one by. A set made by rehearsal_mix.py is sample-aligned, and its
+    Balanced track, every voice at the same level, times best: in a predominant mix a voice 21 dB
+    down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
+    anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
+    only when the Balanced track sits beside this one, is the same length and lines up with it."""
+    m = re.match(r'(.*) - \(.+\) (predominant|part-left)\.mp3$', os.path.basename(mp3))
+    if not m:
+        return mp3, ''
+    ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')
+    if not os.path.exists(ref):
+        return mp3, ''
+    x, y = decode(ref), decode(mp3)
+    if abs(len(x) - len(y)) > 0.03 * 22050:
+        return mp3, ''
+    h = 220                                              # 10 ms envelopes, compared over +-0.3 s
+    n = min(len(x), len(y)) // h
+    ex = np.sqrt((x[:n * h].reshape(n, h) ** 2).mean(1))
+    ey = np.sqrt((y[:n * h].reshape(n, h) ** 2).mean(1))
+    ex, ey = ex - ex.mean(), ey - ey.mean()
+    lags = range(-30, 31)
+    cc = [float(np.dot(ex[max(0, k):n + min(0, k)], ey[max(0, -k):n - max(0, k)])) for k in lags]
+    k = lags[int(np.argmax(cc))]
+    if k != 0:
+        return mp3, ''
+    return ref, f'timed by {os.path.basename(ref)}, which it lines up with (same length, 0 ms apart)'
+
+
 def run_parallel(a):
     """One process per mp3, as many at a time as there are cores: each renders its own
     screens and encodes its own video. Each process's report is printed whole, in the order given."""
@@ -1893,7 +1936,10 @@ def main():
 
     for mp3, view, stem in jobs:
         pages, bar_page, ctrl = layout(view)
-        T = Timing(mp3, pitched, first_score, breaks)
+        ref, why = timing_source(mp3)
+        T = Timing(ref, pitched, first_score, breaks)
+        if ref != mp3:
+            T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):
             s = (t_audio - T.off) / T.scale
             cur = bar_sec[0][1]
@@ -1902,6 +1948,8 @@ def main():
                     cur = num
             return cur
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
+        if why:
+            print(f'   {why}')
         # page turns (audio seconds), in the order the bars are played: a repeat turns back.
         # Up to --lead s before the next screen's first bar, never before the last note on the old
         # screen has begun
