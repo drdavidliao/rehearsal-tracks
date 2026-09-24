@@ -21,7 +21,9 @@ beside it (or in OUT_DIR):
 A note lights (its colour, and a soft halo) while it sounds; its syllable stays lit from its
 note until the next syllable or rest, so a melisma or a tie keeps its word lit. A note or
 word two parts share gets its halo and ink in stacked bands, the higher part's colour on
-top (side by side would read as one part singing the first half, the other the second). A rest lights the same way, and a
+top (side by side would read as one part singing the first half, the other the second).
+A tie lights while either of its notes sounds; in a part's own video the other parts' ties
+and slurs are grey with their notes. A rest lights the same way, and a
 bar under it (above the staff for the upper of two voices) runs from where the rest starts
 to where it ends as the other staves print that time, filling in jumps of one pulse: each
 part's pulse is the coarsest note value that 95% of the bars it sings keep to (eighths in a
@@ -711,7 +713,7 @@ def render_png(svg_bytes, W, H):
 class Page:
     """One rendered page: base images per view, and every lightable element's pixels."""
 
-    def __init__(self, svg, W, H, owners, syl_holder, colours, views, names, label_px, times, bar_end):
+    def __init__(self, svg, W, H, owners, syl_holder, colours, views, names, label_px, times, bar_end, ctrl):
         self.W, self.H, self.names, self.label_px = W, H, names, label_px
         root = etree.fromstring(svg.encode())
         ns = '{http://www.w3.org/2000/svg}'
@@ -724,6 +726,7 @@ class Page:
         pm = next(g for g in inner.iter(ns + 'g') if 'page-margin' in cls(g))
         mx, my = (float(v) for v in re.findall(r'-?[\d.]+', pm.get('transform'))[:2])
         notes, syls, rests = [], [], []
+        self.ctrl, self.ctrl_g = ctrl, []
         for g in root.iter(ns + 'g'):
             c = cls(g)
             if 'note' in c and g.get('id') in owners:
@@ -732,6 +735,12 @@ class Page:
                 rests.append(g)
             elif 'syl' in c:
                 syls.append(g)
+            elif 'tie' in c or 'slur' in c:
+                # a tie or slur carried over a system break is drawn again at the next system's
+                # start with no id, naming the original in a class "id-<its id>"
+                cid = g.get('id') or next((x[3:] for x in c if x.startswith('id-')), None)
+                if cid in ctrl:
+                    self.ctrl_g.append((cid, g))
         # elements: (kind, key, g); heads get their own entry for the halo
         self.elems = []
         self.heads = {}
@@ -753,6 +762,9 @@ class Page:
                                                w / 2 * kx, space * sc / 2 * ky)
         for g in rests:
             self.elems.append(('rest', g.get('id'), g))
+        for cid, g in self.ctrl_g:                     # a tie lights while either of its notes sounds
+            if ctrl[cid][0] == 'tie':
+                self.elems.append(('tie', f'{cid}#{len(self.elems)}', g))
         for s in syls:
             if 'spanning' in cls(s):
                 # an extender carried over a system break: Verovio draws the rest of the line at
@@ -927,6 +939,8 @@ class Page:
                         paint(g, '#000000')
                 elif ({'note', 'rest', 'mRest'} & set(c)) and g.get('id'):
                     paint(g, '#000000' if view in owners.get(g.get('id'), ()) else THEME['grey'])
+            for cid, g in self.ctrl_g:
+                paint(g, '#000000' if view in self.ctrl[cid][3] else THEME['grey'])
             for kind, key, g in self.elems:
                 if kind in ('syl', 'sylx'):
                     k0 = key.split('#')[0]
@@ -1465,8 +1479,24 @@ def main():
         t.setOptions(opts)
         if not t.loadData(mei):
             sys.exit('verovio could not re-read the score as MEI')
+        # whose each tie and slur is: from the notes the MEI says it starts and ends on (the SVG
+        # keeps the MEI ids). A tie is its notes' part's; a slur starting or ending on a chord
+        # that two parts share is both parts'
+        M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+        rr = etree.fromstring(mei.encode())
+        chord_of = {}
+        for ch in rr.iter(M + 'chord'):
+            mem = [nn.get(X) for nn in ch.iter(M + 'note')]
+            for nn in mem:
+                chord_of[nn] = mem
+        ctrl = {}
+        for tag in ('tie', 'slur'):
+            for e in rr.iter(M + tag):
+                st, en = (e.get('startid') or '').lstrip('#'), (e.get('endid') or '').lstrip('#')
+                ends = [st, en] if tag == 'tie' else chord_of.get(st, [st]) + chord_of.get(en, [en])
+                ctrl[e.get(X)] = (tag, st, en, set().union(*[owners.get(i, set()) for i in ends]))
         pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
-                      x_sec, bar_end)
+                      x_sec, bar_end, ctrl)
                  for p in range(1, t.getPageCount() + 1)]
         first, last = [], []
         for pg in pages:
@@ -1475,7 +1505,7 @@ def main():
             last.append(max(ts) if ts else None)
         print(f'engraved for {"every part" if view == "all" else names[view]}: {len(pages)} screens of '
               f'{W}x{H}, staff {a.staff_px:.0f} px')
-        layouts[view] = (pages, first, last)
+        layouts[view] = (pages, first, last, ctrl)
         return layouts[view]
 
     jobs = []
@@ -1490,7 +1520,7 @@ def main():
     bar_sec = [(sec(q), b.get('number')) for q, b in zip(starts, parts[0].findall('measure'))]
 
     for mp3, view, stem in jobs:
-        pages, page_first, page_last = layout(view)
+        pages, page_first, page_last, ctrl = layout(view)
         T = Timing(mp3, pitched, first_score, breaks)
         def bar_at(t_audio):
             s = (t_audio - T.off) / T.scale
@@ -1517,11 +1547,18 @@ def main():
                 if kind == 'sylx':                 # an extender's continuation lights with its syllable
                     page_of.setdefault(('syl', key.split('#')[0]), []).append((pi_, (kind, key)))
                     continue
+                if kind == 'tie':                  # each drawn piece of a tie, on whatever screen
+                    page_of.setdefault(('tie', key.split('#')[0]), []).append((pi_, (kind, key)))
+                    continue
                 kk = ('note' if kind in ('body', 'head') else kind, key)
                 gk = ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk
                 if (pi_, gk) not in page_of.setdefault(kk, []):
                     page_of[kk].append((pi_, gk))
-        for kind, table in (('note', note_win), ('syl', syl_win), ('rest', rest_win)):
+        tie_win = {}
+        for cid, (tag, st, en, ps) in ctrl.items():
+            if tag == 'tie':
+                tie_win[cid] = [w for nid in (st, en) for w in note_win.get(nid, []) if w[0] in ps]
+        for kind, table in (('note', note_win), ('syl', syl_win), ('rest', rest_win), ('tie', tie_win)):
             for nid, ws in table.items():
                 if (kind, nid) not in page_of:
                     continue
