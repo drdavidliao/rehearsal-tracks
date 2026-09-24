@@ -682,6 +682,9 @@ The checks:
     note *in the same voice* for the line to run under. Verovio says
     "Syllable with underline extender under one single note" when it doesn't.
     The fix is to keep the tied note in that voice (7.4), never to drop the line.
+    And the line must stop where its melisma does: the check walks each line to
+    the next syllable on it and fails a line that crosses a printed rest or, given
+    `--original`, runs under notes that sing words of their own (7.6).
 15. **No lyric collisions in the layout you are going to print** —
     `lyric_collisions.py`, Step 8.
 16. **A revoicing matches the original everywhere it was not asked to change.**
@@ -828,7 +831,8 @@ by comparing the two voices' syllable *sequences*, not their note positions.**
   same word on the same beat, plus an extender for the melisma, lands on a
   second lyric line beneath an otherwise-empty one. That is the stray
   `ing______` under a bar whose text is already complete. The slur shows the
-  melisma; the second line adds nothing.
+  melisma; the second line adds nothing. A line-2 extender still open when the
+  words move to line 1 must be ended (7.6).
 - **Sequences differ → two lines,** line 1 the upper voice and line 2 the lower
   voice, *for every bar of the divergent passage*, including bars where one of
   them is silent.
@@ -902,7 +906,9 @@ nothing in the data catches any of them.
   extender on to the next syllable-less note in the same voice, however far
   away. Splitting one crossed note off a chord gives voice 2 exactly such a
   note, and a line from seven bars earlier ran across three systems to reach
-  it. Put a syllable-less voice-2 note that follows an already-finished
+  it. So does 7.4 dropping the lower voice's copies where both sing the same
+  words: its notes there are syllable-less, and an open line-2 extender ran on
+  under them into the next divided bar, six bars away. Put a syllable-less voice-2 note that follows an already-finished
   voice-2 line into voice 3; that was the only encoding that worked in a
   Sibelius probe. Do not write `<lyric><extend type="stop"/></lyric>` for
   Sibelius: it reads it as a new, empty syllable and every held word whose line
@@ -1378,8 +1384,9 @@ What the user settled on, on the two-soloist TTBB:
   staff by the Step 7 rules (7.2, 7.4, 7.6: chords where rhythm, ties and words
   agree, two voices with stems up and down elsewhere, a second lyric line only
   where the words differ, crossed parts never chorded, a tie never changes
-  voice). Pairing defaults to consecutive sung parts in score order with soloists
-  left alone; `--staves` names the pairs, `--open` keeps one part per staff.
+  voice). Before engraving, the score shown gets `verify.py`'s check 14, and the
+  script stops on a line that runs past its melisma. Pairing defaults to
+  consecutive sung parts in score order with soloists left alone; `--staves` names the pairs, `--open` keeps one part per staff.
   Staves empty for a whole system are hidden, as in print.
 - **Show the print file, time from the Cantai file.** The Cantai learning file
   prints Cantai's split syllables ("glea ea ea eams" for "gleams"). Give the print-faithful
@@ -1590,7 +1597,7 @@ needs `numpy` and `ffmpeg`; `verify.py` needs `lxml`, plus `pdfplumber` with
 keep all three beside it; `rehearsal_mix.py` needs `numpy`, `ffmpeg` with
 libmp3lame, and `slab` for the 3D track; `score_video.py` needs `verovio`,
 `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli` and `ffmpeg` with
-libx264, and imports `stem_vs_score.py`, so keep that beside it.
+libx264, and imports `stem_vs_score.py` and `verify.py`, so keep both beside it.
 
 
 ### check_pdf_type.py
@@ -2364,6 +2371,10 @@ reported as NOT RUN, never left out: an empty result and a check nobody ran look
 the same in the output, and that is how check 10 was once skipped.
 
 --pdf enables the checks that compare against the engraving (6, 10, 11, 12).
+--original is the file this one was made from: the score before a revoicing (check 16),
+or the open score a closed score was collapsed from, with its printed words, not a Cantai
+learning file, which re-sings melismas (check 14: lines under notes whose words moved to
+the other line).
 --lanes says which part each lyric line of the PDF belongs to: `<staff>a` is
 the line above that staff of a system, `<staff>b` the line below, staves counted
 from 0 within a system. Default when the PDF has one staff per part: `<k>b` is
@@ -2585,9 +2596,57 @@ def check_words(root, names, out_dir):
         report(9, 'Words reassemble', 'MANUAL', f'hyphen chains all close; read the {len(words)} words in {fn} for typos')
 
 
-def check_extend_runs(root, names):
-    """14: an <extend/> needs a following note in the same voice for the line to run under."""
+def sung_positions(root):
+    """{(bar, onset, midi)} where a note of `root` starts a syllable: which notes of a derived score
+    (a closed score, a revoicing) sing a syllable of their own, whatever line prints it."""
+    out = set()
+    for part in root.findall('part'):
+        for mn, n, v, t in notes_of(part):
+            if n.find('pitch') is not None and any(l.findtext('text') for l in n.findall('lyric')):
+                out.add((mn, t, pitch_midi(n.find('pitch'))))
+    return out
+
+
+def lyric_line_runs(part, sung=frozenset()):
+    """Each lyric line as an engraver draws it: from a syllable with <extend/> on to the next note in
+    the same voice with a syllable on that line, over every syllable-less note between, rests or no
+    (SKILL.md 7.6). A line is wrong when a note under it comes after a printed rest, or sings a
+    syllable of its own (`sung`, from the source) that is printed on the other line (7.4).
+    Returns [(bar, voice, line, text, bar it runs to, why)]."""
+    byv = defaultdict(list)
+    for mn, n, v, t in notes_of(part):
+        if n.find('chord') is None and n.find('grace') is None:
+            byv[v].append((mn, n, t))
+    out = []
+    for v, seq in byv.items():
+        for i, (mn, n, _) in enumerate(seq):
+            for l in n.findall('lyric'):
+                e = l.find('extend')
+                if e is None or e.get('type') == 'stop' or not l.findtext('text'):
+                    continue
+                num = l.get('number') or '1'
+                rest, last, why = False, None, ''
+                for mn2, n2, t2 in seq[i + 1:]:
+                    if any((l2.get('number') or '1') == num for l2 in n2.findall('lyric')):
+                        break                                   # the next syllable on the line ends it
+                    if n2.find('rest') is not None:
+                        rest = rest or n2.get('print-object') != 'no'
+                        continue
+                    p2 = n2.find('pitch')
+                    held = any(x.get('type') == 'stop' for x in n2.findall('tie'))   # a tied note begins no word
+                    own = p2 is not None and not held and (mn2, t2, pitch_midi(p2)) in sung
+                    if rest or own:
+                        last, why = mn2, 'past a rest' if rest else 'under notes that sing their own words'
+                if last is not None:
+                    out.append((mn, v, num, l.findtext('text'), last, why))
+    return out
+
+
+def check_extend_runs(root, names, original=None):
+    """14: an <extend/> needs a following note in the same voice for the line to run under, and the
+    line must stop where the melisma does (SKILL.md 7.6)."""
     bad = []
+    sung = sung_positions(load(original)[0]) if original else frozenset()
     for part in root.findall('part'):
         byv = defaultdict(list)
         for mn, n, v, _ in notes_of(part):
@@ -2603,7 +2662,12 @@ def check_extend_runs(root, names):
                     if (l.findtext('syllabic') or 'single') in ('begin', 'middle'):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} is mid-word; "
                                    f"it prints a hyphen, and an extender would replace it (unless the PDF prints one)")
-    report(14, 'No extender outruns its voice', 'FAIL' if bad else 'PASS', f'{len(bad)} problem(s)' if bad else 'every extender has notes under it', bad)
+        for mn, v, num, text, last, why in lyric_line_runs(part, sung):
+            bad.append(f"{names[part.get('id')]} voice {v} line {num}: the line from {text!r} (bar {mn}) runs on "
+                       f"to bar {last}, {why}")
+    report(14, 'No extender outruns its voice', 'FAIL' if bad else 'PASS', f'{len(bad)} problem(s)' if bad else
+           'every extender has notes under it and stops where its melisma does' +
+           ('' if original else ' (lines under notes whose words moved to the other line need --original)'), bad)
 
 
 def multi_voice_staves(root):
@@ -3027,7 +3091,7 @@ def main():
         for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid')):
             report(n, nm, 'NOT RUN', 'needs --pdf')
     check_shared_staff(root)
-    check_extend_runs(root, names)
+    check_extend_runs(root, names, a.original)
     check_layout(a.score, root)
     check_original(root, names, a.original)
 
@@ -3372,7 +3436,7 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
-8.4) and ffmpeg with libx264; stem_vs_score.py beside it. D.C., D.S. and codas are not
+8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
 followed (repeat signs and endings are). Seven videos of a 4:48 piece took 9 minutes on 2
 cores.
 """
@@ -3384,6 +3448,7 @@ from lxml import etree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stem_vs_score import load_score, beats_to_sec, envelope, runs  # noqa: E402
+from verify import lyric_line_runs, sung_positions  # noqa: E402
 
 # Okabe-Ito, colour-blind safe; neighbours on a shared staff get well-separated hues
 PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#B07A00', '#7F3C8D', '#00798C', '#8C510A']
@@ -3589,6 +3654,15 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 changed = True
     part = etree.Element('part', id=pid)
     lo_clef = None
+    # a line-2 extender runs on to the next syllable-less voice-2 note, and 7.4 moves the lower part's
+    # words to line 1 where both sing them: end it on its last held note (SKILL.md 7.6, Verovio only)
+    line2 = {'open': False, 'last': None}
+
+    def close_line2():
+        if line2['open'] and line2['last'] is not None:
+            ly = etree.SubElement(line2['last'], 'lyric', number='2')
+            etree.SubElement(ly, 'extend', type='stop')
+        line2['open'], line2['last'] = False, None
     for i, (mU, mL) in enumerate(zip(mu, ml)):
         a, b = ev[i]
         m = etree.SubElement(part, 'measure', {k: v for k, v in mU.attrib.items() if k != 'width'})
@@ -3672,6 +3746,8 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
             at.append(copy.deepcopy(lo_clef))
             m.insert(0, at)
         if merged[i]:
+            if hb:
+                close_line2()
             continue
         if t:
             bk = etree.SubElement(m, 'backup')
@@ -3693,6 +3769,8 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 if c.find('rest') is None:
                     set_child(c, 'stem', 'down')
                 lys = c.findall('lyric')
+                if lys and same_words:
+                    close_line2()                   # its words are line 1's from here
                 for j, ly in enumerate(sorted(lys, key=lambda l: int(re.sub(r'\D', '', l.get('number') or '1') or 1))):
                     if same_words or j > 0:
                         c.remove(ly)
@@ -3700,6 +3778,11 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                         ly.set('number', '2')
                         ly.attrib.pop('placement', None)
                         ly.attrib.pop('default-y', None)
+                        ext = ly.find('extend')
+                        line2['open'] = ext is not None and ext.get('type') != 'stop'
+                        line2['last'] = None
+                if not lys and c.find('rest') is None and c.find('chord') is None and line2['open']:
+                    line2['last'] = c
             m.append(c)
     return part, sum(merged), len(merged)
 
@@ -5156,6 +5239,15 @@ def main():
             'pageMarginLeft': int(0.02 * W * z), 'pageMarginRight': int(0.02 * W * z),
             'breaks': 'auto', 'header': 'none', 'footer': 'none', 'adjustPageHeight': False,
             'justifyVertically': False, 'lyricSize': 5.0, 'spacingSystem': 10, 'svgViewBox': False}
+    # every lyric line stops where its melisma does (SKILL.md 7.6): verify.py's check 14, on what is shown
+    dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
+    # which notes sing words of their own: the open score whose words are shown (a closed display file
+    # given ready-made has none beside it, and verify.py --original checks that one)
+    sung_at = frozenset() if closed else sung_positions(root)
+    bad = [f"{dsp.get(p.get('id'), p.get('id'))} voice {v} line {num}: the line from {t!r} (bar {mn}) runs on to "
+           f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_at)]
+    if bad:
+        sys.exit('lyric lines that run on past their melisma in the score shown (SKILL.md 7.6):\n   ' + '\n   '.join(bad))
     tk = verovio.toolkit()
     tk.setOptions(opts)
     if not tk.loadData(etree.tostring(disp).decode()):

@@ -68,7 +68,7 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
-8.4) and ffmpeg with libx264; stem_vs_score.py beside it. D.C., D.S. and codas are not
+8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
 followed (repeat signs and endings are). Seven videos of a 4:48 piece took 9 minutes on 2
 cores.
 """
@@ -80,6 +80,7 @@ from lxml import etree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stem_vs_score import load_score, beats_to_sec, envelope, runs  # noqa: E402
+from verify import lyric_line_runs, sung_positions  # noqa: E402
 
 # Okabe-Ito, colour-blind safe; neighbours on a shared staff get well-separated hues
 PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#B07A00', '#7F3C8D', '#00798C', '#8C510A']
@@ -285,6 +286,15 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 changed = True
     part = etree.Element('part', id=pid)
     lo_clef = None
+    # a line-2 extender runs on to the next syllable-less voice-2 note, and 7.4 moves the lower part's
+    # words to line 1 where both sing them: end it on its last held note (SKILL.md 7.6, Verovio only)
+    line2 = {'open': False, 'last': None}
+
+    def close_line2():
+        if line2['open'] and line2['last'] is not None:
+            ly = etree.SubElement(line2['last'], 'lyric', number='2')
+            etree.SubElement(ly, 'extend', type='stop')
+        line2['open'], line2['last'] = False, None
     for i, (mU, mL) in enumerate(zip(mu, ml)):
         a, b = ev[i]
         m = etree.SubElement(part, 'measure', {k: v for k, v in mU.attrib.items() if k != 'width'})
@@ -368,6 +378,8 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
             at.append(copy.deepcopy(lo_clef))
             m.insert(0, at)
         if merged[i]:
+            if hb:
+                close_line2()
             continue
         if t:
             bk = etree.SubElement(m, 'backup')
@@ -389,6 +401,8 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                 if c.find('rest') is None:
                     set_child(c, 'stem', 'down')
                 lys = c.findall('lyric')
+                if lys and same_words:
+                    close_line2()                   # its words are line 1's from here
                 for j, ly in enumerate(sorted(lys, key=lambda l: int(re.sub(r'\D', '', l.get('number') or '1') or 1))):
                     if same_words or j > 0:
                         c.remove(ly)
@@ -396,6 +410,11 @@ def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
                         ly.set('number', '2')
                         ly.attrib.pop('placement', None)
                         ly.attrib.pop('default-y', None)
+                        ext = ly.find('extend')
+                        line2['open'] = ext is not None and ext.get('type') != 'stop'
+                        line2['last'] = None
+                if not lys and c.find('rest') is None and c.find('chord') is None and line2['open']:
+                    line2['last'] = c
             m.append(c)
     return part, sum(merged), len(merged)
 
@@ -1852,6 +1871,15 @@ def main():
             'pageMarginLeft': int(0.02 * W * z), 'pageMarginRight': int(0.02 * W * z),
             'breaks': 'auto', 'header': 'none', 'footer': 'none', 'adjustPageHeight': False,
             'justifyVertically': False, 'lyricSize': 5.0, 'spacingSystem': 10, 'svgViewBox': False}
+    # every lyric line stops where its melisma does (SKILL.md 7.6): verify.py's check 14, on what is shown
+    dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
+    # which notes sing words of their own: the open score whose words are shown (a closed display file
+    # given ready-made has none beside it, and verify.py --original checks that one)
+    sung_at = frozenset() if closed else sung_positions(root)
+    bad = [f"{dsp.get(p.get('id'), p.get('id'))} voice {v} line {num}: the line from {t!r} (bar {mn}) runs on to "
+           f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_at)]
+    if bad:
+        sys.exit('lyric lines that run on past their melisma in the score shown (SKILL.md 7.6):\n   ' + '\n   '.join(bad))
     tk = verovio.toolkit()
     tk.setOptions(opts)
     if not tk.loadData(etree.tostring(disp).decode()):

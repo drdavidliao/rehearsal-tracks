@@ -17,6 +17,10 @@ reported as NOT RUN, never left out: an empty result and a check nobody ran look
 the same in the output, and that is how check 10 was once skipped.
 
 --pdf enables the checks that compare against the engraving (6, 10, 11, 12).
+--original is the file this one was made from: the score before a revoicing (check 16),
+or the open score a closed score was collapsed from, with its printed words, not a Cantai
+learning file, which re-sings melismas (check 14: lines under notes whose words moved to
+the other line).
 --lanes says which part each lyric line of the PDF belongs to: `<staff>a` is
 the line above that staff of a system, `<staff>b` the line below, staves counted
 from 0 within a system. Default when the PDF has one staff per part: `<k>b` is
@@ -238,9 +242,57 @@ def check_words(root, names, out_dir):
         report(9, 'Words reassemble', 'MANUAL', f'hyphen chains all close; read the {len(words)} words in {fn} for typos')
 
 
-def check_extend_runs(root, names):
-    """14: an <extend/> needs a following note in the same voice for the line to run under."""
+def sung_positions(root):
+    """{(bar, onset, midi)} where a note of `root` starts a syllable: which notes of a derived score
+    (a closed score, a revoicing) sing a syllable of their own, whatever line prints it."""
+    out = set()
+    for part in root.findall('part'):
+        for mn, n, v, t in notes_of(part):
+            if n.find('pitch') is not None and any(l.findtext('text') for l in n.findall('lyric')):
+                out.add((mn, t, pitch_midi(n.find('pitch'))))
+    return out
+
+
+def lyric_line_runs(part, sung=frozenset()):
+    """Each lyric line as an engraver draws it: from a syllable with <extend/> on to the next note in
+    the same voice with a syllable on that line, over every syllable-less note between, rests or no
+    (SKILL.md 7.6). A line is wrong when a note under it comes after a printed rest, or sings a
+    syllable of its own (`sung`, from the source) that is printed on the other line (7.4).
+    Returns [(bar, voice, line, text, bar it runs to, why)]."""
+    byv = defaultdict(list)
+    for mn, n, v, t in notes_of(part):
+        if n.find('chord') is None and n.find('grace') is None:
+            byv[v].append((mn, n, t))
+    out = []
+    for v, seq in byv.items():
+        for i, (mn, n, _) in enumerate(seq):
+            for l in n.findall('lyric'):
+                e = l.find('extend')
+                if e is None or e.get('type') == 'stop' or not l.findtext('text'):
+                    continue
+                num = l.get('number') or '1'
+                rest, last, why = False, None, ''
+                for mn2, n2, t2 in seq[i + 1:]:
+                    if any((l2.get('number') or '1') == num for l2 in n2.findall('lyric')):
+                        break                                   # the next syllable on the line ends it
+                    if n2.find('rest') is not None:
+                        rest = rest or n2.get('print-object') != 'no'
+                        continue
+                    p2 = n2.find('pitch')
+                    held = any(x.get('type') == 'stop' for x in n2.findall('tie'))   # a tied note begins no word
+                    own = p2 is not None and not held and (mn2, t2, pitch_midi(p2)) in sung
+                    if rest or own:
+                        last, why = mn2, 'past a rest' if rest else 'under notes that sing their own words'
+                if last is not None:
+                    out.append((mn, v, num, l.findtext('text'), last, why))
+    return out
+
+
+def check_extend_runs(root, names, original=None):
+    """14: an <extend/> needs a following note in the same voice for the line to run under, and the
+    line must stop where the melisma does (SKILL.md 7.6)."""
     bad = []
+    sung = sung_positions(load(original)[0]) if original else frozenset()
     for part in root.findall('part'):
         byv = defaultdict(list)
         for mn, n, v, _ in notes_of(part):
@@ -256,7 +308,12 @@ def check_extend_runs(root, names):
                     if (l.findtext('syllabic') or 'single') in ('begin', 'middle'):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} is mid-word; "
                                    f"it prints a hyphen, and an extender would replace it (unless the PDF prints one)")
-    report(14, 'No extender outruns its voice', 'FAIL' if bad else 'PASS', f'{len(bad)} problem(s)' if bad else 'every extender has notes under it', bad)
+        for mn, v, num, text, last, why in lyric_line_runs(part, sung):
+            bad.append(f"{names[part.get('id')]} voice {v} line {num}: the line from {text!r} (bar {mn}) runs on "
+                       f"to bar {last}, {why}")
+    report(14, 'No extender outruns its voice', 'FAIL' if bad else 'PASS', f'{len(bad)} problem(s)' if bad else
+           'every extender has notes under it and stops where its melisma does' +
+           ('' if original else ' (lines under notes whose words moved to the other line need --original)'), bad)
 
 
 def multi_voice_staves(root):
@@ -680,7 +737,7 @@ def main():
         for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid')):
             report(n, nm, 'NOT RUN', 'needs --pdf')
     check_shared_staff(root)
-    check_extend_runs(root, names)
+    check_extend_runs(root, names, a.original)
     check_layout(a.score, root)
     check_original(root, names, a.original)
 
