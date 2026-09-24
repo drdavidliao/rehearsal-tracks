@@ -122,7 +122,7 @@ def chord_merge(a, b):
     return e
 
 
-def merge_runs(up, dn, beats=4, hold_start=False):
+def merge_runs(up, dn, beats=4, hold_start=False, hold_end=False):
     """Collapse two single-voice bars onto one staff.
 
     Returns (v1, v2).  v1 covers the whole bar: chords where the two parts agree,
@@ -134,6 +134,8 @@ def merge_runs(up, dn, beats=4, hold_start=False):
     sync = {p for p in umap if p in dmap and mergeable(umap[p], dmap[p])}
     if hold_start:                  # voice 2 arrives tied from the bar before
         sync.discard(F(0))
+    if hold_end and U and D:        # voice 2 leaves tied into a bar where it splits off
+        sync.discard(max(U[-1][0], D[-1][0]))
     v1, v2 = [], []
     cur = F(0)
     ui = di = 0
@@ -166,15 +168,42 @@ def merge_staff(up, dn, nbars, beats=4):
     then jumps voices, and voice 2 has no note left for its syllable's extender
     to run under, so the lyric line under a held word disappears.  When voice 2
     ends a bar on a tie, the tied note in the next bar stays in voice 2 — a
-    unison written with one stem up and one down, as an engraver would.
+    unison written with one stem up and one down, as an engraver would.  The
+    same holds for a melisma that runs on over the barline, and for a tie out
+    of a unison into a bar where voice 2 splits off: the tied note stays out of
+    the chord.
     `up` and `dn` are {bar: [events]}.  Returns {bar: (v1, v2)}.
     """
+    def held_into(m, bars):
+        """Voice 2 runs on from bar m-1 into bar m: by a tie, or by a melisma
+        whose line needs a voice-2 note to run under."""
+        prev = bars.get(m - 1)
+        return bool(prev and prev[1] and prev[1][-1][0] + prev[1][-1][1]['dur'] == beats
+                    and (prev[1][-1][1]['tie']
+                         or (dn[m] and dn[m][0]['pitches'] and not dn[m][0]['lyric'])))
+
     bars = {}
     for m in range(1, nbars + 1):
-        prev = bars.get(m - 1)
-        held = bool(prev and prev[1] and prev[1][-1][1]['tie']
-                    and prev[1][-1][0] + prev[1][-1][1]['dur'] == beats)
-        bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held)
+        bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held_into(m, bars))
+    # The other direction: a tie out of a unison that merged into voice 1, into
+    # a bar where voice 2 splits off, would start in voice 1 and stop in voice 2.
+    # Keep the tied note out of the chord, and redo the bar after it.
+    ends = set()
+    changed = True
+    while changed:
+        changed = False
+        for m in range(1, nbars):
+            nxt = bars[m + 1][1]
+            if (m not in ends and nxt and nxt[0][0] == 0 and dn[m + 1][0].get('tie_stop')
+                    and dn[m] and dn[m][-1]['tie']):
+                v2 = bars[m][1]
+                if not v2 or v2[-1][0] + v2[-1][1]['dur'] != beats:
+                    ends.add(m)
+                    bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held_into(m, bars),
+                                         hold_end=True)
+                    bars[m + 1] = merge_runs(up[m + 1], dn[m + 1], beats,
+                                             hold_start=held_into(m + 1, bars))
+                    changed = True
     return bars
 
 
@@ -229,7 +258,9 @@ def lyric_split(up, dn, nbars):
     puts half a word on line 2 and leaves an extender dangling under it.
     """
     def seq(evs):
-        return [e['lyric']['text'] for e in evs if e['lyric']]
+        # the words AND where each starts: the same word entering a beat apart
+        # in the two voices needs its own copy under each entrance
+        return [(p, e['lyric']['text']) for p, e in positions(evs) if e['lyric']]
     return {m: seq(up[m]) != seq(dn[m]) for m in range(1, nbars + 1)}
 
 

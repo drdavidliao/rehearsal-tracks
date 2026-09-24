@@ -56,7 +56,11 @@ def finalize(line, tag, nbars):
     """Derive tie_stop and lyric extend for one single-voice line, and check it.
 
     A note carries `extend` when the next event is a pitched note with no syllable
-    of its own — the syllable is held over it, whether by tie or by melisma.  A
+    of its own — the syllable is held over it, whether by tie or by melisma.  The
+    exception is a syllable in the middle of a word held only by a tie: it keeps
+    its hyphen and gets no line (`long-` tied into `-in'`).  Held over a melisma
+    of moving notes it does get one, even where the engraver printed only a
+    hyphen: there the hyphen is standing in for an extender.  A
     pitched note with neither a syllable nor a tie into it must sit inside such a
     melisma; anything else means the transcription lost a syllable, so it raises.
     """
@@ -74,6 +78,13 @@ def finalize(line, tag, nbars):
             continue
         j = i + 1
         e['lyric']['extend'] = j < len(flat) and bool(flat[j]['pitches']) and not flat[j]['lyric']
+        if e['lyric']['extend'] and e['lyric'].get('syllabic') in ('begin', 'middle'):
+            held = []
+            while j < len(flat) and flat[j]['pitches'] and not flat[j]['lyric']:
+                held.append(flat[j])
+                j += 1
+            if all(h['tie_stop'] for h in held):
+                e['lyric']['extend'] = False
     for i, e in enumerate(flat):
         if e['pitches'] and not e['lyric'] and not e['tie_stop']:
             k = i - 1

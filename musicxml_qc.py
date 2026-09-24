@@ -16,15 +16,20 @@ def load(path):
             return ET.parse(io.BytesIO(z.read(name))).getroot()
     return ET.parse(path).getroot()
 
-OK_CHARS=re.compile(r"^[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$|^\"[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$")
+# A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
+OK_CHARS=re.compile(r"^[\"'’]?[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$")
 
 def qc(path):
     root=load(path)
     issues=defaultdict(list)
     for part in root.findall('part'):
         pid=part.get('id'); div=1; ts=None
-        prev_oct=None; octjumps=[]
-        seq=[]   # (measure, is_pitched, lyric, has_extend, is_tie_stop)
+        prev_oct={}; octjumps=[]
+        # One sequence per part on each staff: on a shared staff the two
+        # singers' notes interleave in document order, and walking back from a
+        # voice-2 note would otherwise land on voice 1's syllables and rests.
+        seqs=defaultdict(list)   # (staff, part) -> [(measure, is_pitched, lyric, has_extend, is_tie_stop, onset, dur)]
+        bar_start=F(0)
         for m in part.findall('measure'):
             num=m.get('number')
             for a in m.findall('attributes'):
@@ -46,17 +51,28 @@ def qc(path):
                     kind='SHORT' if mx<exp else 'OVERFULL'
                     issues['bar length'].append(f"{pid} m{num}: {mx} beats in a {ts[0]}/{ts[1]} bar ({kind})")
             # --- lyrics + octave continuity ---
-            for n in m.findall('note'):
+            pos=F(0)
+            for e in m:
+                if e.tag=='backup': pos-=F(int(e.find('duration').text),div); continue
+                if e.tag=='forward': pos+=F(int(e.find('duration').text),div); continue
+                if e.tag!='note': continue
+                n=e
+                dur=F(int(n.find('duration').text),div) if n.find('duration') is not None else F(0)
+                # voices 1/5 are the upper part of a staff; any other voice is the
+                # lower part (chorale writes a stray lower-part note in voice 3)
+                key=(n.findtext('staff') or '1', 'upper' if (n.findtext('voice') or '1') in ('1','5') else 'lower')
                 if n.find('chord') is None:
+                    onset=bar_start+pos
+                    pos+=dur
                     ties = [x.get('type') for x in n.findall('tie')]
                     ly = n.find('lyric')
                     if n.find('rest') is not None:
-                        seq.append((num, False, None, False, False))
+                        seqs[key].append((num, False, None, False, False, onset, dur))
                     else:
-                        seq.append((num, True,
+                        seqs[key].append((num, True,
                                     ly.findtext('text') if ly is not None else None,
                                     ly is not None and ly.find('extend') is not None and ly.find('extend').get('type') != 'stop',
-                                    'stop' in ties))
+                                    'stop' in ties, onset, dur))
                         if 'stop' in ties and ly is not None and ly.findtext('text'):
                             issues['syllable on a tie continuation'].append(
                                 f"{pid} m{num}: {ly.findtext('text')!r} — a tied note sustains "
@@ -72,21 +88,56 @@ def qc(path):
                 p=n.find('pitch')
                 if p is None or n.find('chord') is not None: continue
                 o=int(p.find('octave').text)
-                if prev_oct is not None and abs(o-prev_oct)>=2:
-                    octjumps.append(f"{pid} m{num}: {prev_oct}->{o}")
-                prev_oct=o
+                if key in prev_oct and abs(o-prev_oct[key])>=2:
+                    octjumps.append(f"{pid} m{num}: {prev_oct[key]}->{o}")
+                prev_oct[key]=o
+            bar_start+=mx
         # octave leaps only matter where there are lyrics to sing
         if any(True for n in part.iter('lyric')):
             issues['octave jump in a sung line'].extend(octjumps)
-            for i,(mn,pit,txt,ext,tie) in enumerate(seq):
-                if not pit or txt is not None or tie: continue
-                j=i-1; ok=False
-                while j>=0:
-                    if not seq[j][1]: break            # a rest breaks the melisma
-                    if seq[j][2] is not None: ok=seq[j][3]; break
-                    j-=1
-                if not ok:
-                    issues['sung note with no syllable and no extend'].append(f'{pid} m{mn}')
+            # On a staff two parts share, one lyric line serves both where they
+            # sing the same words (SKILL.md 7.4): the lower part's note then has
+            # no syllable of its own and sings the one printed for the other
+            # part at the same moment.  So a note with no syllable is fine if
+            # the other part on its staff starts a syllable at that onset, or if
+            # it continues -- contiguous in its own part -- a note that has one
+            # (with an extender) or that borrows one, or if its part's notes
+            # before it were merged into the other part's chords and that
+            # part's syllable is still being held.
+            starts=defaultdict(set)   # (staff, part) -> onsets of syllables
+            for (st,ln),seq in seqs.items():
+                for (mn,pit,txt,ext,tie,on,du) in seq:
+                    if pit and txt is not None: starts[(st,ln)].add(on)
+            def borrowed(st,ln,on):
+                return any(on in s for (st2,ln2),s in starts.items() if st2==st and ln2!=ln)
+            # where each syllable is held with an extender: onset to the end of its melisma
+            held=defaultdict(list)    # (staff, part) -> [(from, to)]
+            for (st,ln),seq in seqs.items():
+                for i,(mn,pit,txt,ext,tie,on,du) in enumerate(seq):
+                    if not (pit and txt is not None and ext): continue
+                    end=on+du
+                    for q in seq[i+1:]:
+                        if not q[1] or q[2] is not None or q[5]!=end: break
+                        end=q[5]+q[6]
+                    held[(st,ln)].append((on,end))
+            for (st,ln),seq in seqs.items():
+                for i,(mn,pit,txt,ext,tie,on,du) in enumerate(seq):
+                    if not pit or txt is not None or tie or borrowed(st,ln,on): continue
+                    j=i-1; ok=False
+                    while True:
+                        q=seq[j] if j>=0 else None
+                        if q is None or q[5]+q[6]!=seq[j+1][5]:
+                            # a gap: the part's earlier notes merged into the other
+                            # part's chords, so the other part's melisma is this one's
+                            ok=any(a<seq[j+1][5]<b for (st2,ln2),iv in held.items()
+                                   if st2==st and ln2!=ln for a,b in iv)
+                            break
+                        if not q[1]: break                 # a rest ends the melisma
+                        if q[2] is not None: ok=q[3]; break
+                        if borrowed(st,ln,q[5]): ok=True; break
+                        j-=1
+                    if not ok:
+                        issues['sung note with no syllable and no extend'].append(f'{pid} m{mn}')
         # --- clef octave consistency (the tenor-8vb trap) ---
         ocs=set()
         for c in part.iter('clef'):

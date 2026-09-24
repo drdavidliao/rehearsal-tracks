@@ -319,8 +319,14 @@ def check_extend_runs(root, names, original=None):
                     if nxt is None or nxt.find('rest') is not None or nxt.find('lyric') is not None:
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} extends over no note")
                     if (l.findtext('syllabic') or 'single') in ('begin', 'middle'):
-                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} is mid-word; "
-                                   f"it prints a hyphen, and an extender would replace it (unless the PDF prints one)")
+                        # mid-word: a line over a melisma of moving notes, a hyphen over a tie-only hold (2.5)
+                        held = []
+                        for _, n2 in seq[i + 1:]:
+                            if n2.find('rest') is not None or n2.find('lyric') is not None: break
+                            held.append(n2)
+                        if held and all(any(t.get('type') == 'stop' for t in n2.findall('tie')) for n2 in held):
+                            bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} is mid-word "
+                                       f"and held only by a tie; it prints a hyphen, and an extender would replace it")
         for mn, v, num, text, last, why in lyric_line_runs(part, sung):
             bad.append(f"{names[part.get('id')]} voice {v} line {num}: the line from {text!r} (bar {mn}) runs on "
                        f"to bar {last}, {why}")
@@ -594,7 +600,8 @@ def check_extender_lines(root, names, E, lanes):
             for l in n.findall('lyric'):
                 e = l.find('extend')
                 slurred = any(x.get('type') == 'start' for x in n.iter('slur'))
-                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred))
+                mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
+                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid))
         ps = printed[nm]
         sm = difflib.SequenceMatcher(a=[t.strip() for t, _, _ in ps], b=[x[0].strip() for x in xs], autojunk=False)
         blocks = sm.get_matching_blocks()
@@ -604,7 +611,7 @@ def check_extender_lines(root, names, E, lanes):
                 xt, ext, mn, slurred = xs[b0 + k]
                 matched += 1
                 if ext and not has and slurred:
-                    continue          # a slurred melisma keeps its line even where none is printed (SKILL.md 2.5)
+                    continue          # a slurred or mid-word melisma keeps its line even where none is printed (SKILL.md 2.5)
                 if has != ext:
                     bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
                                f"file {'has' if ext else 'has no'} <extend/>")

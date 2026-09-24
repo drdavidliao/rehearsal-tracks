@@ -327,6 +327,7 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
     # Lyric-line state for voice 2, carried across bars (see below).
     v2_line_open = False          # a voice-2 syllable's line is still running
     v2_line_done = False          # a voice-2 line has run and ended since the last syllable
+    v2_tie_voice = None           # voice of a voice-2 note whose tie runs on
     header = header or EMPTY_HEADER
     out = [f'<part id="{pid}">']
     for m in range(1, spec.nbars + 1):
@@ -379,7 +380,9 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
                 # explicit empty stop syllable erased the line, and a hidden
                 # syllable was printed anyway.
                 voice = 2
-                if e['pitches']:
+                if e['pitches'] and e.get('tie_stop') and v2_tie_voice:
+                    voice = v2_tie_voice          # a tie never changes voice
+                elif e['pitches']:
                     if e['lyric']:
                         v2_line_open = bool(e['lyric'].get('extend'))
                         v2_line_done = False
@@ -388,6 +391,8 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
                         voice = 3
                 elif v2_line_open:
                     v2_line_open, v2_line_done = False, True
+                if e['pitches']:
+                    v2_tie_voice = voice if e['tie'] else None
                 s += note_xml(e, spec, voice=voice, beam=bm2[i],
                               stem='up' if m in flipped else 'down',
                               tie_attrs=v2_tie if (m in crossed and v2_tie) else None,
