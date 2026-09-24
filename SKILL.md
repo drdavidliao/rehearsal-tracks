@@ -1395,7 +1395,18 @@ What the user settled on, on the two-soloist TTBB:
   lower part). Voice 1 / voice 2 is only the fallback, and the script says how
   many it needed: on the folk-like TTBB with piano all 753 notes and rests
   matched the open file, none by voice. The staves' part names ("Tenor 1 Tenor
-  2") are matched against the open file's.
+  2") are matched against the open file's; where a closed score's parts have no
+  names at all (the ballad TTBB's did not), each sung part goes to the staff
+  holding most of its notes, and the staff is labelled with the parts'
+  names.
+- **A closed score can put a second voice a beat early.** The ballad TTBB's
+  repaired file wrote bar 51 (both staves) and bar 47 (the low staff) as voice 1,
+  a `<backup>` of the whole bar, then voice 2 with no `<forward>` over the beats
+  it shares with voice 1: voice 2's notes land one or two beats early, in the
+  printed score as in the video. The script finds it (the voice is short of a
+  full bar, and every one of its notes matches the open file exactly that gap
+  later), inserts the `<forward>` for the video, names the bars, and says to fix
+  the file. Tell the user.
 - **Repeats are unrolled.** Every lit thing is placed by bar and position in
   the bar, then at each moment that bar is played: repeat signs (with
   `times`) and first and second endings, in play order. The screen turns back
@@ -4538,6 +4549,55 @@ def play_order(part):
 
 # ----------------------------------------------------------------------------- a closed score to show
 
+def repair_forwards(droot, src_notes, sung):
+    """A second voice written after a <backup> to the start of the bar but missing the <forward>
+    over the beats where it has no notes of its own starts too early: its notes land where
+    another part's are, and the lights would come a beat early. Where the open score has every
+    note of that voice exactly one gap later (the gap being what the voice is short of a full
+    bar), put the <forward> in. Returns the bars mended, by staff."""
+    at = {(n['mi'], n['rel'], n['midi']) for i, ns_ in enumerate(src_notes) if i in sung
+          for n in ns_ if not n['rest'] and not n['grace']}
+    mended = []
+    for j, part in enumerate(droot.findall('part')):
+        div = 1
+        for mi, m in enumerate(part.findall('measure')):
+            kids = list(m)
+            for e in kids:
+                if e.tag == 'attributes' and e.find('divisions') is not None:
+                    div = int(e.findtext('divisions'))
+            full = sum(int(e.findtext('duration') or 0) for e in kids
+                       if e.tag == 'note' and e.findtext('voice', '1') == '1' and e.find('chord') is None
+                       and e.find('grace') is None)
+            for e in kids:
+                if e.tag != 'backup' or int(e.findtext('duration') or 0) != full:
+                    continue
+                voice, t, notes = None, 0, []
+                for f in kids[kids.index(e) + 1:]:
+                    if f.tag in ('backup', 'forward'):
+                        break
+                    if f.tag != 'note' or f.find('grace') is not None:
+                        continue
+                    voice = voice or f.findtext('voice')
+                    if f.findtext('voice') != voice:
+                        break
+                    if f.find('chord') is None:
+                        notes.append((t, f))
+                        t += int(f.findtext('duration') or 0)
+                    else:
+                        notes.append((notes[-1][0] if notes else 0, f))
+                gap = full - t
+                pitched = [(tt, f) for tt, f in notes if f.find('rest') is None]
+                if gap <= 0 or not pitched:
+                    continue
+                if all((mi, Fr(tt + gap, div), midi(f)) in at for tt, f in pitched) and \
+                        not all((mi, Fr(tt, div), midi(f)) in at for tt, f in pitched):
+                    fw = etree.Element('forward')
+                    etree.SubElement(fw, 'duration').text = str(gap)
+                    m.insert(list(m).index(e) + 1, fw)
+                    mended.append((j, m.get('number'), Fr(gap, div)))
+    return mended
+
+
 def closed_display(droot, src_names, src_notes, sung):
     """Use a closed score (two parts to a staff, as printed) as the display. Whose each notehead,
     rest and syllable is comes from the open score the audio was rendered from: a notehead is
@@ -4545,6 +4605,9 @@ def closed_display(droot, src_names, src_notes, sung):
     the parts starting a syllable there (a second lyric line going to the lower part). What
     the open score cannot settle falls back to the voices: voice 1 and the top of a chord to
     the upper part, voice 2 and the bottom to the lower."""
+    for j, num, g in repair_forwards(droot, src_notes, sung):
+        print(f'   display bar {num}, staff {j + 1}: its second voice had no <forward> over its first '
+              f'{g} beat(s) and began too early; mended to match the open score (fix the file too)')
     dparts = droot.findall('part')
     dsps = {sp.get('id'): sp for sp in droot.find('part-list').findall('score-part')}
     dnames = [(dsps[p.get('id')].findtext('part-name') or p.get('id')) for p in dparts]
@@ -4559,6 +4622,7 @@ def closed_display(droot, src_names, src_notes, sung):
                                          and k in hit for k in hit)] or hit
         staff_parts[j] = sorted(hit)
     at, rests, syls = set(), set(), set()
+    count = {}
     for i, ns_ in enumerate(src_notes):
         for n in ns_:
             if n['grace']:
@@ -4567,8 +4631,29 @@ def closed_display(droot, src_names, src_notes, sung):
                 rests.add((i, n['mi'], n['rel'], n['dur']))
             else:
                 at.add((i, n['mi'], n['rel'], n['midi']))
+                count[i] = count.get(i, 0) + 1
                 if n['lyric']:
                     syls.add((i, n['mi'], n['rel']))
+    # staves with no part names (or names that match nothing): each sung part goes to the staff
+    # holding most of its notes, if that is most of them
+    if not any(set(staff_parts[j]) & sung for j in staff_parts):
+        staff_parts = {j: [] for j in range(len(dparts))}
+        for i in sorted(sung):
+            hits = [sum(1 for n in ns_ if not n['rest'] and not n['grace'] and (i, n['mi'], n['rel'], n['midi']) in at)
+                    for ns_ in dnotes]
+            j = int(np.argmax(hits))
+            if hits[j] >= 0.5 * count.get(i, 1):
+                staff_parts[j].append(i)
+        for j, sp in staff_parts.items():             # label a nameless staff with its parts
+            spp = dsps.get(dparts[j].get('id'))
+            if sp and spp is not None and not (spp.findtext('part-name') or '').strip():
+                for tag, val in (('part-name', '\n'.join(src_names[i] for i in sp)),
+                                 ('part-abbreviation', '\n'.join(src_names[i] for i in sp))):
+                    el = spp.find(tag)
+                    if el is None:
+                        el = etree.SubElement(spp, tag)
+                    el.text = val
+                dnames[j] = ' '.join(src_names[i] for i in sp)
     owners, fall = {}, 0
     for j, ns_ in enumerate(dnotes):
         sp = [i for i in staff_parts[j] if i in sung]
