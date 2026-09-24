@@ -754,6 +754,15 @@ class Page:
         for g in rests:
             self.elems.append(('rest', g.get('id'), g))
         for s in syls:
+            if 'spanning' in cls(s):
+                # an extender carried over a system break: Verovio draws the rest of the line at
+                # the start of the next system, outside any note, naming its syllable only in a
+                # class "id-<syllable's svg id>". It lights with that syllable, with a halo of its own
+                ref = next((c[3:] for c in cls(s) if c.startswith('id-')), None)
+                holder = _SYL_SVG.get(ref)
+                if holder is not None:
+                    self.elems.append(('sylx', f'{holder}#{len(self.elems)}', s))
+                continue
             a = s.getparent()
             while a is not None and not ({'note', 'chord'} & set(cls(a))):
                 a = a.getparent()
@@ -764,6 +773,7 @@ class Page:
             if holder is None:
                 continue
             self.elems.append(('syl', holder, s))
+            _SYL_SVG[s.get('id')] = holder
         self.ids_on_page = {g.get('id') for g in root.iter(ns + 'g')
                             if {'note', 'rest', 'mRest'} & set(cls(g)) and g.get('id')}
         # score time -> x on each system, from every note and rest printed on it (any staff) and
@@ -800,7 +810,8 @@ class Page:
                 if not ys:
                     continue
                 top, bot = (min(ys) + my) * ky, (max(ys) + my) * ky
-                layers = [l for l in st if 'layer' in cls(l)]
+                # a layer that draws nothing (the invisible note keeping a part's staff) is no voice
+                layers = [l for l in st if 'layer' in cls(l) and any(e.get('id') in owners for e in l.iter(ns + 'g'))]
                 for li, l in enumerate(layers):
                     for e in l.iter(ns + 'g'):
                         if e.get('id') in owners and {'rest', 'mRest'} & set(cls(e)):
@@ -853,6 +864,7 @@ class Page:
         # covers red, green and blue by different amounts
         au3 = 1.0 - plane(None).astype(np.float32) / 255.0
         au = au3.max(2)
+        self.alpha_mean = au3.mean(2)
         owner = np.zeros(au.shape, np.int32)
         unsure = au <= 0.06
         cov = np.maximum(au3, 1e-6)
@@ -870,7 +882,8 @@ class Page:
         order = np.argsort(flat, kind='stable')
         sorted_ids = flat[order]
         bounds = np.searchsorted(sorted_ids, np.arange(n + 2))
-        self.alpha = au.ravel()
+        self.alpha = self.alpha_mean.ravel()      # how much ink, for blending a lit piece's colour
+        self.free_ink = ((flat == 0) & (au.ravel() > 0.06)).reshape(H, W)   # lightable ink no piece claimed
         self.pix = [order[bounds[j + 1]:bounds[j + 2]] for j in range(n)]
         self.shared_ink = {}
         for ids in self.spots:
@@ -915,9 +928,13 @@ class Page:
                 elif ({'note', 'rest', 'mRest'} & set(c)) and g.get('id'):
                     paint(g, '#000000' if view in owners.get(g.get('id'), ()) else THEME['grey'])
             for kind, key, g in self.elems:
-                if kind == 'syl':
-                    paint(g, '#000000' if (view, key) in syl_readers(syl_holder, key) else THEME['grey'])
+                if kind in ('syl', 'sylx'):
+                    k0 = key.split('#')[0]
+                    paint(g, '#000000' if (view, k0) in syl_readers(syl_holder, k0) else THEME['grey'])
         img = render_png(etree.tostring(self.root), self.W, self.H).copy()
+        # the engraving is black, grey and white: drop cairosvg's coloured subpixel text fringes,
+        # which a lit syllable's unclaimed edge pixels would otherwise show as blue and orange
+        img[:] = img.mean(2, keepdims=True).astype(np.uint8)
         if THEME['dark']:                 # engraved black on white; ink becomes light on dark
             a = 1.0 - img.min(2, keepdims=True).astype(np.float32) / 255.0
             img = (THEME['bg'] + (THEME['ink'] - THEME['bg']) * a).astype(np.uint8)
@@ -928,6 +945,7 @@ class Page:
 
 
 _SYL_INDEX = {}
+_SYL_SVG = {}          # a syllable's svg id -> the note holding it, for extenders over a system break
 
 
 def index_syl_holder(syl_holder):
@@ -958,6 +976,13 @@ class Lights:
             pix = np.unique(pix)
             if not len(pix):
                 continue
+            # the edge pixels no piece could be sure of (antialiasing, overlaps) inside this piece's
+            # outline are its own: a lit word or note has no grey rim
+            ys, xs = pix // W, pix % W
+            y0, y1, x0, x1 = max(ys.min() - 1, 0), ys.max() + 2, max(xs.min() - 1, 0), xs.max() + 2
+            fy, fx = np.nonzero(page.free_ink[y0:y1, x0:x1])
+            if len(fy):
+                pix = np.unique(np.concatenate([pix, (fy + y0) * W + fx + x0]))
             if gk[0] == 'note' and gk[1] in page.heads:
                 cx, cy, rx, ry = page.heads[gk[1]]
                 pad = max(5.0, 1.4 * ry)
@@ -987,6 +1012,8 @@ class Lights:
                 (ya, yb), (xa, xb) = np.percentile(ys, [1, 99]).astype(int), np.percentile(xs, [1, 99]).astype(int)
                 h = yb - ya + 1
                 pad = max(3, int(0.25 * h))
+                if gk[0] == 'sylx':        # a bare extender line: a halo as tall as a word's
+                    pad = max(pad, int(0.6 * page.space_px))
                 y0, y1 = max(0, ya - pad), min(page.H - 1, yb + pad)
                 x0, x1 = max(0, xa - pad), min(W - 1, xb + pad)
                 yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
@@ -1411,6 +1438,7 @@ def main():
         stay on screen to be lit."""
         if view in layouts:
             return layouts[view]
+        _SYL_SVG.clear()
         mei = base_mei
         if not a.no_condense:
             M = '{http://www.music-encoding.org/ns/mei}'
@@ -1422,9 +1450,14 @@ def main():
                 for st in (r.iter(M + 'staff') if sd is not None else []):
                     if st.get('n') == sd.get('n') and st.find('.//' + M + 'note') is None \
                             and st.find('.//' + M + 'chord') is None:
-                        # an invisible whole note keeps the staff; the bar rest stays on its line
+                        # an invisible whole note keeps the staff; a second layer would push the
+                        # rests off their usual lines, so pin them there (a whole rest hangs from the
+                        # fourth line, loc 6; the rest sit on the middle line, loc 4). A bar of rest
+                        # is an <mRest> or, from some files, a plain whole <rest>
                         for mr in st.iter(M + 'mRest'):
                             mr.set('loc', '6')
+                        for rr in st.iter(M + 'rest'):
+                            rr.set('loc', '6' if rr.get('dur') in ('1', 'breve', 'long') else '4')
                         ly = etree.SubElement(st, M + 'layer', n='9')
                         etree.SubElement(ly, M + 'note', dur='1', oct='4', pname='c', visible='false')
             mei = etree.tostring(r).decode()
@@ -1478,20 +1511,25 @@ def main():
             turns.append(min(start, max(prev_last + 0.3, start - a.lead)))
         # light windows per page: (t0, t1, page, group key, colour)
         wins = []
-        page_of = {}                               # (kind, id) -> (page, lit group)
+        page_of = {}                               # (kind, id) -> [(page, lit group)]
         for pi_, pg in enumerate(pages):
             for kind, key, _ in pg.elems:
+                if kind == 'sylx':                 # an extender's continuation lights with its syllable
+                    page_of.setdefault(('syl', key.split('#')[0]), []).append((pi_, (kind, key)))
+                    continue
                 kk = ('note' if kind in ('body', 'head') else kind, key)
-                page_of[kk] = (pi_, ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk)
+                gk = ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk
+                if (pi_, gk) not in page_of.setdefault(kk, []):
+                    page_of[kk].append((pi_, gk))
         for kind, table in (('note', note_win), ('syl', syl_win), ('rest', rest_win)):
             for nid, ws in table.items():
                 if (kind, nid) not in page_of:
                     continue
-                pi_, gk = page_of[(kind, nid)]
-                for part, s0, s1 in ws:
-                    if view == 'all' or part == view:
-                        wins.append((float(T(s0)), float(T(s1)), pi_, gk, colours[part], part, s0, s1,
-                                     steps(nid, part) if kind == 'rest' else None))
+                for pi_, gk in page_of[(kind, nid)]:
+                    for part, s0, s1 in ws:
+                        if view == 'all' or part == view:
+                            wins.append((float(T(s0)), float(T(s1)), pi_, gk, colours[part], part, s0, s1,
+                                         steps(nid, part) if kind == 'rest' else None))
         wins.sort()
 
         t_start, t_len = 0.0, T.dur
