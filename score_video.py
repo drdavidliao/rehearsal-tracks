@@ -82,7 +82,7 @@ from lxml import etree
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from stem_vs_score import load_score, beats_to_sec, envelope, runs  # noqa: E402
-from verify import lyric_line_runs, sung_positions  # noqa: E402
+from verify import lyric_line_runs, sung_positions, parts_on  # noqa: E402
 
 # Okabe-Ito, colour-blind safe; neighbours on a shared staff get well-separated hues
 PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#B07A00', '#7F3C8D', '#00798C', '#8C510A']
@@ -857,7 +857,19 @@ class Timing:
             g = self.straight(inside) + coarse
             g = g[(g > t0) & (g < t1)]
             ok, near = self.nearest(g, 0.1)
-            seg.append(coarse + float(np.median(near[ok] - g[ok])) if ok.sum() >= 6 else coarse)
+            if ok.sum() >= 6:
+                seg.append(coarse + float(np.median(near[ok] - g[ok])))
+            elif len(inside) and seg and a > -1e8:
+                # too few onsets to refine, and held chords leave the pitch alignment free to slide
+                # (a ballad's last three bars, one chord: -1.1 s where playback held +0.75 s): after
+                # a fermata the sound comes back with the next note, so take the first onset after it
+                # (a hold is never negative: an onset before the written end is the held note's own)
+                prev = seg[-1] if seg[-1] is not None else 0.0
+                g0 = float(self.straight(inside.min()))
+                later = self.aon[(self.aon > g0 + prev - 0.03) & (self.aon < g0 + prev + 3.0)]
+                seg.append(float(later[0]) - g0 if len(later) else coarse)
+            else:
+                seg.append(coarse)
         base = seg[0] if seg[0] is not None else 0.0
         self.base = base
         self.steps, prev = [], base
@@ -896,6 +908,9 @@ class Timing:
                 continue
             print(f'   fermata ending at {fmt(float(self.straight(b)))} (bar {bar_at(float(self(b)))}): playback '
                   f'holds it {1000 * d:+.0f} ms beyond the written length; the lights after it follow')
+            if d < -0.1:
+                print(f'   <- a hold cannot be negative: the fit is wrong here; check the lights after bar '
+                      f'{bar_at(float(self(b)))} by eye')
         # the check: the pitch alignment against the lights, per stretch
         t = np.arange(len(self.dtw)) * HOP_C
         s_of_t = (t - self.off) / self.scale
@@ -1688,7 +1703,7 @@ def timing_source(mp3):
     down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
     anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
     only when the Balanced track sits beside this one, is the same length and lines up with it."""
-    m = re.match(r'(.*) - \(.+\) (predominant|part-left)\.mp3$', os.path.basename(mp3))
+    m = re.match(r'(.*?) - (\(.+\)|Solo.*) (predominant|part-left)\.mp3$', os.path.basename(mp3))
     if not m:
         return mp3, ''
     ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')
@@ -1901,9 +1916,14 @@ def main():
             if bl.find('fermata') is not None:
                 q = src_starts[mi] + (0 if bl.get('location') == 'left' else blen[mi])
                 fermata_at += [s0 for s0, _ in times_of(mi, q, q)]
+    # fermatas a moment apart are one hold for the fit, taken after the last of them: two
+    # fermata eighths 0.4 s apart and a caesura (a ballad TTBB's last line) left too little
+    # between them to measure, and the fit put -1.1 s on the second where playback held +0.75 s
     breaks = []
     for b in sorted(fermata_at):
-        if all(abs(b - x) > 0.05 for x in breaks):
+        if breaks and b - breaks[-1] < 1.5:
+            breaks[-1] = b
+        else:
             breaks.append(b)
     first_score = min(all_onsets)
 
@@ -2064,9 +2084,12 @@ def main():
     dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
     # which notes sing words of their own: the open score whose words are shown (a closed display file
     # given ready-made has none beside it, and verify.py --original checks that one)
-    sung_at = frozenset() if closed else sung_positions(root)
+    src_names = [(sp.findtext('part-name') or '').strip() for sp in root.iter('score-part')]
+
+    def sung_on(p):                        # only the parts sharing that staff (a soloist is not the tenors)
+        return frozenset() if closed else sung_positions(root, parts_on(dsp.get(p.get('id'), ''), src_names))
     bad = [f"{dsp.get(p.get('id'), p.get('id'))} voice {v} line {num}: the line from {t!r} (bar {mn}) runs on to "
-           f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_at)]
+           f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_on(p))]
     if bad:
         sys.exit('lyric lines that run on past their melisma in the score shown (SKILL.md 7.6):\n   ' + '\n   '.join(bad))
     print('check, lyric lines: every one stops where its melisma does' +

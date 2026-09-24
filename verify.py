@@ -242,15 +242,27 @@ def check_words(root, names, out_dir):
         report(9, 'Words reassemble', 'MANUAL', f'hyphen chains all close; read the {len(words)} words in {fn} for typos')
 
 
-def sung_positions(root):
+def sung_positions(root, only=None):
     """{(bar, onset, midi)} where a note of `root` starts a syllable: which notes of a derived score
-    (a closed score, a revoicing) sing a syllable of their own, whatever line prints it."""
+    (a closed score, a revoicing) sing a syllable of their own, whatever line prints it. `only`: the
+    part names to take, those sharing the staff being checked (a soloist singing the same pitch at
+    the same moment is not the tenors' word)."""
     out = set()
+    names = {sp.get('id'): (sp.findtext('part-name') or '').strip() for sp in root.iter('score-part')}
     for part in root.findall('part'):
+        if only is not None and names.get(part.get('id')) not in only:
+            continue
         for mn, n, v, t in notes_of(part):
             if n.find('pitch') is not None and any(l.findtext('text') for l in n.findall('lyric')):
                 out.add((mn, t, pitch_midi(n.find('pitch'))))
     return out
+
+
+def parts_on(staff_name, source_names):
+    """The source parts a derived staff carries, by name ("Tenor 1\nTenor 2", "Tenor 1 + Tenor 2");
+    all of them when the name does not say."""
+    got = {n for n in source_names if n and re.search(r'(^|[\n+/&,])\s*' + re.escape(n) + r'\s*($|[\n+/&,])', staff_name)}
+    return got or set(source_names)
 
 
 def lyric_line_runs(part, sung=frozenset()):
@@ -292,8 +304,9 @@ def check_extend_runs(root, names, original=None):
     """14: an <extend/> needs a following note in the same voice for the line to run under, and the
     line must stop where the melisma does (SKILL.md 7.6)."""
     bad = []
-    sung = sung_positions(load(original)[0]) if original else frozenset()
+    oroot, onames = load(original) if original else (None, {})
     for part in root.findall('part'):
+        sung = sung_positions(oroot, parts_on(names[part.get('id')], onames.values())) if original else frozenset()
         byv = defaultdict(list)
         for mn, n, v, _ in notes_of(part):
             if n.find('chord') is None: byv[v].append((mn, n))
