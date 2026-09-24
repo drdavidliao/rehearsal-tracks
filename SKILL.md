@@ -1499,7 +1499,27 @@ two-soloist TTBB, under two 50 ms steps), naming the bar of any stretch 100 ms
 out; ignore the last few seconds, where only reverb is left. Each finished mp4
 is checked for what the file itself can go wrong on: its audio against the mp3
 (0.0 ms) and every frame's time against the time it was meant for (exact).
-Report all of it in the handback.
+All of it goes on record (next paragraph).
+
+**Every check goes on record, whatever it finds.** The script writes everything
+it prints to `TITLE - video checks.txt` beside the videos, a line for each
+check even when it finds nothing: accidentals written out (8.1), lyric lines
+(`verify.py` check 14), a **pitch readback** (every note Verovio engraves, read
+the way a singer reads it, from its written accidental or else the key
+signature and the bar so far, tied notes from their first note, against the
+pitch it sounds; any difference stops the run), and per mp3 the sync report.
+`--proof DIR` also writes one unlit PNG per screen of the all-parts view.
+Compare each with the print PDF bar by bar (pitches and accidentals, rhythms,
+ties and slurs, words and where they sit, extenders) and add to the file, under
+the proof line, per screen, what differs or "as printed", and a one-line
+result; show the user screens only where something differs. The record is so
+the user can see, song by song, which checks still find things and which have
+gone quiet, and decide which to keep. Cost: the automatic checks take seconds;
+the comparison a few minutes for five screens. On the barbershop-voiced TTBB
+the readback found 61 notes in 21 bars reading a half step off (the file wrote
+no `<accidental>` at all), which inspection by eye had passed, and the first
+comparison found 8 cautionary accidentals the print puts in parentheses and
+the video leaves out.
 
 **Shared notes and words split top to bottom.** A notehead, rest or syllable
 two parts share gets its halo and its ink in stacked bands, the higher part's
@@ -3390,7 +3410,7 @@ if __name__ == '__main__':
         "Shenandoah - (Tenor 1) predominant.mp3" "Shenandoah - (Tenor 2) predominant.mp3" ...
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
-        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N]
+        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N] [--proof DIR]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -3402,7 +3422,9 @@ singing that pitch, resting, or starting a syllable at that moment; a second lyr
 goes to the lower part), with voice 1 / voice 2 as the fallback. Repeat signs and first
 and second endings are unrolled: the lights follow the bars in the order they are played,
 turning back a screen for a repeat. Each mp3 gives one mp4 of the same name beside it (or
-in OUT_DIR):
+in OUT_DIR), and everything the run prints, every check included, also goes to
+"<title> - video checks.txt" there; --proof DIR writes one unlit PNG per screen, for the
+comparison with the print PDF that SKILL.md Step 10 asks for:
 
   a Balanced mp3          -> every sung part lights up in its own colour
   "(Part) predominant", "(Part) part-left", "Solo ... " mp3s
@@ -3888,6 +3910,62 @@ def mark_accidentals(root):
                 state[(st, octv)] = alt
                 added += 1
     return added
+
+
+MEI_ACC = {'s': 1, 'f': -1, 'n': 0, 'x': 2, 'ss': 2, 'ff': -2, 'ns': 1, 'nf': -1}
+
+
+def pitch_readback(tk):
+    """Every note as a singer would read it off the page Verovio draws, against the pitch it
+    plays: written accidentals, else the key signature and what earlier notes in the bar on that
+    staff have altered. Returns [(bar, staff, note name, reads, sounds)] where they differ."""
+    M = '{http://www.music-encoding.org/ns/mei}'
+    X = '{http://www.w3.org/XML/1998/namespace}id'
+    root = etree.fromstring(tk.getMEI().encode())
+    q = {}
+    for ev in tk.renderToTimemap():
+        for i in ev.get('on', []):
+            q.setdefault(i, ev['qstamp'])
+    key, bad = {}, []
+    held = {t.get('endid', '').lstrip('#') for t in root.iter(M + 'tie')}   # tied over: reads as its first note
+
+    def setkey(el, n=None):
+        sig = el.get('keysig') or next((k.get('sig') for k in el.iter(M + 'keySig')), None)
+        if sig is None:
+            return
+        d = {}
+        if sig not in ('0', 'mixed'):
+            k, a = int(sig[:-1]), (1 if sig[-1] == 's' else -1)
+            d = {st: a for st in ('fcgdaeb' if a > 0 else 'beadgcf')[:k]}
+        if n is None:
+            for s_ in list(key) or ['*']:
+                key[s_] = d
+            key['*'] = d
+        else:
+            key[n] = d
+    for el in root.iter(M + 'scoreDef', M + 'staffDef', M + 'measure'):
+        if el.tag == M + 'scoreDef':
+            setkey(el)
+        elif el.tag == M + 'staffDef':
+            setkey(el, el.get('n'))
+        else:
+            for st in el.findall(M + 'staff'):
+                n = st.get('n')
+                kd = key.get(n, key.get('*', {}))
+                notes = [(q.get(nt.get(X)), k, nt) for k, nt in enumerate(st.iter(M + 'note'))
+                         if nt.get(X) not in held and nt.get('tie') not in ('m', 't')]
+                state = {}
+                for qs, _, nt in sorted((x for x in notes if x[0] is not None), key=lambda x: (x[0], x[1])):
+                    pn, oc = nt.get('pname'), nt.get('oct')
+                    w = nt.get('accid') or next((a.get('accid') for a in nt.findall(M + 'accid') if a.get('accid')), None)
+                    g = nt.get('accid.ges') or next((a.get('accid.ges') for a in nt.findall(M + 'accid') if a.get('accid.ges')), None)
+                    sounds = MEI_ACC.get(g, MEI_ACC.get(w, 0)) if (g or w) else 0
+                    reads = MEI_ACC[w] if w in MEI_ACC else state.get((pn, oc), kd.get(pn, 0))
+                    state[(pn, oc)] = reads
+                    if reads != sounds:
+                        nm = lambda a: pn.upper() + {-2: 'bb', -1: 'b', 0: '', 1: '#', 2: '##'}[a] + oc
+                        bad.append((el.get('n'), n, nm(sounds), nm(reads), nm(sounds)))
+    return bad
 
 
 def mark_tuplets(root):
@@ -5037,6 +5115,42 @@ def timing_source(mp3):
     return ref, f'timed by {os.path.basename(ref)}, which it lines up with (same length, 0 ms apart)'
 
 
+class Tee:
+    """Everything the run prints also goes to the checks file beside the videos, so what every
+    check found, including nothing, is on record song by song (SKILL.md Step 10)."""
+    def __init__(self, path, out):
+        self.f, self.out = open(path, 'w'), out
+
+    def write(self, s):
+        self.out.write(s)
+        self.f.write(s)
+
+    def flush(self):
+        self.out.flush()
+        self.f.flush()
+
+
+def checks_file(a):
+    """<title> - video checks.txt in the output folder, the title being what the mp3 names share."""
+    import datetime, hashlib
+    names = [os.path.basename(m) for m in a.mp3s]
+    title = os.path.commonprefix(names).split(' - ')[0].strip() or os.path.splitext(os.path.basename(a.score))[0]
+    out_dir = a.out or os.path.dirname(os.path.abspath(a.mp3s[0]))
+    path = os.path.join(out_dir, f'{title} - video checks.txt')
+    sys.stdout = Tee(path, sys.stdout)
+    ver = hashlib.md5(open(os.path.abspath(__file__), 'rb').read()).hexdigest()[:8]
+    print(f'Video checks for {title}, {datetime.datetime.now():%Y-%m-%d %H:%M}, score_video.py {ver}')
+    print(f'score: {os.path.basename(a.score)}' + (f'; shown: {os.path.basename(a.display)}' if a.display else ''))
+    print('mp3s: ' + '; '.join(names) + '\n')
+    return path
+
+
+def proof_note(a):
+    print('\ncheck, proof against the print PDF: ' + (
+        'screens written; Claude compares each with the PDF and records what differs, or that nothing '
+        'does, below (SKILL.md Step 10)' if a.proof else 'NOT RUN (no --proof)'))
+
+
 def run_parallel(a):
     """One process per mp3, as many at a time as there are cores: each renders its own
     screens and encodes its own video. Each process's report is printed whole, in the order given."""
@@ -5048,7 +5162,7 @@ def run_parallel(a):
     while todo or running:
         while todo and len(running) < n:
             k, mp3 = todo.pop(0)
-            cmd = [sys.executable, os.path.abspath(__file__), *rest, mp3, '--jobs', '1']
+            cmd = [sys.executable, os.path.abspath(__file__), *rest, mp3, '--jobs', '1', '--child']
             log = tempfile.TemporaryFile('w+')      # a pipe could fill and stall the process
             running[k] = (subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, text=True), log)
         for k, (pr, log) in list(running.items()):
@@ -5067,6 +5181,7 @@ def run_parallel(a):
             nxt += 1
         time.sleep(0.5)
     print(f'{len(a.mp3s) - failed} of {len(a.mp3s)} videos in {time.time() - t0:.0f} s')
+    proof_note(a)
     return 1 if failed else 0
 
 
@@ -5092,7 +5207,12 @@ def main():
     ap.add_argument('--pulse', type=int, help='rest bars jump in these notes (8 = eighths, 16 = sixteenths); '
                     'default: per part, the coarsest value 95%% of its sung bars keep to')
     ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
+    ap.add_argument('--proof', help='folder for one unlit PNG per screen of the all-parts view, to compare '
+                    'with the print PDF (SKILL.md Step 10)')
+    ap.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = ap.parse_args()
+    if not (a.child or a.stills or a.clip):
+        checks_file(a)
     if len(a.mp3s) > 1 and a.jobs != 1 and not a.stills:
         sys.exit(run_parallel(a))
     set_theme(a.dark)
@@ -5343,8 +5463,8 @@ def main():
             'breaks': 'auto', 'header': 'none', 'footer': 'none', 'adjustPageHeight': False,
             'justifyVertically': False, 'lyricSize': 5.0, 'spacingSystem': 10, 'svgViewBox': False}
     k = mark_accidentals(disp)
-    if k:
-        print(f'{k} accidental(s) the file leaves to the reader written out for the video')
+    print('check, accidentals: ' + (f'{k} the file leaves to the reader, written out for the video' if k else
+                                     'the file writes every one the page needs'))
     # every lyric line stops where its melisma does (SKILL.md 7.6): verify.py's check 14, on what is shown
     dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
     # which notes sing words of their own: the open score whose words are shown (a closed display file
@@ -5354,10 +5474,17 @@ def main():
            f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_at)]
     if bad:
         sys.exit('lyric lines that run on past their melisma in the score shown (SKILL.md 7.6):\n   ' + '\n   '.join(bad))
+    print('check, lyric lines: every one stops where its melisma does' +
+          ('' if not closed else ' (past rests only: a closed display file has no open score beside it)'))
     tk = verovio.toolkit()
     tk.setOptions(opts)
     if not tk.loadData(etree.tostring(disp).decode()):
         sys.exit('verovio could not read the closed score')
+    wrong = pitch_readback(tk)
+    if wrong:
+        sys.exit('notes that read on the page as a pitch they do not sound (bar, staff, reads, sounds):\n   ' +
+                 '\n   '.join(f'{b} staff {n}: reads {r}, sounds {s}' for b, n, _, r, s in wrong))
+    print('check, pitch readback: every note reads on the page as the pitch it sounds')
     base_mei = tk.getMEI()
     layouts = {}
 
@@ -5438,6 +5565,16 @@ def main():
 
     for mp3, view, stem in jobs:
         pages, bar_page, ctrl = layout(view)
+        if a.proof and view == 'all':
+            from PIL import Image
+            os.makedirs(a.proof, exist_ok=True)
+            nums = [m.get('number') for m in src_parts[0].findall('measure')]
+            for p_ in range(len(pages)):
+                bars = sorted(mi for mi, pg in bar_page.items() if pg == p_)
+                pages[p_].raster()
+                fn = os.path.join(a.proof, f'screen {p_ + 1} bars {nums[bars[0]]}-{nums[bars[-1]]}.png')
+                Image.fromarray(pages[p_].base['all']).save(fn)
+                print(f'   proof screen: {os.path.basename(fn)}')
         ref, why = timing_source(mp3)
         T = Timing(ref, pitched, first_score, breaks)
         if ref != mp3:
@@ -5606,11 +5743,13 @@ def main():
             cc = np.fft.irfft(np.fft.rfft(seg_y, 2 * n) * np.conj(np.fft.rfft(seg_x, 2 * n)))
             k = int(np.argmax(np.concatenate([cc[-2205:], cc[:2206]]))) - 2205
             lag = k / 22.05
-        print(f'   wrote {out}: {len(segs)} frames, one per change of lights or page; '
+        print(f'   wrote {os.path.basename(out)}: {len(segs)} frames, one per change of lights or page; '
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
         check_frames(out, [ms for ms, _ in segs])
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
+    if not (a.child or a.stills or a.clip):
+        proof_note(a)
 
 
 if __name__ == '__main__':
