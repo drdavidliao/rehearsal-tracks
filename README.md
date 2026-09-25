@@ -74,8 +74,30 @@ Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 
 ### 🎧 &nbsp;Make rehearsal tracks
 
-To make rehearsal tracks for each part, first export one audio file per staff
-from Sibelius: solo each staff in turn and use **File > Export > Audio**. Put
+To make rehearsal tracks for each part, first **wait for Cantai to finish
+rendering**, then export one audio file per staff.
+
+**Wait for Cantai first.** Cantai renders the singing in the background, from
+the start of the piece onward, after you open the file or clear its cache, and
+an export writes only what has been rendered so far. Everything else comes out
+as silence, with no warning. On one 3½-minute piece with six Cantai voices, rendering
+took about five minutes. An export a few seconds after clearing the cache sang
+only the first three bars; one five minutes later sang everything. Exporting
+the whole score first does not help: it is cut short the same way. To see
+whether Cantai is done:
+
+1. Open the Mixer (**Play > Mixer**, or press **M**) and click the small **gear** on a Cantai
+   voice's strip. That opens Cantai's panel for that voice.
+2. On the panel's first page, the singer's picture has a **spinning halo while
+   that voice is still rendering**. Wait for it to stop.
+3. Once it has stopped, open the gear of every other Cantai voice and check
+   that its halo has stopped too.
+4. If you want a second opinion, click the **three dots** at the top right of
+   the panel. The second page shows the cache size. It does not update while
+   you watch, so leave the page and come back; when the number stops growing,
+   rendering is done.
+
+Then export: solo each staff in turn and use **File > Export > Audio**. Put
 the files in one folder **together with the MusicXML the audio was rendered
 from**, connect that folder to Claude (or attach the files), and write
 something like:

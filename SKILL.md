@@ -48,7 +48,11 @@ handling. Never print from it.
 Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
 (cantai.app).
 
-**Make rehearsal tracks.** Export one audio file per staff from Sibelius
+**Make rehearsal tracks.** First wait for Cantai to finish rendering: an
+export writes only what Cantai has rendered so far, and silence for the rest.
+In the Mixer (Play > Mixer, or M), click the gear on each Cantai voice's
+strip; the singer's picture on that panel has a spinning halo until that voice
+is rendered. When every halo has stopped, export one audio file per staff
 (solo each staff, File > Export > Audio), put them in one folder with the
 MusicXML they were rendered from, connect or attach it, and write something
 like:
@@ -1240,8 +1244,44 @@ observations from that session, not documented behaviour.
 
 ### 9.1 Export one stem per staff
 
-**Solo each staff and use File > Export > Audio.** Slow, and every manual
-export tested came out clean. Bob Zawalich's *Export Each Staff As Audio*
+**Wait until Cantai has rendered everything, then export.** Cantai renders in
+the background, from bar 1 onward, after the file is opened or its cache is
+cleared (its guide: "Cantai automatically re-renders just the affected
+segments", https://cantai.app/sibelius), and File > Export > Audio writes only
+what is rendered at that moment. The rest of the stem is digital silence, with
+no warning. Playing a passage renders it on the spot, which is why live
+playback can sing a phrase the export lost. Tell the user to watch for it this
+way: in the Mixer (Play > Mixer, or M) the gear on a Cantai voice's strip
+opens that voice's Cantai panel, and the singer's picture on its first page
+has a spinning halo while the voice is rendering. When one halo stops, open
+every other Cantai voice's panel and check that its halo has stopped too. The
+three dots at the panel's top right open a second page with the cache size,
+which does not update live (leave the page and come back); a size that has
+stopped growing is a second confirmation.
+
+Measured on a TTBB with piano split into six Cantai voices, 3:39 long, all
+exported with File > Export > Audio. The first set of stems, exported within
+two minutes of saving the file, was missing whole runs of phrases in every
+voice (Tenor 1 lost 89 s of 167 s sung), and the gaps shrank in export order,
+since rendering went on between exports. Each gap started and ended on a
+phrase's first syllable. After a cache clear: a Tenor 1 exported about 10 s later
+sang only bars 1–3; a full-score export right after the clear held voices for
+its first half-minute and was the piano stem alone, sample for sample, from
+then on, and a Tenor 1 exported 25 s after that stopped at bar 22; so
+exporting everything first does not fill the cache. Left alone after a clear,
+with nothing played or exported, the cache grew at about 0.5 MB/s, stopped at
+136.5 MB about 4.9 minutes later, and the Tenor 1 halo went out within the
+same half-minute; the Tenor 1 exported then was complete, and so were all six
+voices exported next. Cantai does not render the same performance twice: two
+complete renders of bars 1–3 were different waveforms, so a stem cannot be
+checked against a known-good copy, only against the score (9.2).
+
+An earlier version of this file said every manual export tested came out
+clean, and 9.2's "voice that stops for good" was put down to Cantai. Some of
+those stops may have been exports taken before rendering finished; the
+cure is the wait above, and the score check after it.
+
+**Solo each staff and use File > Export > Audio.** Slow. Bob Zawalich's *Export Each Staff As Audio*
 plug-in is faster but not trustworthy with Cantai (9.3); if you use it, check
 every stem it writes. It writes WAV or AIFF only, not mp3.
 
@@ -1301,7 +1341,9 @@ the score when you have it): in the 2008 Sibelius TTBB both tenors came in at
 10.9 s and Baritone and Bass at 3.5 s, each pair within milliseconds, where the
 late-ensemble bug shifts one staff by a different 4–12 s every export.
 
-**A voice that stops for good.** Cantai can also stop rendering a staff partway
+**A voice that stops for good.** First suspect an export taken before Cantai
+had finished rendering (9.1): then the gaps start and end on phrase starts and
+shrink from one export to the next. Cantai can also stop rendering a staff partway
 through and never resume: the last note fades out normally and the rest of the
 stem is digital silence. On the two-soloist TTBB Tenor 1, Tenor 2 and
 Baritone stopped at 2:48, 3:38 and 4:12 in one export while Bass sang to the
@@ -1381,6 +1423,9 @@ tracks' loudness (9.4).
   in 4–12 s after the rest of the section, by a different amount each export,
   and the individual singers were audible rather than blended. Single solo
   voices entered on time. Prefer single voices for learning tracks.
+- **An export before rendering finishes is silent wherever Cantai has not
+  rendered yet** (9.1): whole runs of phrases missing, in every voice, with
+  sung passages in between. Wait for every voice's halo to stop.
 - **The first export after a settings change can be silent.** Three stems were
   all zeros on the first run and fine on the second.
 
