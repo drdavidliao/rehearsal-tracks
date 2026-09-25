@@ -194,21 +194,27 @@ def check_render(path, out):
 def check_ties(root, names):
     bad = []
     for part in root.findall('part'):
+        # events per voice, a chord being one event: a tie on any chord member must meet the same
+        # pitch, carrying the stop, in the voice's next event (a tie on the upper note of a chord was
+        # once compared with the next chord's lowest note)
         byv = defaultdict(list)
         for mn, n, v, _ in notes_of(part):
-            if n.find('chord') is not None: continue
-            byv[v].append((mn, n))
+            if n.find('chord') is not None and byv[v]:
+                byv[v][-1][1].append(n)
+            else:
+                byv[v].append((mn, [n]))
+        def ties_of(ns, kind):
+            return {pitch_midi(x.find('pitch')) for x in ns if x.find('pitch') is not None
+                    and kind in {t.get('type') for t in x.findall('tie')}}
         for v, seq in byv.items():
-            for i, (mn, n) in enumerate(seq):
-                t = {x.get('type') for x in n.findall('tie')}
-                if 'start' in t:
-                    nxt = seq[i + 1][1] if i + 1 < len(seq) else None
-                    if nxt is None or nxt.find('pitch') is None or 'stop' not in {x.get('type') for x in nxt.findall('tie')} \
-                            or pitch_midi(nxt.find('pitch')) != pitch_midi(n.find('pitch')):
+            for i, (mn, ns) in enumerate(seq):
+                for p in ties_of(ns, 'start'):
+                    nxt = seq[i + 1][1] if i + 1 < len(seq) else []
+                    if p not in ties_of(nxt, 'stop'):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie start with no matching stop")
-                if 'stop' in t:
-                    prv = seq[i - 1][1] if i else None
-                    if prv is None or 'start' not in {x.get('type') for x in prv.findall('tie')}:
+                for p in ties_of(ns, 'stop'):
+                    prv = seq[i - 1][1] if i else []
+                    if p not in ties_of(prv, 'start'):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie stop with no start")
         # slurs: each start closed by the next stop of the same number, in the same voice. On a shared
         # staff a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is closed
@@ -446,10 +452,15 @@ def is_ledger(l, st, p):
     edge = s['lines'][0] if l['top'] < s['lines'][0] else s['lines'][4]
     k = abs(l['top'] - edge) / sp
     if abs(k - round(k)) > 0.15 or round(k) < 1 or round(k) > 6: return False
+    mid = lambda t: (t['lines'][0] + t['lines'][4]) / 2
     for c in p.chars:
         if any(f in c['fontname'] for f in MUSIC_FONTS) and (ord(c['text'][0]) in HEADS or c['text'] == 'w') \
                 and c['x0'] < l['x1'] and c['x1'] > l['x0'] and abs((p.height - c['matrix'][5]) - l['top']) <= 4 * sp:
-            return True
+            # the notehead must belong to the same staff: an extender between two staves can sit on
+            # the upper staff's ledger grid right over a note of the lower staff (a TTBB with piano)
+            y = p.height - c['matrix'][5]
+            if min(st, key=lambda t: abs(mid(t) - y)) is s:
+                return True
     return False
 
 
@@ -505,7 +516,10 @@ class Engraving:
         """-> [(page idx, system idx, lane, top, [syllable dicts])] in reading order."""
         out = []
         for pi, page in enumerate(self.pages):
-            cs = [c for c in page['chars'] if c['font'] == self.lyric_font and c['size'] == self.lyric_size]
+            # the lyric font at its size, or a page scaled a few percent (Finale scales pages one by one:
+            # a TTBB with piano set its last two pages' lyrics at 12.1 pt against 11.5)
+            cs = [c for c in page['chars'] if c['font'] == self.lyric_font
+                  and 0.92 * self.lyric_size <= c['size'] <= 1.09 * self.lyric_size]
             rows = []
             for c in sorted(cs, key=lambda c: c['top']):
                 for r in rows:
@@ -716,7 +730,8 @@ def check_onsets(root, E):
                 for x in g:
                     if c and x - c[-1][0] < 1.9 * sp: c[-1].append(x)   # a second prints its heads one head-width apart
                     else: c.append([x])
-                cols.append(len(c))
+                if c:                  # a stretch with no notes or rests is a courtesy key or time at a system's end
+                    cols.append(len(c))
     if len(cols) != len(order):
         return report(11, 'Cross-staff onset alignment', 'NOT RUN',
                       f'PDF bar count {len(cols)} does not match the file ({len(order)}); first-bar or pickup layout not understood')
