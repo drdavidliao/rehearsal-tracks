@@ -996,10 +996,14 @@ printed over the last; the script moves such a syllable right until
 it clears its neighbour, and drops an extender squeezed to a stub, which read as
 a full stop after the word.
 
-**In a bar with a second voice, every voice-1 stem goes up**, a chord both parts
-share included. Left to Verovio, a shared chord after voice 2 had finished (Tenor 1
-with Tenor 2, bar 42 beat 3, high on the staff) was drawn stem down, reading as
-voice 2's note; the print has it up.
+**Once the parts split within a bar, they stay split for that bar, except at a
+unison.** Where both parts sing the same rhythm and word on two different pitches
+after they have split, the print gives each part its own stem, the upper part's up
+and the lower's down (the TTBB with piano at bars 13, 42 and 64). Merged into one
+chord on one stem, the note read as one part's whichever way the stem went: down,
+it looked like Tenor 2's alone, and a first fix that forced it up made it look like
+Tenor 1's alone. `merge_staff` keeps such moments out of the chord; a unison still
+merges into one note, stemmed by position, as the print's "unis." notes are.
 
 **A fermata once per staff and beat.** Collapsed onto one staff, both voices'
 fermatas stack one over the other, and a piano beat of two eighths got one over

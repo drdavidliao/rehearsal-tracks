@@ -237,6 +237,21 @@ def merge_staff(up, dn, nbars, beats=4):
                 break
         if not moved:
             break
+    # In a bar where the parts have split, a later moment they sing together on two
+    # different pitches stays split too: each part keeps its own stem, as the print does
+    # (bars 13, 42 and 64 of the TTBB with piano: the upper part's note stem up, the
+    # lower's stem down, never one chord on one stem). A chord on one stem there reads
+    # as one part's, whichever way the stem goes. A unison still merges into one note.
+    for m in range(1, nbars + 1):
+        if not bars[m][1]:
+            continue
+        U, D = dict(positions(up[m])), dict(positions(dn[m]))
+        v1pos = positions(bars[m][0])
+        keep = {p for p, e in v1pos if p in U and p in D and U[p]['pitches'] and D[p]['pitches']
+                and sorted(pkey(x) for x in U[p]['pitches']) != sorted(pkey(x) for x in D[p]['pitches'])}
+        if keep - apart.get(m, set()):
+            apart.setdefault(m, set()).update(keep)
+            remerge(m)
     return bars
 
 
