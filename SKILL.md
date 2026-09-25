@@ -72,7 +72,9 @@ Make rehearsal tracks from the audio files in the Shenandoah folder.
 
 That is Step 9: check every stem, then per part one predominant mp3 and one
 part-left mp3, plus Balanced, Balanced panned and Balanced 3D tracks, named for
-Chorus Connection.
+Chorus Connection. Claude first shows the section each part's files will be
+filed under, for you to click and change: Chorus Connection shows a file whose
+section it does not recognise to everyone.
 
 **Make follow-along videos.** Once the rehearsal tracks exist, write something
 like:
@@ -1554,6 +1556,26 @@ tracks, which belong to no section: `Shenandoah - Balanced.mp3`,
 `Shenandoah - Balanced panned.mp3`, `Shenandoah - Balanced 3D, use
 headphones.mp3`. Part-left tracks follow the same pattern:
 `Shenandoah - (Tenor 2) part-left.mp3`, `Shenandoah - Solo part-left.mp3`.
+
+**Only a real section goes in the parentheses.** Chorus Connection shows a track
+whose parenthesised name is not one of the chorus's sections to *everyone*: on
+a TTBB with piano whose score split Tenor 2 and Bass into a and b parts,
+`(Tenor 2a)` and `(Bass b)` went to the whole chorus, and the user renamed the
+files on Chorus Connection by hand. A division of a section keeps the section in
+the parentheses and puts the suffix after them: `Shenandoah - (Tenor 2) a
+predominant.mp3`, `Shenandoah - (Bass) b part-left.mp3`. `rehearsal_mix.py` does
+that by default for a part name ending in a lone lower-case letter, takes
+`--section "Voice=Section|suffix"` for anything else (`"Bari=Baritone|"`,
+`"Bass a=Bass 1|"`), and prints the mapping; `score_video.py` reads both forms.
+
+Choruses name their sections differently, so **propose the names and let the
+user click to change them before mixing.** Use a question card (AskUserQuestion),
+one question per voice, up to four per card: the proposed file name
+(`(Tenor 2) a`) as the first option, one plausible alternative (`(Bass 1)` for
+a Bass a, say) as the second, and the card's own free-text answer for the
+chorus's real name. Ask about every voice whose name is not obviously a
+standard section; plain `Tenor 1`, `Baritone` can be listed in the message
+as staying as they are. Pass the answers as `--section`.
 
 **Check what landed, not what was sent.** On the unaccompanied TTBB a file written to the
 user's computer, reported as written, turned out to hold the previous version
@@ -3644,8 +3666,8 @@ List the voices from the LOWEST to the HIGHEST: the order sets the stereo and 3D
 layouts. An accompaniment stem (--accomp, repeatable) is never featured and stays
 at 0 dB.
 
-Writes, for every voice V (parentheses around the section name, for Chorus
-Connection; a voice named Solo... gets none):
+Writes, for every voice V (the Chorus Connection section in parentheses, see Sections below;
+a voice named Solo... gets none):
     TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment 0 dB
     TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment as exported
 and once:
@@ -3669,6 +3691,15 @@ layout, and in the panned track a placed voice sits proportionally (135 deg = 45
 Chosen for a TTBB piece with one solo (Solo ahead) and one with two soloists (Solo 2 5 deg left,
 Solo 1 5 deg right), without listening; the user may move them.
 
+Sections: Chorus Connection files a track under the section named in parentheses, and shows
+a track whose parenthesised name is not one of the chorus's sections to EVERYONE. A voice
+that is a division of a section goes in as the section plus a suffix after the parentheses:
+"Tenor 2a" -> "(Tenor 2) a", "Bass b" -> "(Bass) b". That is the default for a name ending in
+a lone lower-case letter; everything else is used as it is. Override per voice with
+--section "Voice=Section|suffix" ("Tenor 2a=Tenor 2|a", "Bari=Baritone|", or "Descant=|" for
+no parentheses at all). The mapping is printed; confirm it with the user before handing over
+the tracks, since each chorus names its sections its own way.
+
 Stem levels: every stem's median level while sounding is printed. A stem several dB off
 the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
 
@@ -3680,7 +3711,7 @@ the panned Balanced track and then turned down on its own if it would clip.
 Needs numpy and ffmpeg (with libmp3lame); slab for the 3D track (without it the 3D track is
 not made, the script says so and exits 1).
 """
-import sys, os, types, argparse, subprocess
+import re, sys, os, types, argparse, subprocess
 import numpy as np
 
 SR = 44100
@@ -3757,6 +3788,24 @@ def fftconv(x, h):
     return np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(h, size), size)[:n]
 
 
+def section_of(n, sections):
+    """(section, suffix) for a voice: --section if given; a Solo... voice has no section; a name
+    ending in a lone lower-case letter ("Tenor 2a", "Bass b") is that section divided."""
+    if n in sections:
+        return sections[n]
+    if n.lower().startswith('solo'):
+        return '', ''
+    m = re.fullmatch(r'(.*\d)([a-z])', n) or re.fullmatch(r'(.*\S) ([a-z])', n)
+    return (m.group(1), m.group(2)) if m else (n, '')
+
+
+def label(n, sections):
+    sec, suf = section_of(n, sections)
+    if not sec:
+        return n
+    return f'({sec})' + (f' {suf}' if suf else '')
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument('title'); ap.add_argument('out')
@@ -3766,6 +3815,9 @@ def main():
     ap.add_argument('--place', action='append', default=[],
                     help='"Solo=0", "Solo 1=5R", "Solo 2=5L": put a voice (or accompaniment) at a fixed '
                          'direction instead of the automatic layout; the other voices keep theirs')
+    ap.add_argument('--section', action='append', default=[],
+                    help='"Voice=Section|suffix": the Chorus Connection section (in parentheses) and the '
+                         'suffix after it, e.g. "Tenor 2a=Tenor 2|a"; "Voice=|" for no section')
     ap.add_argument('--only', choices=['all', '3d'], default='all', help='write every track, or only the 3D one')
     ap.add_argument('--featured', type=float, default=3.0)
     ap.add_argument('--others', type=float, default=-21.0)
@@ -3775,7 +3827,12 @@ def main():
     placed = {k: parse_az(v) for k, v in (t.split('=', 1) for t in a.place)}
     V = [tuple(s.split('=', 1)) for s in a.voices]
     A = [tuple(s.split('=', 1)) for s in a.accomp]
-    for n in list(trims) + list(placed):
+    sections = {}
+    for t in a.section:
+        k, v = t.split('=', 1)
+        if '|' not in v: v += '|'
+        sections[k] = tuple(x.strip() for x in v.split('|', 1))
+    for n in list(trims) + list(placed) + list(sections):
         if n not in {x for x, _ in V + A}: sys.exit(f'{n!r} is not a stem')
     st = {n: load(p).astype(np.float32) for n, p in V + A}
     N = max(len(x) for x in st.values())
@@ -3803,7 +3860,9 @@ def main():
                                    f'{round(abs(pan[n])*100, 1):g}% {"left" if pan[n] < 0 else "right"}') for n in names + acc))
     print('3D: ' + ', '.join(f'{n} {side(az[n])}' for n in names + acc))
 
-    label = lambda n: n if n.lower().startswith('solo') else f'({n})'
+    print('\nfile names (Chorus Connection section in parentheses):')
+    for v in names:
+        print(f'   {v:12} -> {label(v, sections)}')
     accsum = sum((st[n] for n in acc), np.zeros((N, 2), np.float32))
     mono_ = {n: mono(st[n]) for n in names + acc}
 
@@ -3844,8 +3903,8 @@ def main():
 
     builders = {}
     for v in names:
-        builders[f'{a.title} - {label(v)} predominant'] = (lambda v=v: predominant(v))
-        builders[f'{a.title} - {label(v)} part-left'] = (lambda v=v: part_left(v))
+        builders[f'{a.title} - {label(v, sections)} predominant'] = (lambda v=v: predominant(v))
+        builders[f'{a.title} - {label(v, sections)} part-left'] = (lambda v=v: part_left(v))
     builders[f'{a.title} - Balanced'] = balanced
     builders[f'{a.title} - Balanced panned'] = panned
     three = f'{a.title} - Balanced 3D, use headphones'
@@ -3908,7 +3967,7 @@ in OUT_DIR), and everything the run prints, every check included, also goes to
 comparison with the print PDF that SKILL.md Step 10 asks for:
 
   a Balanced mp3          -> every sung part lights up in its own colour
-  "(Part) predominant", "(Part) part-left", "Solo ... " mp3s
+  "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
                           -> only that part lights up; every other part, piano too, is grey,
                              and that part's staff is never hidden, so its rests stay on screen
 
@@ -5376,14 +5435,23 @@ def check_frames(mp4, planned_ms):
 
 def featured_of(mp3, names, part_map):
     b = os.path.basename(mp3)
-    m = re.search(r' - \((.+?)\) ', b) or re.search(r' - (Solo[^-]*?) (?:predominant|part-left)', b)
+    # "(Tenor 2) predominant", or a division of a section: "(Tenor 2) a predominant" (rehearsal_mix.py)
+    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant|part-left)', b) \
+        or re.search(r' - (Solo[^-]*?) (?:predominant|part-left)', b)
     if not m:
         return None
     sec = m.group(1).strip()
+    suf = (m.group(2) or '') if m.re.groups > 1 else ''
+    tries = [f'{sec} {suf}', f'{sec}{suf}'] if suf else [sec]
+    for t in tries:
+        t = part_map.get(t, t)
+        for i, n in enumerate(names):
+            if n.lower() == t.lower():
+                return i
+    if suf:
+        sys.exit(f'{b}: no part named {tries[0]!r} or {tries[1]!r} in the score (parts: {names}); '
+                 f'map it with --part "{tries[0]}=<part name>"')
     sec = part_map.get(sec, sec)
-    for i, n in enumerate(names):
-        if n.lower() == sec.lower():
-            return i
     # "Solo 1" in the mp3 name for a part called "Solo 1 (tenor)"
     near = [i for i, n in enumerate(names)
             if n.lower().startswith(sec.lower()) and not n[len(sec):len(sec) + 1].isalnum()]
@@ -5738,7 +5806,7 @@ def timing_source(mp3):
     down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
     anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
     only when the Balanced track sits beside this one, is the same length and lines up with it."""
-    m = re.match(r'(.*?) - (\(.+\)|Solo.*) (predominant|part-left)\.mp3$', os.path.basename(mp3))
+    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant|part-left)\.mp3$', os.path.basename(mp3))
     if not m:
         return mp3, ''
     ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')

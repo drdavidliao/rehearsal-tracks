@@ -132,8 +132,18 @@ made.
 
 Claude then checks every stem against the score and reports, by bar number,
 any phrase the score has that the audio leaves silent, and any rest in the
-score that the audio fills (audio leaked in from another staff). Then Claude
-writes five kinds of mp3 beside the originals, named for Chorus Connection:
+score that the audio fills (audio leaked in from another staff).
+
+Before mixing, Claude shows the **Chorus Connection section** each part's files
+will be filed under, and you click to accept or type your chorus's own name.
+This matters: Chorus Connection files a track under the section named in
+parentheses, and shows a track whose section it does not recognise to
+*everyone*. A part that divides a section keeps the section in the parentheses
+and puts the division after it: `Shenandoah - (Tenor 2) a predominant.mp3`,
+never `(Tenor 2a)`.
+
+Then Claude writes five kinds of mp3 beside the originals, named for Chorus
+Connection:
 
 - one **predominant** track per part, with that part loud, the other voices
   faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
