@@ -89,7 +89,9 @@ whether Cantai is done:
 1. Open the Mixer (**Play > Mixer**, or press **M**) and click the small **gear** on a Cantai
    voice's strip. That opens Cantai's panel for that voice.
 2. On the panel's first page, the singer's picture has a **spinning halo while
-   that voice is still rendering**. Wait for it to stop.
+   that voice is still rendering**, and near the top left corner a **pulsing dot
+   beside the word "Rendering..."**. Wait until the halo, the dot and the word
+   have all gone.
 3. Once it has stopped, open the gear of every other Cantai voice and check
    that its halo has stopped too.
 4. If you want a second opinion, click the **three dots** at the top right of
@@ -97,7 +99,10 @@ whether Cantai is done:
    you watch, so leave the page and come back; when the number stops growing,
    rendering is done.
 
-Then export: solo each staff in turn and use **File > Export > Audio**. Put
+Then export: solo each staff in turn and use **File > Export > Audio**, one staff
+at a time. Do not use a plug-in that exports every staff in one go: even with
+rendering finished, it gave each staff after the first the opening of the staff
+before it. Put
 the files in one folder **together with the MusicXML the audio was rendered
 from**, connect that folder to Claude (or attach the files), and write
 something like:

@@ -51,8 +51,9 @@ Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
 **Make rehearsal tracks.** First wait for Cantai to finish rendering: an
 export writes only what Cantai has rendered so far, and silence for the rest.
 In the Mixer (Play > Mixer, or M), click the gear on each Cantai voice's
-strip; the singer's picture on that panel has a spinning halo until that voice
-is rendered. When every halo has stopped, export one audio file per staff
+strip; the singer's picture on that panel has a spinning halo, and a pulsing
+dot beside "Rendering..." sits at its top left, until that voice is rendered.
+When every halo has stopped, export one audio file per staff
 (solo each staff, File > Export > Audio), put them in one folder with the
 MusicXML they were rendered from, connect or attach it, and write something
 like:
@@ -1286,7 +1287,8 @@ no warning. Playing a passage renders it on the spot, which is why live
 playback can sing a phrase the export lost. Tell the user to watch for it this
 way: in the Mixer (Play > Mixer, or M) the gear on a Cantai voice's strip
 opens that voice's Cantai panel, and the singer's picture on its first page
-has a spinning halo while the voice is rendering. When one halo stops, open
+has a spinning halo while the voice is rendering, with a pulsing dot beside the word
+"Rendering..." near its top left corner; all three go when it is done. When one halo stops, open
 every other Cantai voice's panel and check that its halo has stopped too. The
 three dots at the panel's top right open a second page with the cache size,
 which does not update live (leave the page and come back); a size that has
@@ -1452,6 +1454,23 @@ tracks' loudness (9.4).
   Workaround: export the failing staff by hand. Untested: reorder the staves,
   or put an empty staff after Solo, to see whether the leak follows export
   order; if it does, it is worth reporting to the plug-in's author.
+
+  **It is not a rendering-timing artefact.** On the Finale TTBB with piano (six
+  Otteto ensemble voices), with every voice's halo stopped before exporting, the
+  plug-in gave every stem after the first the previous staff's opening, about
+  21 s (bars 1–7, up to the first rest), over sung notes this time and not only
+  rests: Tenor 2a sang Tenor 1's line, the Baritone the tenors', Bass a the
+  Baritone's, and the first stem, Tenor 1, a basses' line from somewhere. The rest
+  of each stem was right. By-hand exports of the same staves were clean. Two
+  stems looked clean only because their part is written identically to the one
+  before in those bars (Tenor 2a and 2b, Bass a and b).
+
+  **How to catch it:** compare every stem's opening with every part's written line,
+  not only its own, and with every other stem sample by sample (2 s windows
+  correlating above 0.99 where the two parts' written lines differ). Checking a
+  stem only against its own part fails both ways: a leaked line has plausible
+  pitches and the right rhythm, and a clean stem can be condemned for matching a
+  leaked one. That happened here, and the user's ears overruled it.
 - **Ensemble voices enter late.** With "Choir Male" (voices = 6), Tenor 1 came
   in 4–12 s after the rest of the section, by a different amount each export,
   and the individual singers were audible rather than blended. Single solo
@@ -1763,6 +1782,14 @@ sets one line of words between the staves. In the display copy mark those
 `print-object="no"`, take their `<extend/>` off (Verovio draws a hidden syllable's line
 anyway), and run `end_lines_for_verovio`, or the last printed line on that staff runs on
 across the system under the hidden ones.
+
+**A part's video greys every staff it does not sing on, words and all.** Staff text
+(a piano's "slow down" instruction), dynamics and hairpins belong to the parts on their
+staff, found from the MEI `@staff` and the notes on that staff; in a part's own video
+they are grey where that part is not on the staff, like the notes and rests there.
+Tempo marks are everyone's and stay black. The display copy's staves are named after the
+parts on them for matching (above); give each a `<part-name-display>` with the printed
+name, or the first system's label reads "Tenor 1 Tenor 2a Tenor 2b".
 
 **The all-parts video needs about 5 GB.** In an 8 GB workspace the Balanced video was
 killed for memory when it rendered beside a part video; the log said only "failed". Render
@@ -4030,7 +4057,8 @@ note until the next syllable or rest, so a melisma or a tie keeps its word lit. 
 word two parts share gets its halo and ink in stacked bands, the higher part's colour on
 top (side by side would read as one part singing the first half, the other the second).
 A tie lights while either of its notes sounds; in a part's own video the other parts' ties
-and slurs are grey with their notes. A rest lights the same way, and a
+and slurs are grey with their notes, and so are the words, dynamics and hairpins of a staff
+it does not sing on (tempo marks stay black). A rest lights the same way, and a
 bar under it (above the staff for the upper of two voices) runs from where the rest starts
 to where it ends as the other staves print that time, filling in jumps of one pulse: each
 part's pulse is the coarsest note value that 95% of the bars it sings keep to (eighths in a
@@ -5065,7 +5093,7 @@ class Page:
                 rests.append(g)
             elif 'syl' in c:
                 syls.append(g)
-            elif 'tie' in c or 'slur' in c or 'fermata' in c:
+            elif {'tie', 'slur', 'fermata', 'dir', 'dynam', 'hairpin'} & set(c):
                 # a tie or slur carried over a system break is drawn again at the next system's
                 # start with no id, naming the original in a class "id-<its id>"
                 cid = g.get('id') or next((x[3:] for x in c if x.startswith('id-')), None)
@@ -6367,6 +6395,18 @@ def main():
                     # fermata, left out on the closed staff where it would stack over this one)
                     own |= ferm_end.get(d_end[k_], set()) & staff_sung(k_)
                 ctrl[e.get(X)] = (tag, st, en, own)
+        # a staff's own markings (words such as a piano's "slow down", dynamics, hairpins) are the
+        # parts on that staff: grey in the video of a part that is not, like that staff's notes.
+        # Tempo marks are everyone's and stay black
+        staff_own = {}
+        for stf in rr.iter(M + 'staff'):
+            got = staff_own.setdefault(stf.get('n'), set())
+            for nn in list(stf.iter(M + 'note')) + list(stf.iter(M + 'rest')) + list(stf.iter(M + 'mRest')):
+                got |= owners.get(nn.get(X), set())
+        for tag in ('dir', 'dynam', 'hairpin'):
+            for e in rr.iter(M + tag):
+                own = set().union(*[staff_own.get(n_, set()) for n_ in (e.get('staff') or '').split()])
+                ctrl[e.get(X)] = (tag, '', '', own)
         pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
                       x_q, bar_end, ctrl)
                  for p in range(1, t.getPageCount() + 1)]

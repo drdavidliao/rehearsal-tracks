@@ -31,7 +31,8 @@ note until the next syllable or rest, so a melisma or a tie keeps its word lit. 
 word two parts share gets its halo and ink in stacked bands, the higher part's colour on
 top (side by side would read as one part singing the first half, the other the second).
 A tie lights while either of its notes sounds; in a part's own video the other parts' ties
-and slurs are grey with their notes. A rest lights the same way, and a
+and slurs are grey with their notes, and so are the words, dynamics and hairpins of a staff
+it does not sing on (tempo marks stay black). A rest lights the same way, and a
 bar under it (above the staff for the upper of two voices) runs from where the rest starts
 to where it ends as the other staves print that time, filling in jumps of one pulse: each
 part's pulse is the coarsest note value that 95% of the bars it sings keep to (eighths in a
@@ -1066,7 +1067,7 @@ class Page:
                 rests.append(g)
             elif 'syl' in c:
                 syls.append(g)
-            elif 'tie' in c or 'slur' in c or 'fermata' in c:
+            elif {'tie', 'slur', 'fermata', 'dir', 'dynam', 'hairpin'} & set(c):
                 # a tie or slur carried over a system break is drawn again at the next system's
                 # start with no id, naming the original in a class "id-<its id>"
                 cid = g.get('id') or next((x[3:] for x in c if x.startswith('id-')), None)
@@ -2368,6 +2369,18 @@ def main():
                     # fermata, left out on the closed staff where it would stack over this one)
                     own |= ferm_end.get(d_end[k_], set()) & staff_sung(k_)
                 ctrl[e.get(X)] = (tag, st, en, own)
+        # a staff's own markings (words such as a piano's "slow down", dynamics, hairpins) are the
+        # parts on that staff: grey in the video of a part that is not, like that staff's notes.
+        # Tempo marks are everyone's and stay black
+        staff_own = {}
+        for stf in rr.iter(M + 'staff'):
+            got = staff_own.setdefault(stf.get('n'), set())
+            for nn in list(stf.iter(M + 'note')) + list(stf.iter(M + 'rest')) + list(stf.iter(M + 'mRest')):
+                got |= owners.get(nn.get(X), set())
+        for tag in ('dir', 'dynam', 'hairpin'):
+            for e in rr.iter(M + tag):
+                own = set().union(*[staff_own.get(n_, set()) for n_ in (e.get('staff') or '').split()])
+                ctrl[e.get(X)] = (tag, '', '', own)
         pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
                       x_q, bar_end, ctrl)
                  for p in range(1, t.getPageCount() + 1)]
