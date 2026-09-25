@@ -186,7 +186,7 @@ own video, only that part lights up and everyone else is grey.
 
 | File | What it does | Needs |
 |---|---|---|
-| `SKILL.md` | The whole method, start to finish. The nine scripts below are printed inside it in full, so it is self-contained. | — |
+| `SKILL.md` | The whole method, start to finish. The ten scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
@@ -197,6 +197,7 @@ own video, only that part lights up and everyone else is grey.
 | `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
 | `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
+| `stem_audit.py` | Audits a whole set of stems against the MusicXML they came from: silent stretches of written notes (Cantai's unfinished rendering), a stem singing another part's line (the export plug-in's leak), stems holding the same audio, and the basic file checks. | `numpy`, `ffmpeg` |
 
 ## Setup
 
@@ -217,6 +218,7 @@ python3 verify.py score.musicxml --pdf score.pdf --lanes "0a=Tenor,0b=Lead,1a=Ba
 python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
 python3 lyric_collisions.py score-laid-out.musicxml 7.0
 python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
+python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav" "Piano=Piano.wav"
 python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
 python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant.mp3" --display Shenandoah.musicxml
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
