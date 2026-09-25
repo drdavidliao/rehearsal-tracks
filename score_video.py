@@ -796,6 +796,7 @@ class Timing:
         if not sounding:
             sys.exit(f'{mp3}: no sound above -50 dBFS')
         self.first_audio = sounding[0][0]
+        self.last_audio = sounding[-1][1]
         self.off = self.first_audio - first_score           # anchored at the first entrance
         self.aon = audio_onsets(self.x)
         so = np.array(sorted(set(round(a, 3) for a, _, _ in notes)))
@@ -909,7 +910,8 @@ class Timing:
                   f'pitch alignment of the opening)')
         for b, d in zip(self.breaks, self.steps):
             if b >= self.so.max() - 1e-6:
-                print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor')
+                print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor, '
+                      f'and the last notes stay lit until the sound stops at {fmt(self.last_audio)}')
                 continue
             print(f'   fermata ending at {fmt(float(self.straight(b)))} (bar {bar_at(float(self(b)))}): playback '
                   f'holds it {1000 * d:+.0f} ms beyond the written length; the lights after it follow')
@@ -2389,6 +2391,15 @@ def main():
             T.cum[j] = t_audio - float(T.straight(s0))
             T.steps = [float(v) for v in np.diff(T.cum)]
             print(f'   anchored: bar {num} at {t}, by hand (the stretch after fermata {j} of {len(T.breaks)})')
+        # a stretch with no onsets to fit (after the last fermata: only the final note's end) holds
+        # nothing of its own and keeps the offset before it. Left at the fit's value it did not follow
+        # an anchor: bar 76's lights ended 6 s before they began, and the last bar never lit
+        for j in range(1, len(T.cum)):
+            lo_ = T.breaks[j - 1]
+            hi_ = T.breaks[j] if j < len(T.breaks) else np.inf
+            if not ((T.so >= lo_) & (T.so < hi_)).any():
+                T.cum[j] = T.cum[j - 1]
+        T.steps = [float(v) for v in np.diff(T.cum)]
         if ref != mp3:
             T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):
@@ -2434,6 +2445,7 @@ def main():
                 gk = ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk
                 if (pi_, gk) not in page_of.setdefault(kk, []):
                     page_of[kk].append((pi_, gk))
+        score_end = max(w[2] for tb in (note_s, rest_s) for ws in tb.values() for w in ws)
         tie_s = {}
         for cid, (tag, st, en, ps) in ctrl.items():
             if tag == 'tie':
@@ -2445,7 +2457,12 @@ def main():
                 for pi_, gk in page_of[(kind, nid)]:
                     for part, s0, s1, q0, q1, mi in ws:
                         if view == 'all' or part == view:
-                            wins.append((float(T(s0)), float(T(s1)), pi_, gk, colours[part], part, s0, s1,
+                            t1_ = float(T(s1))
+                            if s1 >= score_end - 1e-6 and kind != 'rest':
+                                # playback holds the final fermata as long as it likes: the last
+                                # notes stay lit until the sound stops
+                                t1_ = max(t1_, min(T.last_audio, T.dur))
+                            wins.append((float(T(s0)), t1_, pi_, gk, colours[part], part, s0, s1,
                                          steps(part, s0, s1, q0, q1, mi) if kind == 'rest' else None,
                                          float(q0), float(q1)))
         wins.sort()
