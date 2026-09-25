@@ -111,8 +111,9 @@ WEDGE_STOP = '<direction><direction-type><wedge type="stop" number="1"/></direct
 
 
 def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
-             lyr_place=None, lyr_num=1, fermata=False, tie_attrs=None):
-    """One event — a rest, a note, or a chord — as one or more <note> elements."""
+             lyr_place=None, lyr_num=1, fermata=False, tie_attrs=None, lyr_also=None):
+    """One event — a rest, a note, or a chord — as one or more <note> elements.
+    `lyr_also` = (placement, number): the same syllable printed a second time, on another line."""
     s = ''
     for pi, p in enumerate(e['pitches'] or [None]):
         s += '<note>'
@@ -165,11 +166,18 @@ def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
         if pi == 0 and p is not None and e['lyric']:
             ly = e['lyric']
             pl = f' placement="{lyr_place}"' if lyr_place else ''
+            if ly.get('hidden'):
+                pl += ' print-object="no"'
             s += (f'<lyric number="{lyr_num}"{pl}><syllabic>{ly["syllabic"]}</syllabic>'
                   f'<text>{escape(ly["text"])}</text>')
             if ly.get('extend'):
                 s += '<extend/>'
             s += '</lyric>'
+            if lyr_also:
+                pl2 = f' placement="{lyr_also[0]}"' if lyr_also[0] else ''
+                s += (f'<lyric number="{lyr_also[1]}"{pl2}><syllabic>{ly["syllabic"]}</syllabic>'
+                      f'<text>{escape(ly["text"])}</text>' + ('<extend/>' if ly.get('extend') else '')
+                      + '</lyric>')
         s += '</note>'
     return s
 
@@ -298,7 +306,8 @@ def divided_part(pid, bars, clef, spec, first=False, marks=None, header=None):
 
 
 def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, two_map=None,
-                   stems_follow_crossing=False, crossed_tie=(('orientation', 'over'),)):
+                   stems_follow_crossing=False, crossed_tie=(('orientation', 'over'),),
+                   lyric_place=None, hide_unprinted=False):
     """Two parts on one staff, merging and splitting freely inside the bar.
 
     `bars` is {bar: (v1, v2)} from collapse.merge_runs; `two_map` is
@@ -318,6 +327,24 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
     and any further lift is a hand touch-up in Sibelius (Tie Middle Y).
     Pass crossed_tie=None to leave those ties alone, or
     `stems_follow_crossing=True` to flip the stems in those bars instead.
+
+    `lyric_place(role, bar, offset)`, if given, lays the words out as the print
+    does: `role` is 'upper' or 'lower', and it returns 'above' or 'below' this
+    staff, or None (not printed on this staff: the part reads it from a line
+    printed for another part, often on the other staff, between the staves);
+    or a pair (side, lyric number) to number the lines by where they are
+    printed instead of by voice (a display: see `end_lines_for_verovio`).  A
+    chord both parts share prints its syllable where the upper part's goes, or
+    the lower part's if the upper's is None.  Voice 1's words are lyric line 1
+    and voice 2's line 2 wherever they are printed, so a line never changes
+    number when it moves above the staff; and where both parts' words go on the
+    same side and are the same words (`two_map` says not), voice 2's copy is
+    dropped as before (SKILL.md 7.4).  An unprinted syllable is dropped, or
+    with `hide_unprinted` kept as `print-object="no"`, for a display (a
+    follow-along video) that must still know who sings what.
+
+    A fermata is written once per moment: voice 2 carries none where voice 1 is
+    sounding, which a printed closed score does too (two stacked fermatas).
     """
     from .collapse import crossed_bars
     marks = marks or EMPTY_MARKS
@@ -339,7 +366,37 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
 
         v1pos = positions(v1)
         two_lines = bool(two_map and two_map.get(m))
-        if not two_lines:
+        place1, place2, also1 = {}, {}, {}
+        if lyric_place is not None:
+            def unprinted(e):
+                if hide_unprinted:
+                    e['lyric'] = dict(e['lyric'], hidden=True, extend=False)
+                else:
+                    e['lyric'] = None
+            def side(v):                      # 'above' / 'below' / None, from a str or (str, n)
+                return v[0] if isinstance(v, tuple) else v
+            for i, (pos, e) in enumerate(v1pos):
+                pu = lyric_place('upper', m, pos)
+                pl = lyric_place('lower', m, pos)
+                place1[i] = pu if split_here(pos, e['dur']) else (pu if side(pu) else pl)
+                if side(place1[i]) is None and e['lyric']:
+                    unprinted(e)
+                # a chord both parts sing, whose words the print gives each part on its own line
+                # (Tenor 1 above, Tenor 2 between the staves): print the syllable on both lines
+                elif (hide_unprinted and not split_here(pos, e['dur']) and side(pu) and side(pl)
+                        and side(pu) != side(pl) and e['lyric']):
+                    also1[i] = (side(pl) if side(pl) == 'above' else None,
+                                pl[1] if isinstance(pl, tuple) else 2)
+            for i, (pos, e) in enumerate(v2):
+                pl = lyric_place('lower', m, pos)
+                place2[i] = pl
+                if not e['lyric']:
+                    continue
+                if side(pl) is None:
+                    unprinted(e)
+                elif side(pl) == side(lyric_place('upper', m, pos)) and not two_lines:
+                    e['lyric'] = None                      # the same words on the same line
+        elif not two_lines:
             for _, e in v2:
                 if e['lyric']:
                     e['lyric'] = None
@@ -358,7 +415,10 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
             s += note_xml(e, spec, voice=1, beam=bm[i],
                           stem=((('down' if m in flipped else 'up'))
                                 if split_here(pos, e['dur']) else None),
-                          fermata=(m in spec.fermata_bars))
+                          fermata=(m in spec.fermata_bars),
+                          lyr_place='above' if side(place1.get(i)) == 'above' else None,
+                          lyr_num=place1[i][1] if isinstance(place1.get(i), tuple) else 1,
+                          lyr_also=also1.get(i))
             s += marks.after(m, pos + e['dur'])
         if not v2 and v2_line_open:
             v2_line_open, v2_line_done = False, True     # voice 2 gone: its line ended
@@ -393,11 +453,18 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
                     v2_line_open, v2_line_done = False, True
                 if e['pitches']:
                     v2_tie_voice = voice if e['tie'] else None
+                if lyric_place is not None:
+                    q_ = place2.get(i)
+                    lp_ = 'above' if side(q_) == 'above' else None
+                    ln_ = q_[1] if isinstance(q_, tuple) else 2
+                else:
+                    lp_, ln_ = None, 2 if two_lines else 1
                 s += note_xml(e, spec, voice=voice, beam=bm2[i],
                               stem='up' if m in flipped else 'down',
                               tie_attrs=v2_tie if (m in crossed and v2_tie) else None,
-                              lyr_num=2 if two_lines else 1,
-                              fermata=(m in spec.fermata_bars))
+                              lyr_place=lp_, lyr_num=ln_,
+                              fermata=(m in spec.fermata_bars
+                                       and not any(q <= pos < q + f['dur'] for q, f in v1pos)))
                 cur = pos + e['dur']
         out.append(s + _measure_close(m, spec))
     out.append('</part>')
@@ -567,3 +634,59 @@ def break_words_at_melismas(xml):
                         nxt.text = {'middle': 'begin', 'end': 'single'}.get(nxt.text, nxt.text)
                 changed.append(f"{part.get('id')} bar {mn}: {ly.findtext('text')!r}")
     return head + ET.tostring(root, encoding='unicode'), changed
+
+
+def end_lines_for_verovio(xml):
+    """End every extender line where its melisma does, for Verovio only.
+
+    A line runs on to the next note in its voice that has no syllable on that
+    lyric line, rests or not (SKILL.md 7.6).  Numbered by where they are printed
+    rather than by voice, the lines of a laid-out display change number when a
+    part's words move to another line, and a line left open would run on under
+    notes whose words are now on the other one.  Verovio stops a line at an
+    empty `<lyric><extend type="stop"/></lyric>`; Sibelius reads that as a new,
+    empty syllable, so this is for a display file only, never for Sibelius.
+    """
+    import xml.etree.ElementTree as ET
+    head = xml.split('<score-partwise', 1)[0]
+    root = ET.fromstring(xml[len(head):])
+    n_added = 0
+    for part in root.findall('part'):
+        seqs = {}
+        for meas in part.findall('measure'):
+            for n in meas.findall('note'):
+                if n.find('chord') is not None:
+                    continue
+                seqs.setdefault((n.findtext('staff') or '1', n.findtext('voice') or '1'), []).append(n)
+        for seq in seqs.values():
+            for i, n in enumerate(seq):
+                for ly in n.findall('lyric'):
+                    ext = ly.find('extend')
+                    if ext is None or ext.get('type') == 'stop' or ly.get('print-object') == 'no':
+                        continue
+                    num = ly.get('number') or '1'
+                    last = n
+                    for k in range(i + 1, len(seq)):
+                        q = seq[k]
+                        if q.find('rest') is not None or q.find('lyric') is not None:
+                            break
+                        last = q
+                    nxt = seq[seq.index(last) + 1] if seq.index(last) + 1 < len(seq) else None
+                    ends_itself = nxt is not None and any(
+                        (x.get('number') or '1') == num and x.get('print-object') != 'no'
+                        and (x.findtext('text') or '').strip() for x in nxt.findall('lyric'))
+                    if ends_itself or last is n:
+                        if last is n and not ends_itself:
+                            ly.remove(ext)                    # nothing after it to hold over
+                        continue
+                    stop = ET.Element('lyric', number=num)
+                    ET.SubElement(stop, 'extend', type='stop')
+                    kids = list(last)
+                    idx = len(kids)
+                    for j, kid in enumerate(kids):
+                        if kid.tag in ('play', 'listen'):
+                            idx = j
+                            break
+                    last.insert(idx, stop)
+                    n_added += 1
+    return head + ET.tostring(root, encoding='unicode'), n_added

@@ -19,9 +19,38 @@ def load(path):
 # A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
 OK_CHARS=re.compile(r"^[\"'’]?[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$")
 
+def syllable_onsets(part):
+    """Where each syllable of one part starts (quarters from the start), and whether any staff of
+    the part carries two voices."""
+    div=1; bar_start=F(0); out=set(); voices=set()
+    for m in part.findall('measure'):
+        for a in m.findall('attributes'):
+            d=a.find('divisions')
+            if d is not None: div=int(d.text)
+        pos=F(0); mx=F(0)
+        for e in m:
+            if e.tag=='backup': pos-=F(int(e.find('duration').text),div)
+            elif e.tag=='forward': pos+=F(int(e.find('duration').text),div)
+            elif e.tag=='note':
+                if e.find('chord') is not None: continue
+                if e.find('rest') is None:
+                    voices.add((e.findtext('staff') or '1', e.findtext('voice') or '1'))
+                    if e.find('lyric') is not None and (e.findtext('lyric/text') or '').strip():
+                        out.add(bar_start+pos)
+                pos+=F(int(e.find('duration').text),div) if e.find('duration') is not None else 0
+            mx=max(mx,pos)
+        bar_start+=mx
+    return out, bool(out) and len({v for st,v in voices})>1     # a sung part (not a piano) on two voices
+
 def qc(path):
     root=load(path)
     issues=defaultdict(list)
+    # A closed score (two parts to a staff) prints words once where the staves sing them together,
+    # often between the staves: the other staff's notes there carry none and read that line. So in
+    # a closed score a note may also borrow a syllable another part starts at the same moment. Not
+    # in an open score, where every part carries its own words and a gap is a lost syllable.
+    ons={p.get('id'): syllable_onsets(p) for p in root.findall('part')}
+    closed=any(two for _,two in ons.values())
     for part in root.findall('part'):
         pid=part.get('id'); div=1; ts=None
         prev_oct={}; octjumps=[]
@@ -109,7 +138,8 @@ def qc(path):
                 for (mn,pit,txt,ext,tie,on,du) in seq:
                     if pit and txt is not None: starts[(st,ln)].add(on)
             def borrowed(st,ln,on):
-                return any(on in s for (st2,ln2),s in starts.items() if st2==st and ln2!=ln)
+                return any(on in s for (st2,ln2),s in starts.items() if st2==st and ln2!=ln) or \
+                    (closed and any(on in o for p2,(o,_) in ons.items() if p2!=pid))
             # where each syllable is held with an extender: onset to the end of its melisma
             held=defaultdict(list)    # (staff, part) -> [(from, to)]
             for (st,ln),seq in seqs.items():

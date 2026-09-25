@@ -132,6 +132,10 @@ def midi(note):
     return 12 * (int(p.findtext('octave')) + 1) + STEP[p.findtext('step')] + int(float(p.findtext('alter') or 0))
 
 
+def _letters(t):
+    return re.sub(r'[^a-z]', '', (t or '').lower())
+
+
 def lyric1(note):
     """The first lyric line's (syllabic, text), or None."""
     ls = note.findall('lyric')
@@ -969,6 +973,62 @@ def render_png(svg_bytes, W, H):
     return np.asarray(Image.open(io.BytesIO(png)).convert('RGB'))
 
 
+_LYRIC_FONT = []
+
+
+def _lyric_width(text, size):
+    """The printed width of a syllable, in the SVG's units: measured in the serif font cairo
+    draws Verovio's "Times, serif" with, or estimated when that cannot be found."""
+    if not _LYRIC_FONT:
+        try:
+            from PIL import ImageFont
+            path = subprocess.run(['fc-match', '-f', '%{file}', 'Times'], capture_output=True,
+                                  text=True).stdout.strip()
+            _LYRIC_FONT.append(ImageFont.truetype(path, 400) if path else None)
+        except Exception:
+            _LYRIC_FONT.append(None)
+    f = _LYRIC_FONT[0]
+    if f is None:
+        return sum(size * (0.30 if c in "ijltfr.,'’ " else 0.56) for c in text)
+    return f.getlength(text) * size / 400
+
+
+def nudge_syllables(syls, ns):
+    """Verovio spaces a line's syllables apart only within one layer, so where the words on one
+    line come from two voices (the upper part's chord, then the lower part's own note) the next
+    bar's first syllable can print over the last one. Move each such syllable right until it
+    clears its neighbour by a space's width, as an engraver would, and shorten its line to match."""
+    rows = {}
+    for g in syls:
+        if 'spanning' in (g.get('class') or ''):
+            continue
+        t = g.find(ns + 'text')
+        inner = [x for x in g.iter(ns + 'tspan') if x.get('font-size')]
+        if t is None or not inner or t.get('x') is None:
+            continue
+        txt = ''.join(t.itertext()).strip()
+        if not txt:
+            continue
+        size = float(inner[-1].get('font-size').rstrip('px'))
+        rows.setdefault(t.get('y'), []).append([float(t.get('x')), txt, size, g, t])
+    moved = 0
+    for row in rows.values():
+        row.sort(key=lambda r: r[0])
+        for prev, cur in zip(row, row[1:]):
+            need = prev[0] + _lyric_width(prev[1], prev[2]) + 0.15 * prev[2]
+            if cur[0] < need:
+                dx = need - cur[0]
+                cur[0] = need
+                cur[4].set('x', f'{need:.0f}')
+                for r_ in cur[3].findall(ns + 'rect'):          # its own line or hyphen moves with it
+                    x0, w0 = float(r_.get('x')), float(r_.get('width'))
+                    r_.set('x', f'{x0 + dx:.0f}')
+                    if w0 - dx > 0.5 * cur[2]:            # a line ends where it did; a hyphen keeps its length
+                        r_.set('width', f'{w0 - dx:.0f}')
+                moved += 1
+    return moved
+
+
 class Page:
     """One rendered page: base images per view, and every lightable element's pixels."""
 
@@ -994,7 +1054,7 @@ class Page:
                 rests.append(g)
             elif 'syl' in c:
                 syls.append(g)
-            elif 'tie' in c or 'slur' in c:
+            elif 'tie' in c or 'slur' in c or 'fermata' in c:
                 # a tie or slur carried over a system break is drawn again at the next system's
                 # start with no id, naming the original in a class "id-<its id>"
                 cid = g.get('id') or next((x[3:] for x in c if x.startswith('id-')), None)
@@ -1024,7 +1084,13 @@ class Page:
         for cid, g in self.ctrl_g:                     # a tie lights while either of its notes sounds
             if ctrl[cid][0] == 'tie':
                 self.elems.append(('tie', f'{cid}#{len(self.elems)}', g))
+        self.nudged = nudge_syllables(syls, ns)
         for s in syls:
+            # an extender squeezed to a stub (the next note sits right under the word's end) would
+            # read as a full stop after the word; a print has room for the line, this has not
+            for r_ in s.findall(ns + 'rect'):
+                if float(r_.get('width') or 0) < 0.6 * space:
+                    s.remove(r_)
             if 'spanning' in cls(s):
                 # an extender carried over a system break: Verovio draws the rest of the line at
                 # the start of the next system, outside any note, naming its syllable only in a
@@ -1593,6 +1659,7 @@ def closed_display(droot, src_names, src_notes, sung):
                                          and k in hit for k in hit)] or hit
         staff_parts[j] = sorted(hit)
     at, rests, syls = set(), set(), set()
+    syl_text = {}
     count = {}
     for i, ns_ in enumerate(src_notes):
         for n in ns_:
@@ -1605,6 +1672,7 @@ def closed_display(droot, src_names, src_notes, sung):
                 count[i] = count.get(i, 0) + 1
                 if n['lyric']:
                     syls.add((i, n['mi'], n['rel']))
+                    syl_text[(i, n['mi'], n['rel'])] = _letters(n['lyric'][1])
     # staves with no part names (or names that match nothing): each sung part goes to the staff
     # holding most of its notes, if that is most of them
     if not any(set(staff_parts[j]) & sung for j in staff_parts):
@@ -1651,9 +1719,21 @@ def closed_display(droot, src_names, src_notes, sung):
     # syllables: grouped by staff and moment; with two lines at one moment, line k is the
     # k-th part (top down) that starts a syllable there in the open score
     groups = {}
+    el_of = {n['id']: n['el'] for ns_ in dnotes for n in ns_}
+
+    def placed_above(h):
+        return any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
+                   and str(h[0]) == (re.sub(r'\D', '', ly.get('number') or '1') or '1')
+                   for ly in el_of[h[1]].findall('lyric'))
+
+    def text_of_el(nid):
+        return next((''.join(x.text or '' for x in ly.findall('text')) for ly in el_of[nid].findall('lyric')
+                     if ly.get('print-object') != 'no'), '')
     for j, ns_ in enumerate(dnotes):
         for n in ns_:
             for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') == 'no':
+                    continue                  # sung here, printed for another part (read below)
                 if ''.join(x.text or '' for x in ly.findall('text')).strip():
                     num = int(re.sub(r'\D', '', ly.get('number') or '1') or 1)
                     groups.setdefault((j, n['mi'], n['rel']), []).append((num, n['id']))
@@ -1662,12 +1742,64 @@ def closed_display(droot, src_names, src_notes, sung):
         sp = [i for i in staff_parts[j] if i in sung]
         cand = [i for i in sp if (i, mi, rel) in syls]
         lst.sort()
+        if len(lst) == 1 and len(cand) > 1:
+            # two parts start a syllable here but one word is printed: it is the parts whose word
+            # it is (a Cantai file restarts a held vowel as a new syllable under another part's new word)
+            pt = _letters(text_of_el(lst[0][1]))
+            same = [i for i in cand if syl_text[(i, mi, rel)] and pt
+                    and (pt.startswith(syl_text[(i, mi, rel)]) or syl_text[(i, mi, rel)].startswith(pt))]
+            cand = same or cand
         if len(lst) == 1:
             readers.setdefault(lst[0][1], set()).update(cand or owners.get(lst[0][1], set()))
         else:
-            for k, (_, hid) in enumerate(lst):
-                readers.setdefault(hid, set()).update(
-                    {cand[k]} if k < len(cand) else owners.get(hid, set()))
+            # lines top down: those above the staff first. A part reads the line on its own note
+            # (the upper part's words above, the lower's below, as printed); where that does not
+            # tell them apart, line k is the k-th part down
+            lst.sort(key=lambda h: (0 if placed_above(h) else 1, h[0]))
+            holders = list(dict.fromkeys(hid for _, hid in lst))
+            if len(holders) == 1:                 # one note's word printed on two lines
+                readers.setdefault(holders[0], set()).update(cand or owners.get(holders[0], set()))
+            else:
+                for k, i in enumerate(cand):
+                    mine = [hid for hid in holders if i in owners.get(hid, set())]
+                    readers.setdefault(mine[0] if len(mine) == 1 else holders[min(k, len(holders) - 1)],
+                                       set()).add(i)
+                for hid in holders:
+                    if not readers.get(hid):
+                        readers.setdefault(hid, set()).update(owners.get(hid, set()))
+    # words printed once for parts on two staves, as a closed score prints them between the staves
+    # where both sing them: a part whose own staff prints no syllable at a moment it starts one reads
+    # the one printed on another staff there with the same text (a hidden, print-object="no" copy on
+    # its own staff says so, and gives the text)
+    hidden = {}
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') == 'no':
+                    hidden[(j, n['mi'], n['rel'])] = ''.join(x.text or '' for x in ly.findall('text')).strip()
+    text_of = {}
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') != 'no':
+                    text_of.setdefault(n['id'], ''.join(x.text or '' for x in ly.findall('text')).strip())
+    for (j, mi, rel), txt in hidden.items():
+        if (j, mi, rel) in groups:
+            continue
+        sp = [i for i in staff_parts[j] if i in sung and (i, mi, rel) in syls]
+        for (j2, mi2, rel2), lst in groups.items():
+            if j2 != j and mi2 == mi and rel2 == rel:
+                hit = [(num, hid) for num, hid in lst if text_of.get(hid) == txt]
+                if hit:
+                    # the same word on two lines of that staff: the one on the side facing this staff
+                    def facing(h, j2=j2):
+                        ab = any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
+                                 and str(h[0]) == re.sub(r'\D', '', ly.get('number') or '1')
+                                 for ly in el_of[h[1]].findall('lyric'))
+                        return ab == (j < j2)
+                    pick = [h for h in hit if facing(h)] or hit
+                    readers.setdefault(pick[-1][1], set()).update(sp)
+                    break
     return dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts
 
 
@@ -1941,6 +2073,7 @@ def main():
         if len(dstarts) != len(src_starts) or any(x != y for x, y in zip(dstarts, src_starts)):
             sys.exit('--display: the closed score\'s bars do not line up with the open score\'s')
         disp, d_all = droot, [n for ns_ in dnotes for n in ns_]
+        pid_of = {n['id']: dparts[j].get('id') for j, ns_ in enumerate(dnotes) for n in ns_}
         pairs = [tuple(i for i in sp if i in sung) for sp in staff_parts.values()
                  if len([i for i in sp if i in sung]) == 2]
         staff_pid = {i: dparts[j].get('id') for j, sp in staff_parts.items() for i in sp}
@@ -1988,6 +2121,7 @@ def main():
         d_all = [n for ns_ in notes_by_part for n in ns_]
         pair_of = {x: pr for pr in pairs for x in pr}
         staff_pid = {i: (f'PX{pair_of[i][0]}' if i in pair_of else parts[i].get('id')) for i in range(len(parts))}
+        pid_of = {n['id']: staff_pid[i] for i, ns_ in enumerate(notes_by_part) for n in ns_}
         mi_of = {n['id']: n['mi'] for n in d_all}
         for i, ns_ in enumerate(notes_by_part):
             if i not in sung:
@@ -2110,6 +2244,23 @@ def main():
                  '\n   '.join(f'{b} staff {n}: reads {r}, sounds {s}' for b, n, _, r, s in wrong))
     print('check, pitch readback: every note reads on the page as the pitch it sounds')
     base_mei = tk.getMEI()
+    # words printed above the staff: Verovio reads no placement from a MusicXML lyric, but honours
+    # it on an MEI verse (@place). The note ids survive the trip, and a verse's @n is its lyric number
+    above = {(n_.get('id'), ly.get('number') or '1') for n_ in disp.iter('note') for ly in n_.findall('lyric')
+             if ly.get('placement') == 'above' and n_.get('id')}
+    if above:
+        M_, X_ = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+        rm = etree.fromstring(base_mei.encode())
+        k_ = 0
+        for el in rm.iter(M_ + 'note', M_ + 'chord'):
+            # a chord's verses sit under the <chord>, not its notes: take any member's placement
+            ids = [el.get(X_)] + ([m_.get(X_) for m_ in el.iter(M_ + 'note')] if el.tag == M_ + 'chord' else [])
+            for vv in el.findall(M_ + 'verse'):
+                if any((i_, vv.get('n') or '1') in above for i_ in ids):
+                    vv.set('place', 'above')
+                    k_ += 1
+        base_mei = etree.tostring(rm).decode()
+        print(f'words above the staff: {k_} syllables, as printed')
     layouts = {}
 
     def layout(view):
@@ -2157,11 +2308,31 @@ def main():
             for nn in mem:
                 chord_of[nn] = mem
         ctrl = {}
-        for tag in ('tie', 'slur'):
+        d_end = {n['id']: (n['mi'], n['on'] + n['dur']) for n in d_all}
+
+        def staff_sung(nid):
+            # the parts on the fermata's own staff: the tenors' hold is not the basses'
+            return {i for i, pid in staff_pid.items() if pid == pid_of.get(nid)}
+        ferm_end = {}
+        for i_, ns_ in enumerate(notes_by_part):
+            for n in ns_:
+                if i_ in sung and n['el'].find('.//fermata') is not None:
+                    ferm_end.setdefault((n['mi'], n['on'] + n['dur']), set()).add(i_)
+        for ch in rr.iter(M + 'chord'):
+            chord_of[ch.get(X)] = [nn.get(X) for nn in ch.iter(M + 'note')]
+        for tag in ('tie', 'slur', 'fermata'):
             for e in rr.iter(M + tag):
                 st, en = (e.get('startid') or '').lstrip('#'), (e.get('endid') or '').lstrip('#')
                 ends = [st, en] if tag == 'tie' else chord_of.get(st, [st]) + chord_of.get(en, [en])
-                ctrl[e.get(X)] = (tag, st, en, set().union(*[owners.get(i, set()) for i in ends]))
+                # a fermata is black in a part's own video only where it sits on that part's note or
+                # rest (grey over everyone else's, like their notes)
+                own = set().union(*[owners.get(i, set()) for i in ends if i])
+                k_ = next((i for i in [st] + chord_of.get(st, []) if i in d_end), None)
+                if tag == 'fermata' and k_:
+                    # and every part holding its own fermata to the same moment (a bar rest's
+                    # fermata, left out on the closed staff where it would stack over this one)
+                    own |= ferm_end.get(d_end[k_], set()) & staff_sung(k_)
+                ctrl[e.get(X)] = (tag, st, en, own)
         pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
                       x_q, bar_end, ctrl)
                  for p in range(1, t.getPageCount() + 1)]
@@ -2172,6 +2343,9 @@ def main():
                     bar_page.setdefault(d_mi[i], pi_)
         print(f'engraved for {"every part" if view == "all" else names[view]}: {len(pages)} screens of '
               f'{W}x{H}, staff {a.staff_px:.0f} px')
+        nud = sum(p_.nudged for p_ in pages)
+        if nud:
+            print(f'   {nud} syllables moved right to clear the word before them on their line')
         layouts[view] = (pages, bar_page, ctrl)
         return layouts[view]
 
