@@ -524,3 +524,46 @@ def orient_tie(xml, part, bar, voice, pitch, orientation):
     measure = mm.group(0).replace(n, fixed, 1)
     part_xml = pm.group(0).replace(mm.group(0), measure, 1)
     return xml.replace(pm.group(0), part_xml, 1)
+
+
+def break_words_at_melismas(xml):
+    """Make Sibelius draw an extender under a mid-word syllable held over a melisma.
+
+    SKILL.md 2.5 gives a first or middle syllable held over moving notes an
+    `<extend/>`, but Sibelius draws a hyphen after any syllable whose `syllabic`
+    is begin or middle, `<extend/>` or not.  It draws the line only after a
+    syllable that ends a word.  So end the word there, and start the rest of it
+    afresh: the held syllable goes begin -> single or middle -> end, and the next
+    syllable on the same lyric line, staff and voice goes middle -> begin or
+    end -> single.  "mu" over three notes then "sic" prints `mu ______ sic`.
+
+    For the print and display files only.  Cantai reads the hyphens to pronounce
+    a word, so make the Cantai copy (cantai_mode.py) from the file before this.
+    Takes and returns the MusicXML text; also returns what it changed.
+    """
+    import xml.etree.ElementTree as ET
+    head = xml.split('<score-partwise', 1)[0]
+    root = ET.fromstring(xml[len(head):])
+    changed = []
+    for part in root.findall('part'):
+        lanes = {}
+        for m in part.findall('measure'):
+            for n in m.findall('note'):
+                if n.find('chord') is not None:
+                    continue
+                for ly in n.findall('lyric'):
+                    key = (n.findtext('staff') or '1', n.findtext('voice') or '1', ly.get('number') or '1')
+                    lanes.setdefault(key, []).append((m.get('number'), ly))
+        for seq in lanes.values():
+            for i, (mn, ly) in enumerate(seq):
+                syl, ext = ly.find('syllabic'), ly.find('extend')
+                if syl is None or ext is None or ext.get('type') == 'stop' \
+                        or syl.text not in ('begin', 'middle'):
+                    continue
+                syl.text = {'begin': 'single', 'middle': 'end'}[syl.text]
+                if i + 1 < len(seq):
+                    nxt = seq[i + 1][1].find('syllabic')
+                    if nxt is not None:
+                        nxt.text = {'middle': 'begin', 'end': 'single'}.get(nxt.text, nxt.text)
+                changed.append(f"{part.get('id')} bar {mn}: {ly.findtext('text')!r}")
+    return head + ET.tostring(root, encoding='unicode'), changed

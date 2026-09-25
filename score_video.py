@@ -800,6 +800,7 @@ class Timing:
         self.breaks = np.array(sorted(breaks))
         self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
+        self.A, self.notes = A, notes
         self.fit_holds(A, notes, so)
         # the first entrance can be too quiet to trip the level threshold (a predominant mix with
         # the entering voice 21 dB down started 0.1 s late): the pitch alignment of the first
@@ -911,11 +912,12 @@ class Timing:
             if d < -0.1:
                 print(f'   <- a hold cannot be negative: the fit is wrong here; check the lights after bar '
                       f'{bar_at(float(self(b)))} by eye')
-        # the check: the pitch alignment against the lights, per stretch
-        t = np.arange(len(self.dtw)) * HOP_C
-        s_of_t = (t - self.off) / self.scale
-        model = self.cum[np.searchsorted(self.breaks, s_of_t, side='right')]
-        err = self.dtw - model
+        # the check: the pitch alignment against the lights, per stretch. Aligned around the lights
+        # themselves, not around the straight line: the alignment only looks +-3 s either side, and
+        # after a few long holds the lights can be further than that from the straight line (a TTBB
+        # with piano: 3.5 s by bar 52), where it locks on to the wrong bar of a repeated figure
+        err = dtw_offset(self.A, chroma_score(self.notes, self, len(self.A)), band=int(3.0 / HOP_C))
+        t = np.arange(len(err)) * HOP_C
         rows = []
         for a in np.arange(self.lo, self.hi, seg):
             sel = (t >= a) & (t < min(a + seg, self.hi))
@@ -1729,6 +1731,7 @@ class Tee:
     """Everything the run prints also goes to the checks file beside the videos, so what every
     check found, including nothing, is on record song by song (SKILL.md Step 10)."""
     def __init__(self, path, out):
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
         self.f, self.out = open(path, 'w'), out
 
     def write(self, s):
@@ -1810,6 +1813,9 @@ def main():
     ap.add_argument('--jobs', type=int, default=0,
                     help='mp3s rendered at once, each in its own process (default: one per CPU core)')
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
+    ap.add_argument('--anchor', action='append', default=[],
+                    help='BAR=M:SS.ss: the audio time of that bar\'s downbeat, measured by hand (from a stem\'s '
+                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in')
     ap.add_argument('--crf', type=int, default=20)
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
@@ -2195,6 +2201,20 @@ def main():
                 print(f'   proof screen: {os.path.basename(fn)}')
         ref, why = timing_source(mp3)
         T = Timing(ref, pitched, first_score, breaks)
+        # hand-measured downbeats overrule the fit for the stretch between fermatas that holds them:
+        # where the pitch alignment has too little to hold on to (a repeated piano figure, held
+        # chords, few onsets) the fitted hold can come out seconds wrong, and even negative
+        for an in a.anchor:
+            num, t = an.split('=', 1)
+            mm, _, ss = t.rpartition(':')
+            t_audio = (float(mm) * 60 if mm else 0.0) + float(ss)
+            s0 = next((s0 for s0, n_ in bar_sec if str(n_) == num.strip()), None)
+            if s0 is None:
+                sys.exit(f'--anchor {an}: no bar {num}')
+            j = int(np.searchsorted(T.breaks, s0, side='right'))
+            T.cum[j] = t_audio - float(T.straight(s0))
+            T.steps = [float(v) for v in np.diff(T.cum)]
+            print(f'   anchored: bar {num} at {t}, by hand (the stretch after fermata {j} of {len(T.breaks)})')
         if ref != mp3:
             T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):

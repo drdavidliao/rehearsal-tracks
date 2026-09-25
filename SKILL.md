@@ -469,6 +469,14 @@ learned on the unaccompanied TTBB (TTBB closed score, Finale/Maestro):
   syllable is held. This is a deliberate disagreement with the engraving, so
   say in the handback where you made it. `chorale.events.finalize` does both;
   checks 10 and 14 accept the line.
+- **Sibelius draws a hyphen after a first or middle syllable even when it
+  carries `<extend/>`**; it draws the line only after a syllable that ends a
+  word. So in the print and display files, end the word at the held syllable
+  and start the rest afresh (`begin` becomes `single`, the next `end` becomes
+  `single`): `mu ______ sic`, confirmed in Sibelius on a TTBB with piano.
+  `chorale.musicxml.break_words_at_melismas` does it on the finished file. Make
+  the Cantai copy from the file before that step: Cantai reads the hyphens to
+  pronounce the word.
 
 Where a line runs off the right margin, the leading segment on the next system
 is not always drawn at the height of its own lyric line: Finale puts it just
@@ -663,9 +671,13 @@ The checks:
 7. **Hand back the judgment calls.** Every divisi bar, every place you duplicated
    lyrics, every literal-rest reading, every typo you fixed. The singer needs to
    know what you decided on their behalf.
-8. **Ties pair up.** In every monophonic part, each tie start is followed by a
+8. **Ties and slurs pair up.** In every monophonic part, each tie start is followed by a
    same-pitch note carrying the stop; no tie runs into a rest. Sibelius plays an
-   unpaired tie as a note held through whatever comes next.
+   unpaired tie as a note held through whatever comes next. Every slur start is
+   closed by the next stop of the same number in the same voice: on a shared staff
+   a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is
+   closed by nothing, and is drawn on across the page to the next stop it finds
+   (7.2).
 9. **Words reassemble.** Rebuild every hyphenated word from the syllabics and
    read the list (see 2.4).
 10. **Every printed extension line is consumed** by exactly one syllable, and
@@ -805,6 +817,14 @@ lyric text and syllabic. Anything else → voice 1 carries the upper part, and a
 second voice follows after `<backup>`, with `<forward>` for its lead-in,
 explicit `<stem>up</stem>` / `<stem>down</stem>` on the split stretch, and
 `<voice>2</voice>`.
+
+**A slur never changes voice.** The chord's one slur mark belongs to voice 1, so
+a lower-part slur that starts in voice 2 (the parts split) and ends on a note
+that merges into a chord (they agree again) is left open, and Verovio drew it
+from bar 33 to bar 39 of a TTBB with piano; the reverse, a slur that starts on
+a merged chord and ends where voice 2 has split off, leaves a stop with no start.
+`collapse.merge_staff` keeps both ends of such a slur out of the chord, and
+check 8 fails any slur that does not close in its own voice.
 
 Parts diverge and reconverge **several times inside one bar**. A prefix merge
 — agree until the first difference, then two voices to the end of the bar —
@@ -1489,6 +1509,30 @@ hold, after the last of them; and where a stretch has too few onsets to refine
 and one chord leaves the pitch alignment free to slide (it gave -1.1 s), the
 hold is taken from the first onset after the fermata's written end (+0.76 s,
 as measured by hand). A negative hold is flagged in the report as a wrong fit.
+
+**When the fit cannot find a hold, measure it and say so: `--anchor BAR=M:SS.ss`.** On a
+TTBB with piano the fit put −4.6 s on one fermata, and the stretch after it ran seconds
+out: the two fermatas either side of it were only three bars apart, and the bars after it
+were a repeated one-bar piano figure the pitch alignment could lock on to a bar early.
+The stems settle it: the first onset after a fermata, in a stem that rests through it,
+is the next bar's downbeat (there, bar 49 at 1:53.07 and bar 52 at 2:01.15, from the
+piano and the voices' entrances). `--anchor` sets the offset of the stretch that bar is
+in, overruling the fit, and the report says it was set by hand. Check the anchored
+timing against a second entrance in the same stretch (bar 54's voices, 4.6 s after
+bar 52, landed within 20 ms).
+
+**The drift check is aligned around the lights, not the straight line.** The pitch
+alignment looks ±3 s either side of what it is centred on. After three fermatas each
+held about 1.15 s the lights were 3.5 s from the straight line, and the check, centred
+there, locked on to the wrong bar of the piano figure and reported the lights 6.3 s
+behind when they were right. Centred on the lights it reads within 50 ms throughout.
+
+**Name the closed score's staves after the parts on them.** The display file's
+staves are matched to the open file's parts by name: "Tenors" matched none of "Tenor 1",
+"Tenor 2a", "Tenor 2b", so nothing on that staff lit, and "Basses" matched only
+"Bass". Giving the video's copy of the closed score the part names "Tenor 1 Tenor 2a
+Tenor 2b" and "Baritone Bass" placed all 503 notes and rests from the open file, none by
+voice. The staff labels on screen are the abbreviations, so nothing changes there.
 
 **A predominant mix is timed by its Balanced track.** The level-threshold
 anchor misreads a predominant mix whose first entrance is by a voice 21 dB
@@ -2670,7 +2714,30 @@ def check_ties(root, names):
                     prv = seq[i - 1][1] if i else None
                     if prv is None or 'start' not in {x.get('type') for x in prv.findall('tie')}:
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie stop with no start")
-    report(8, 'Ties pair up', 'FAIL' if bad else 'PASS', f'{len(bad)} unpaired' if bad else 'every tie pairs', bad)
+        # slurs: each start closed by the next stop of the same number, in the same voice. On a shared
+        # staff a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is closed
+        # by nothing: the chord's one stop closes the upper part's slur, and the lower part's is drawn
+        # on to whatever stop comes next, bars later (SKILL.md 7.2)
+        open_ = {}
+        for mn, n, v, _ in notes_of(part):
+            for sl in n.iter('slur'):
+                num, typ = sl.get('number') or '1', sl.get('type')
+                if typ == 'start':
+                    if num in open_:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}: slur {num} (voice {open_[num][1]}) "
+                                   f"never closed before another starts in bar {mn}")
+                    open_[num] = (mn, v)
+                elif typ == 'stop':
+                    if num not in open_:
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} stop with no start")
+                    elif open_[num][1] != v:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}-{mn}: slur {num} starts in voice "
+                                   f"{open_[num][1]} and stops in voice {v}")
+                    open_.pop(num, None)
+        for num, (mn, v) in open_.items():
+            bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} never closed")
+    report(8, 'Ties and slurs pair up', 'FAIL' if bad else 'PASS', f'{len(bad)} unpaired' if bad else
+           'every tie and slur pairs', bad)
 
 
 def check_words(root, names, out_dir):
@@ -4294,6 +4361,7 @@ class Timing:
         self.breaks = np.array(sorted(breaks))
         self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
+        self.A, self.notes = A, notes
         self.fit_holds(A, notes, so)
         # the first entrance can be too quiet to trip the level threshold (a predominant mix with
         # the entering voice 21 dB down started 0.1 s late): the pitch alignment of the first
@@ -4405,11 +4473,12 @@ class Timing:
             if d < -0.1:
                 print(f'   <- a hold cannot be negative: the fit is wrong here; check the lights after bar '
                       f'{bar_at(float(self(b)))} by eye')
-        # the check: the pitch alignment against the lights, per stretch
-        t = np.arange(len(self.dtw)) * HOP_C
-        s_of_t = (t - self.off) / self.scale
-        model = self.cum[np.searchsorted(self.breaks, s_of_t, side='right')]
-        err = self.dtw - model
+        # the check: the pitch alignment against the lights, per stretch. Aligned around the lights
+        # themselves, not around the straight line: the alignment only looks +-3 s either side, and
+        # after a few long holds the lights can be further than that from the straight line (a TTBB
+        # with piano: 3.5 s by bar 52), where it locks on to the wrong bar of a repeated figure
+        err = dtw_offset(self.A, chroma_score(self.notes, self, len(self.A)), band=int(3.0 / HOP_C))
+        t = np.arange(len(err)) * HOP_C
         rows = []
         for a in np.arange(self.lo, self.hi, seg):
             sel = (t >= a) & (t < min(a + seg, self.hi))
@@ -5223,6 +5292,7 @@ class Tee:
     """Everything the run prints also goes to the checks file beside the videos, so what every
     check found, including nothing, is on record song by song (SKILL.md Step 10)."""
     def __init__(self, path, out):
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
         self.f, self.out = open(path, 'w'), out
 
     def write(self, s):
@@ -5304,6 +5374,9 @@ def main():
     ap.add_argument('--jobs', type=int, default=0,
                     help='mp3s rendered at once, each in its own process (default: one per CPU core)')
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
+    ap.add_argument('--anchor', action='append', default=[],
+                    help='BAR=M:SS.ss: the audio time of that bar\'s downbeat, measured by hand (from a stem\'s '
+                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in')
     ap.add_argument('--crf', type=int, default=20)
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
@@ -5689,6 +5762,20 @@ def main():
                 print(f'   proof screen: {os.path.basename(fn)}')
         ref, why = timing_source(mp3)
         T = Timing(ref, pitched, first_score, breaks)
+        # hand-measured downbeats overrule the fit for the stretch between fermatas that holds them:
+        # where the pitch alignment has too little to hold on to (a repeated piano figure, held
+        # chords, few onsets) the fitted hold can come out seconds wrong, and even negative
+        for an in a.anchor:
+            num, t = an.split('=', 1)
+            mm, _, ss = t.rpartition(':')
+            t_audio = (float(mm) * 60 if mm else 0.0) + float(ss)
+            s0 = next((s0 for s0, n_ in bar_sec if str(n_) == num.strip()), None)
+            if s0 is None:
+                sys.exit(f'--anchor {an}: no bar {num}')
+            j = int(np.searchsorted(T.breaks, s0, side='right'))
+            T.cum[j] = t_audio - float(T.straight(s0))
+            T.steps = [float(v) for v in np.diff(T.cum)]
+            print(f'   anchored: bar {num} at {t}, by hand (the stretch after fermata {j} of {len(T.breaks)})')
         if ref != mp3:
             T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):

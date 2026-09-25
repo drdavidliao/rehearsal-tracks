@@ -122,7 +122,7 @@ def chord_merge(a, b):
     return e
 
 
-def merge_runs(up, dn, beats=4, hold_start=False, hold_end=False):
+def merge_runs(up, dn, beats=4, hold_start=False, hold_end=False, no_sync=()):
     """Collapse two single-voice bars onto one staff.
 
     Returns (v1, v2).  v1 covers the whole bar: chords where the two parts agree,
@@ -136,6 +136,7 @@ def merge_runs(up, dn, beats=4, hold_start=False, hold_end=False):
         sync.discard(F(0))
     if hold_end and U and D:        # voice 2 leaves tied into a bar where it splits off
         sync.discard(max(U[-1][0], D[-1][0]))
+    sync -= set(no_sync)            # moments the caller keeps apart (a slur that must stay in voice 2)
     v1, v2 = [], []
     cur = F(0)
     ui = di = 0
@@ -171,7 +172,7 @@ def merge_staff(up, dn, nbars, beats=4):
     unison written with one stem up and one down, as an engraver would.  The
     same holds for a melisma that runs on over the barline, and for a tie out
     of a unison into a bar where voice 2 splits off: the tied note stays out of
-    the chord.
+    the chord.  And both ends of a lower-part slur stay in one voice.
     `up` and `dn` are {bar: [events]}.  Returns {bar: (v1, v2)}.
     """
     def held_into(m, bars):
@@ -183,12 +184,18 @@ def merge_staff(up, dn, nbars, beats=4):
                          or (dn[m] and dn[m][0]['pitches'] and not dn[m][0]['lyric'])))
 
     bars = {}
+    ends = set()                    # bars whose last note ties out of a unison into a split
+    apart = {}                      # bar -> moments kept out of the chord (slurs, below)
+
+    def remerge(m):
+        bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held_into(m, bars),
+                             hold_end=m in ends, no_sync=apart.get(m, ()))
+
     for m in range(1, nbars + 1):
-        bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held_into(m, bars))
+        remerge(m)
     # The other direction: a tie out of a unison that merged into voice 1, into
     # a bar where voice 2 splits off, would start in voice 1 and stop in voice 2.
     # Keep the tied note out of the chord, and redo the bar after it.
-    ends = set()
     changed = True
     while changed:
         changed = False
@@ -199,11 +206,37 @@ def merge_staff(up, dn, nbars, beats=4):
                 v2 = bars[m][1]
                 if not v2 or v2[-1][0] + v2[-1][1]['dur'] != beats:
                     ends.add(m)
-                    bars[m] = merge_runs(up[m], dn[m], beats, hold_start=held_into(m, bars),
-                                         hold_end=True)
-                    bars[m + 1] = merge_runs(up[m + 1], dn[m + 1], beats,
-                                             hold_start=held_into(m + 1, bars))
+                    remerge(m)
+                    remerge(m + 1)
                     changed = True
+    # A slur never changes voice either.  The lower part's slur can start where
+    # it has split off into voice 2 and end on a note that merges into a chord in
+    # voice 1 (or the reverse); the chord's one slur mark then closes the upper
+    # part's slur, and the lower part's is left open, drawn on across the page to
+    # the next slur end it finds.  Keep both ends of such a slur out of the chord.
+    for _ in range(4 * nbars):
+        start, moved = None, False
+        for m in range(1, nbars + 1):
+            in_v2 = {q for q, _ in bars[m][1]}
+            for p, e in positions(dn[m]):
+                where = 2 if p in in_v2 else 1
+                if e['slur_start']:
+                    start = (m, p, where)
+                if e['slur_stop'] and start is not None:
+                    if start[2] != where:
+                        for mm, pp in ((start[0], start[1]), (m, p)):
+                            apart.setdefault(mm, set()).add(pp)
+                        for mm in sorted({start[0], m}):
+                            remerge(mm)
+                            if mm + 1 <= nbars:
+                                remerge(mm + 1)
+                        moved = True
+                        break
+                    start = None
+            if moved:
+                break
+        if not moved:
+            break
     return bars
 
 

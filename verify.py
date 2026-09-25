@@ -210,7 +210,30 @@ def check_ties(root, names):
                     prv = seq[i - 1][1] if i else None
                     if prv is None or 'start' not in {x.get('type') for x in prv.findall('tie')}:
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie stop with no start")
-    report(8, 'Ties pair up', 'FAIL' if bad else 'PASS', f'{len(bad)} unpaired' if bad else 'every tie pairs', bad)
+        # slurs: each start closed by the next stop of the same number, in the same voice. On a shared
+        # staff a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is closed
+        # by nothing: the chord's one stop closes the upper part's slur, and the lower part's is drawn
+        # on to whatever stop comes next, bars later (SKILL.md 7.2)
+        open_ = {}
+        for mn, n, v, _ in notes_of(part):
+            for sl in n.iter('slur'):
+                num, typ = sl.get('number') or '1', sl.get('type')
+                if typ == 'start':
+                    if num in open_:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}: slur {num} (voice {open_[num][1]}) "
+                                   f"never closed before another starts in bar {mn}")
+                    open_[num] = (mn, v)
+                elif typ == 'stop':
+                    if num not in open_:
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} stop with no start")
+                    elif open_[num][1] != v:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}-{mn}: slur {num} starts in voice "
+                                   f"{open_[num][1]} and stops in voice {v}")
+                    open_.pop(num, None)
+        for num, (mn, v) in open_.items():
+            bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} never closed")
+    report(8, 'Ties and slurs pair up', 'FAIL' if bad else 'PASS', f'{len(bad)} unpaired' if bad else
+           'every tie and slur pairs', bad)
 
 
 def check_words(root, names, out_dir):
