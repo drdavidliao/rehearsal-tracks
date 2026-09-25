@@ -2460,10 +2460,11 @@ def main():
         if ref != mp3:
             T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):
-            s = (t_audio - T.off) / T.scale
+            # the bar whose downbeat the lights reach by then: through every hold and anchor, not the
+            # straight line (which put an anchor at bar 2 down as "bar 1", one at 153 as "bar 156")
             cur = bar_sec[0][1]
             for s0, num in bar_sec:
-                if s0 <= s + 1e-6:
+                if float(T(s0)) <= t_audio + 1e-3:
                     cur = num
             return cur
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')

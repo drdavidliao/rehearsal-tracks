@@ -1776,6 +1776,27 @@ within 50 ms. Measure these downbeats on the piano's onsets in a window of ±0.2
 around what the voices say: an unconstrained onset match on a repeating accompaniment
 slips by exactly one beat (0.30 s at quarter = 198) and looks just as confident.
 
+**Caesuras and the opening: measure them from entrances, and distrust the opening's move.** On
+the Finale TTBB with piano, Sibelius paused about 0.4 s at each of the caesuras ending bars 1 and
+3, so the voices entered +0.00 s, +0.42 s and +0.82 s against the tempo in bars 1, 3 and 5. The
+script lit bars 1-7 as one stretch and moved it +808 ms "to agree with the pitch alignment of the
+opening", exactly one beat at quarter = 74: the lights were a beat late in bar 1, and the 15 s sync
+windows could not see it. Treating caesuras as holds did not rescue the fit: it put +814 and -6 ms
+on the two where the entrances say +420 and +400, and a -2.0 s hold on a later one. What worked:
+the first attack after each rest, in the voice stems (a rise of 15 dB within 5 ms frames), then
+`--anchor` at the downbeats between (`1=0:00.00 2=0:03.66 4=0:10.55`). Onset matching and chroma
+both fail here in the same way as on a repeating piano figure: on a steady rhythm they fit a beat
+away just as well.
+
+**Where a hard consonant leads, the lights look late.** In a stretch of staccato shouts (a
+one-word refrain on accented quarters at half = 138) the voices' attacks landed 42 ms before
+their lights, while everywhere else the voices came 0-30 ms and the piano 15-25 ms after. The
+user heard that stretch as "a touch off", and it was the only one where the sound led the
+picture: sound early is noticed sooner than sound late. An anchor 35 ms earlier over those bars
+(and one after them to restore the offset) put the lights just before the attacks. Measure it
+per section, as the median of each note's nearest audio onset within ±100 ms of its light (less
+than half a beat), per stem, voices and piano apart.
+
 **The words as printed, in the display copy** (7.7). A closed score built for Sibelius
 carries, on the lower staff, the syllables it borrowed from the upper one where the print
 sets one line of words between the staves. In the display copy mark those
@@ -6486,10 +6507,11 @@ def main():
         if ref != mp3:
             T.x = decode(mp3)                            # the audio check below is against this mp3
         def bar_at(t_audio):
-            s = (t_audio - T.off) / T.scale
+            # the bar whose downbeat the lights reach by then: through every hold and anchor, not the
+            # straight line (which put an anchor at bar 2 down as "bar 1", one at 153 as "bar 156")
             cur = bar_sec[0][1]
             for s0, num in bar_sec:
-                if s0 <= s + 1e-6:
+                if float(T(s0)) <= t_audio + 1e-3:
                     cur = num
             return cur
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
