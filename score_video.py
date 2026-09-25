@@ -808,6 +808,7 @@ class Timing:
         self.so = so
         self.fit_tempo(so)
         self.breaks = np.array(sorted(breaks))
+        self.hand = set()                                   # stretch starts set by --anchor, not fermatas
         self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
         self.A, self.notes = A, notes
@@ -914,6 +915,10 @@ class Timing:
             print(f'   (moved {1000 * self.moved:+.0f} ms from where the audio first sounds, to agree with the '
                   f'pitch alignment of the opening)')
         for b, d in zip(self.breaks, self.steps):
+            if float(b) in self.hand:
+                print(f'   bar {bar_at(float(self(b)))} at {fmt(float(self(b)))}: anchored by hand, {1000 * d:+.0f} ms '
+                      f'against the stretch before it (no fermata there)')
+                continue
             if b >= self.so.max() - 1e-6:
                 print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor, '
                       f'and the last notes stay lit until the sound stops at {fmt(self.last_audio)}')
@@ -1971,7 +1976,8 @@ def main():
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
     ap.add_argument('--anchor', action='append', default=[],
                     help='BAR=M:SS.ss: the audio time of that bar\'s downbeat, measured by hand (from a stem\'s '
-                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in')
+                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in, '
+                         'or, away from a fermata, starts a new stretch at that bar')
     ap.add_argument('--crf', type=int, default=20)
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
@@ -2415,9 +2421,20 @@ def main():
             if s0 is None:
                 sys.exit(f'--anchor {an}: no bar {num}')
             j = int(np.searchsorted(T.breaks, s0, side='right'))
+            # an anchor that is not at the start of its stretch starts a stretch of its own there:
+            # playback can lose time with no fermata to show for it (a TTBB with piano ran 0.37 s
+            # late from a bar rest ending on a double barline, halfway through a 128-bar stretch)
+            start = T.breaks[j - 1] if j else min(T.so)
+            new = ''
+            if s0 - start > 1e-6 and not (j == 0 and s0 <= min(T.so) + 1e-6):
+                T.breaks = np.insert(T.breaks, j, s0)
+                T.cum = np.insert(T.cum, j + 1, T.cum[j])
+                T.hand.add(float(s0))
+                j += 1
+                new = ', a new stretch from there'
             T.cum[j] = t_audio - float(T.straight(s0))
             T.steps = [float(v) for v in np.diff(T.cum)]
-            print(f'   anchored: bar {num} at {t}, by hand (the stretch after fermata {j} of {len(T.breaks)})')
+            print(f'   anchored: bar {num} at {t}, by hand (stretch {j + 1} of {len(T.breaks) + 1}{new})')
         # a stretch with no onsets to fit (after the last fermata: only the final note's end) holds
         # nothing of its own and keeps the offset before it. Left at the fit's value it did not follow
         # an anchor: bar 76's lights ended 6 s before they began, and the last bar never lit

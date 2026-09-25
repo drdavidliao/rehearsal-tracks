@@ -368,6 +368,37 @@ the hidden-meter trap in one line. When a bar over-runs by exactly the amount
 that one note being longer than it should be would explain, the constraint tells
 you which reading is right.
 
+**Accidentals: attach by column, not by distance, and check every one.** Bar lengths,
+the notehead grid and check 17 all pass on a wrong accidental, since the head is where
+it should be. Engravers pack a chord's accidentals in columns right up against it, the
+outermost furthest away: with a second in the chord (one head displaced right) and
+three columns, the outermost sat 4–5 staff spaces from its head, past the 3.2–3.4 SP
+cut-off the Finale TTBB with piano's extractor used. Eleven piano accidentals were
+lost that way (E♭ read as E, G♯ as G), and the stems, mp3s and videos were all made
+from the file before a proof of the video screens against the print found them.
+Attach an accidental to the chord at the end of an unbroken run of accidentals (each
+within about 1 SP of the next) directly left of it; a key signature is set off from
+the first note by a clear gap and stays out of the run. Then scan: for every
+accidental glyph on the page, the file's alter for the head it stands in front of must
+be that accidental. Nothing else catches it.
+
+**A key change can be printed only at the end of the system before.** Six courtesy
+naturals after the last barline of a system, and no key signature at the start of the
+next, is a change to C there. The same TTBB's extractor read the key from glyphs
+before a system's first note and so missed it at bar 107 (as it had at 136, which was
+patched by hand), and every note in the two bars before the next key signature came out
+flat that the print has natural, in all six voices. Look past the last barline of every
+system for accidentals.
+
+**Where a mark sits decides whose it is, and nearest-staff can be wrong for marks.** An
+articulation or dynamic hangs off its note, and on a crowded page it can be nearer the
+next staff, even the next system's (the Finale TTBB: an accent under bar 1's low piano
+octave went to bar 4's tenors; a basses' accent-staccato between the staves went to the
+tenor staff, which had no note there, and was lost). Give a mark to the nearer of the
+two nearest staves that has a notehead under or over it, within a few staff spaces. And
+a glyph within half a point of a barline is collected into both bars: a dynamic printed
+once came out twice.
+
 ### 2.4 Lyrics: from the text layer
 
 Filter `page.chars` by font (the text font, not the music font) and by a y-band
@@ -1713,6 +1744,29 @@ piano and the voices' entrances). `--anchor` sets the offset of the stretch that
 in, overruling the fit, and the report says it was set by hand. Check the anchored
 timing against a second entrance in the same stretch (bar 54's voices, 4.6 s after
 bar 52, landed within 20 ms).
+
+**Playback can lose time with no fermata to show for it.** On the Finale TTBB with piano the
+sync check put the lights 400–575 ms ahead of the audio around bars 117–133, a stretch with
+no fermata, only a tempo change and meter changes. The voices' entrances after rests pinned
+it: +1.60 s to bar 118, +1.90 s from bar 122, after a bar rest ending on a double barline,
+then +2.06 s and +2.21 s by bar 131. The file says nothing that explains it. An anchor
+away from a fermata now starts a stretch of its own at its bar, so a run of anchors
+follows the drift piecewise (`--anchor 122=2:09.78 --anchor 125=2:12.65 --anchor
+131=2:18.86`); the report lists each as anchored by hand, and every 15 s window came
+within 50 ms. Measure these downbeats on the piano's onsets in a window of ±0.2 s
+around what the voices say: an unconstrained onset match on a repeating accompaniment
+slips by exactly one beat (0.30 s at quarter = 198) and looks just as confident.
+
+**The words as printed, in the display copy** (7.7). A closed score built for Sibelius
+carries, on the lower staff, the syllables it borrowed from the upper one where the print
+sets one line of words between the staves. In the display copy mark those
+`print-object="no"`, take their `<extend/>` off (Verovio draws a hidden syllable's line
+anyway), and run `end_lines_for_verovio`, or the last printed line on that staff runs on
+across the system under the hidden ones.
+
+**The all-parts video needs about 5 GB.** In an 8 GB workspace the Balanced video was
+killed for memory when it rendered beside a part video; the log said only "failed". Render
+it on its own (`--jobs 1`), and check `dmesg` for an oom-kill when a render fails silently.
 
 **The last fermata: the lights stay on until the sound stops.** A piece that ends on a
 fermata has a stretch after it with no onsets, holding only the final note's end, and it
@@ -4753,6 +4807,7 @@ class Timing:
         self.so = so
         self.fit_tempo(so)
         self.breaks = np.array(sorted(breaks))
+        self.hand = set()                                   # stretch starts set by --anchor, not fermatas
         self.cum = np.zeros(len(self.breaks) + 1)
         A = chroma_audio(self.x)
         self.A, self.notes = A, notes
@@ -4859,6 +4914,10 @@ class Timing:
             print(f'   (moved {1000 * self.moved:+.0f} ms from where the audio first sounds, to agree with the '
                   f'pitch alignment of the opening)')
         for b, d in zip(self.breaks, self.steps):
+            if float(b) in self.hand:
+                print(f'   bar {bar_at(float(self(b)))} at {fmt(float(self(b)))}: anchored by hand, {1000 * d:+.0f} ms '
+                      f'against the stretch before it (no fermata there)')
+                continue
             if b >= self.so.max() - 1e-6:
                 print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor, '
                       f'and the last notes stay lit until the sound stops at {fmt(self.last_audio)}')
@@ -5916,7 +5975,8 @@ def main():
     ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
     ap.add_argument('--anchor', action='append', default=[],
                     help='BAR=M:SS.ss: the audio time of that bar\'s downbeat, measured by hand (from a stem\'s '
-                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in')
+                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in, '
+                         'or, away from a fermata, starts a new stretch at that bar')
     ap.add_argument('--crf', type=int, default=20)
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
@@ -6360,9 +6420,20 @@ def main():
             if s0 is None:
                 sys.exit(f'--anchor {an}: no bar {num}')
             j = int(np.searchsorted(T.breaks, s0, side='right'))
+            # an anchor that is not at the start of its stretch starts a stretch of its own there:
+            # playback can lose time with no fermata to show for it (a TTBB with piano ran 0.37 s
+            # late from a bar rest ending on a double barline, halfway through a 128-bar stretch)
+            start = T.breaks[j - 1] if j else min(T.so)
+            new = ''
+            if s0 - start > 1e-6 and not (j == 0 and s0 <= min(T.so) + 1e-6):
+                T.breaks = np.insert(T.breaks, j, s0)
+                T.cum = np.insert(T.cum, j + 1, T.cum[j])
+                T.hand.add(float(s0))
+                j += 1
+                new = ', a new stretch from there'
             T.cum[j] = t_audio - float(T.straight(s0))
             T.steps = [float(v) for v in np.diff(T.cum)]
-            print(f'   anchored: bar {num} at {t}, by hand (the stretch after fermata {j} of {len(T.breaks)})')
+            print(f'   anchored: bar {num} at {t}, by hand (stretch {j + 1} of {len(T.breaks) + 1}{new})')
         # a stretch with no onsets to fit (after the last fermata: only the final note's end) holds
         # nothing of its own and keeps the offset before it. Left at the fit's value it did not follow
         # an anchor: bar 76's lights ended 6 s before they began, and the last bar never lit
@@ -6588,6 +6659,12 @@ at it — that takes about five minutes and is the fastest part of the job.
 | `0xf03e` | Opus | accent |
 | `0xf02c` | Opus | breath mark |
 | `"3"` | OpusText | triplet bracket number |
+
+**Maestro** (Finale): accent `>` 0x3E; `0xF9` is accent and staccato stacked above the
+note in one glyph and `0xDF` the same below, so read both marks from it (read as a
+staccato alone, every accent on a TTBB's shouted one-word refrain was lost); a plain staccato
+dot is `.` 0x2E, the augmentation dot's code, told apart by sitting over or under its
+head rather than 1.6–2 SP to its right.
 
 **Helsinki** (Sibelius's other house font) uses the same code points, but
 pdfplumber hands them back through the Mac Roman table, so they arrive as
