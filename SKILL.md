@@ -979,7 +979,9 @@ and writes it two ways:
   voice, a row that takes one bar's words from the upper voice's chords and the
   next bar's from the lower voice's notes was drawn as two rows. A chord both
   parts sing, whose words the print gives on two rows (Tenor 1 above, Tenor 2
-  between the staves), carries the syllable twice. Then run
+  between the staves), carries the syllable twice; the video gives each row its
+  own light (the MEI verse's `@type` names its line in the SVG), so Tenor 2a's
+  video lights only the row between the staves, where a singer would read it. Then run
   `end_lines_for_verovio` on it: renumbered lines would otherwise run on under
   notes whose words have moved to another row, and Verovio (not Sibelius) stops
   a line at an empty `<extend type="stop"/>`. A cue the print sets on the lyric
@@ -993,6 +995,11 @@ layer, so where a row takes words from two voices the next bar's first syllable
 printed over the last; the script moves such a syllable right until
 it clears its neighbour, and drops an extender squeezed to a stub, which read as
 a full stop after the word.
+
+**In a bar with a second voice, every voice-1 stem goes up**, a chord both parts
+share included. Left to Verovio, a shared chord after voice 2 had finished (Tenor 1
+with Tenor 2, bar 42 beat 3, high on the staff) was drawn stem down, reading as
+voice 2's note; the print has it up.
 
 **A fermata once per staff and beat.** Collapsed onto one staff, both voices'
 fermatas stack one over the other, and a piano beat of two eighths got one over
@@ -1505,8 +1512,8 @@ What the user settled on, on the two-soloist TTBB:
 - **Words laid out as the singers' copy prints them** (7.7). Give the display
   copy built with the print's layout; the script sets its above-the-staff words
   above, and a part whose words are printed on the other staff reads them
-  there. Where one line prints on two rows (a shared chord), both rows light
-  for everyone who sings it.
+  there. Where one word prints on two rows (a shared chord), each part lights
+  the row it reads: the upper part the upper row, the lower parts the lower.
 - **A closed score can put a second voice a beat early.** The ballad TTBB's
   repaired file wrote bar 51 (both staves) and bar 47 (the low staff) as voice 1,
   a `<backup>` of the whole bar, then voice 2 with no `<forward>` over the beats
@@ -3786,6 +3793,11 @@ def midi(note):
     return 12 * (int(p.findtext('octave')) + 1) + STEP[p.findtext('step')] + int(float(p.findtext('alter') or 0))
 
 
+def _base(key):
+    """A syllable key's note id: "id@n" is line n of a note printing its word on two lines."""
+    return key.split('@')[0]
+
+
 def _letters(t):
     return re.sub(r'[^a-z]', '', (t or '').lower())
 
@@ -4762,7 +4774,9 @@ class Page:
             if a is None:
                 continue
             ids = [a.get('id')] if 'note' in cls(a) else [n.get('id') for n in a.iter(ns + 'g') if 'note' in cls(n)]
-            holder = next((i for i in ids if i in _SYL_INDEX), None)
+            vg = s.getparent()
+            vn = next((c[2:] for c in cls(vg) if c.startswith('vn')), None) if vg is not None else None
+            holder = next((k for i in ids for k in (f'{i}@{vn}', i) if k in _SYL_INDEX), None)
             if holder is None:
                 continue
             self.elems.append(('syl', holder, s))
@@ -5380,7 +5394,7 @@ def closed_display(droot, src_names, src_notes, sung):
     def placed_above(h):
         return any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
                    and str(h[0]) == (re.sub(r'\D', '', ly.get('number') or '1') or '1')
-                   for ly in el_of[h[1]].findall('lyric'))
+                   for ly in el_of[_base(h[1])].findall('lyric'))
 
     def text_of_el(nid):
         return next((''.join(x.text or '' for x in ly.findall('text')) for ly in el_of[nid].findall('lyric')
@@ -5392,7 +5406,13 @@ def closed_display(droot, src_names, src_notes, sung):
                     continue                  # sung here, printed for another part (read below)
                 if ''.join(x.text or '' for x in ly.findall('text')).strip():
                     num = int(re.sub(r'\D', '', ly.get('number') or '1') or 1)
-                    groups.setdefault((j, n['mi'], n['rel']), []).append((num, n['id']))
+                    # a note printing its word on two lines (a chord both parts sing, the print
+                    # giving each its own row) has one key per line, "id@n", so each part lights
+                    # only the row it reads
+                    two = sum(1 for x in n['el'].findall('lyric') if x.get('print-object') != 'no'
+                              and ''.join(t.text or '' for t in x.findall('text')).strip()) > 1
+                    groups.setdefault((j, n['mi'], n['rel']), []).append(
+                        (num, f"{n['id']}@{num}" if two else n['id']))
     readers = {}
     for (j, mi, rel), lst in groups.items():
         sp = [i for i in staff_parts[j] if i in sung]
@@ -5401,12 +5421,12 @@ def closed_display(droot, src_names, src_notes, sung):
         if len(lst) == 1 and len(cand) > 1:
             # two parts start a syllable here but one word is printed: it is the parts whose word
             # it is (a Cantai file restarts a held vowel as a new syllable under another part's new word)
-            pt = _letters(text_of_el(lst[0][1]))
+            pt = _letters(text_of_el(_base(lst[0][1])))
             same = [i for i in cand if syl_text[(i, mi, rel)] and pt
                     and (pt.startswith(syl_text[(i, mi, rel)]) or syl_text[(i, mi, rel)].startswith(pt))]
             cand = same or cand
         if len(lst) == 1:
-            readers.setdefault(lst[0][1], set()).update(cand or owners.get(lst[0][1], set()))
+            readers.setdefault(lst[0][1], set()).update(cand or owners.get(_base(lst[0][1]), set()))
         else:
             # lines top down: those above the staff first. A part reads the line on its own note
             # (the upper part's words above, the lower's below, as printed); where that does not
@@ -5414,15 +5434,15 @@ def closed_display(droot, src_names, src_notes, sung):
             lst.sort(key=lambda h: (0 if placed_above(h) else 1, h[0]))
             holders = list(dict.fromkeys(hid for _, hid in lst))
             if len(holders) == 1:                 # one note's word printed on two lines
-                readers.setdefault(holders[0], set()).update(cand or owners.get(holders[0], set()))
+                readers.setdefault(holders[0], set()).update(cand or owners.get(_base(holders[0]), set()))
             else:
                 for k, i in enumerate(cand):
-                    mine = [hid for hid in holders if i in owners.get(hid, set())]
+                    mine = [hid for hid in holders if i in owners.get(_base(hid), set())]
                     readers.setdefault(mine[0] if len(mine) == 1 else holders[min(k, len(holders) - 1)],
                                        set()).add(i)
                 for hid in holders:
                     if not readers.get(hid):
-                        readers.setdefault(hid, set()).update(owners.get(hid, set()))
+                        readers.setdefault(hid, set()).update(owners.get(_base(hid), set()))
     # words printed once for parts on two staves, as a closed score prints them between the staves
     # where both sing them: a part whose own staff prints no syllable at a moment it starts one reads
     # the one printed on another staff there with the same text (a hidden, print-object="no" copy on
@@ -5445,13 +5465,13 @@ def closed_display(droot, src_names, src_notes, sung):
         sp = [i for i in staff_parts[j] if i in sung and (i, mi, rel) in syls]
         for (j2, mi2, rel2), lst in groups.items():
             if j2 != j and mi2 == mi and rel2 == rel:
-                hit = [(num, hid) for num, hid in lst if text_of.get(hid) == txt]
+                hit = [(num, hid) for num, hid in lst if text_of.get(_base(hid)) == txt]
                 if hit:
                     # the same word on two lines of that staff: the one on the side facing this staff
                     def facing(h, j2=j2):
                         ab = any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
                                  and str(h[0]) == re.sub(r'\D', '', ly.get('number') or '1')
-                                 for ly in el_of[h[1]].findall('lyric'))
+                                 for ly in el_of[_base(h[1])].findall('lyric'))
                         return ab == (j < j2)
                     pick = [h for h in hit if facing(h)] or hit
                     readers.setdefault(pick[-1][1], set()).update(sp)
@@ -5469,10 +5489,10 @@ def part_windows(dnotes, owners, readers, part):
             if not n['grace'] and n['dur'] > 0 and part in owners.get(n['id'], ()):
                 evs.setdefault(n['on'], []).append(n)
     syl_at = {}
-    for ns_ in dnotes:
-        for n in ns_:
-            if part in readers.get(n['id'], ()):
-                syl_at[n['on']] = n['id']
+    on_of = {n['id']: n['on'] for ns_ in dnotes for n in ns_}
+    for k, ps in readers.items():
+        if part in ps and _base(k) in on_of:
+            syl_at[on_of[_base(k)]] = k
     out, cur = {}, None
     for on in sorted(evs):
         ns_ = evs[on]
@@ -5902,6 +5922,11 @@ def main():
     base_mei = tk.getMEI()
     # words printed above the staff: Verovio reads no placement from a MusicXML lyric, but honours
     # it on an MEI verse (@place). The note ids survive the trip, and a verse's @n is its lyric number
+    # every verse names its line in the SVG (a class "vn<n>"), for a note printing its word on two lines
+    _rm = etree.fromstring(base_mei.encode())
+    for vv in _rm.iter('{http://www.music-encoding.org/ns/mei}verse'):
+        vv.set('type', 'vn' + (vv.get('n') or '1'))
+    base_mei = etree.tostring(_rm).decode()
     above = {(n_.get('id'), ly.get('number') or '1') for n_ in disp.iter('note') for ly in n_.findall('lyric')
              if ly.get('placement') == 'above' and n_.get('id')}
     if above:

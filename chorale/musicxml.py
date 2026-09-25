@@ -413,8 +413,10 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
         for i, (pos, e) in enumerate(v1pos):
             s += marks.at(m, pos)
             s += note_xml(e, spec, voice=1, beam=bm[i],
-                          stem=((('down' if m in flipped else 'up'))
-                                if split_here(pos, e['dur']) else None),
+                          # in a bar with a second voice, voice 1's stems go up throughout, a chord
+                          # both parts share included (left to the reader, one at the top of the
+                          # staff after voice 2 had finished was drawn stem down, as if voice 2's)
+                          stem=((('down' if m in flipped else 'up')) if v2 else None),
                           fermata=(m in spec.fermata_bars),
                           lyr_place='above' if side(place1.get(i)) == 'above' else None,
                           lyr_num=place1[i][1] if isinstance(place1.get(i), tuple) else 1,
