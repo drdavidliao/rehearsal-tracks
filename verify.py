@@ -16,7 +16,7 @@ Paste the table into the handback as printed. A check that did not run is
 reported as NOT RUN, never left out: an empty result and a check nobody ran look
 the same in the output, and that is how check 10 was once skipped.
 
---pdf enables the checks that compare against the engraving (6, 10, 11, 12).
+--pdf enables the checks that compare against the engraving (6, 10, 11, 12, 17).
 --original is the file this one was made from: the score before a revoicing (check 16),
 or the open score a closed score was collapsed from, with its printed words, not a Cantai
 learning file, which re-sings melismas (check 14: lines under notes whose words moved to
@@ -689,25 +689,17 @@ def check_grid(E):
     if not offs:
         return report(12, 'Noteheads on the grid', 'NOT RUN', 'no noteheads recognised (music font not in the list)')
     base = statistics.median([d - round(d) for d, _, _ in offs])      # font baseline offset, if any
+    E.grid_base = base
     bad = [f'p{pn} x{x:.0f}: {d - base:.2f} half-spaces' for d, pn, x in offs if abs((d - base) - round(d - base)) > 0.15]
     report(12, 'Noteheads on the grid', 'FAIL' if bad else 'PASS',
            f'{len(offs)} noteheads, {len(bad)} off the grid' + (f' (font offset {base:+.2f})' if abs(base) > 0.05 else ''), bad[:20])
 
 
-def check_onsets(root, E):
-    """11: notes that start together in the file start at one x in the PDF.
-    Compares, bar by bar, the number of distinct onsets across all parts with the number of
-    distinct note/rest columns the engraving prints."""
-    from collections import Counter
-    ons = defaultdict(set)
-    for part in root.findall('part'):
-        for mn, n, v, t in notes_of(part):
-            r = n.find('rest')
-            if r is not None and r.get('measure') == 'yes': continue
-            if n.findtext('type') is None and r is not None: continue
-            ons[mn].add(t)
-    order = [m.get('number') for m in root.find('part').findall('measure')]
-    cols = []
+def pdf_bars(E):
+    """[(page, system, x from, x to)] for every bar the engraving prints, in reading order.
+    A bar is a stretch between two vertical lines that cross every staff of the system; a
+    stretch with no note or rest in it is a courtesy key or time at a system's end, and is dropped."""
+    out = []
     for page in E.pages:
         sp = page['sp']
         for sy in page['systems']:
@@ -730,8 +722,24 @@ def check_onsets(root, E):
                 for x in g:
                     if c and x - c[-1][0] < 1.9 * sp: c[-1].append(x)   # a second prints its heads one head-width apart
                     else: c.append([x])
-                if c:                  # a stretch with no notes or rests is a courtesy key or time at a system's end
-                    cols.append(len(c))
+                if c:
+                    out.append((page, sy, a, b, len(c)))
+    return out
+
+
+def check_onsets(root, E):
+    """11: notes that start together in the file start at one x in the PDF.
+    Compares, bar by bar, the number of distinct onsets across all parts with the number of
+    distinct note/rest columns the engraving prints."""
+    ons = defaultdict(set)
+    for part in root.findall('part'):
+        for mn, n, v, t in notes_of(part):
+            r = n.find('rest')
+            if r is not None and r.get('measure') == 'yes': continue
+            if n.findtext('type') is None and r is not None: continue
+            ons[mn].add(t)
+    order = [m.get('number') for m in root.find('part').findall('measure')]
+    cols = [c for *_, c in pdf_bars(E)]
     if len(cols) != len(order):
         return report(11, 'Cross-staff onset alignment', 'NOT RUN',
                       f'PDF bar count {len(cols)} does not match the file ({len(order)}); first-bar or pickup layout not understood')
@@ -740,6 +748,96 @@ def check_onsets(root, E):
     report(11, 'Cross-staff onset alignment', 'WARN' if bad else 'PASS',
            f'{len(bad)} bar(s) where the file and the engraving disagree on how many attack points there are' if bad
            else 'every bar has as many attack points as the engraving has columns', bad)
+
+
+CLEF_REF = {'G': 4 * 7 + 4, 'F': 3 * 7 + 3, 'C': 4 * 7 + 0}     # the note on the clef's line: G4, F3, C4 (diatonic)
+
+
+def file_positions(root):
+    """{(bar index, staff index in the system): {half-spaces below the top line}} for every notehead
+    the file would print, each read with the clef in force at its onset. Staves are counted over the
+    parts in file order (a part with <staves>2</staves> takes two)."""
+    pos = defaultdict(set)
+    base = 0
+    for part in root.findall('part'):
+        nst, div = 1, 1
+        clefs = {}                      # staff number -> [(bar index, onset, top-line diatonic)]
+        for bi, m in enumerate(part.findall('measure')):
+            t = F(0)
+            last = F(0)
+            for e in m:
+                if e.tag == 'attributes':
+                    if e.find('divisions') is not None: div = int(e.findtext('divisions'))
+                    if e.find('staves') is not None: nst = int(e.findtext('staves'))
+                    for c in e.findall('clef'):
+                        k = int(c.get('number', '1'))
+                        line = int(c.findtext('line') or {'G': 2, 'F': 4, 'C': 3}.get(c.findtext('sign'), 2))
+                        ref = CLEF_REF.get(c.findtext('sign'))
+                        if ref is None: continue
+                        ref += 7 * int(c.findtext('clef-octave-change') or 0)
+                        clefs.setdefault(k, []).append((bi, t, ref + 2 * (5 - line)))
+                elif e.tag == 'backup':
+                    t -= F(int(e.findtext('duration')), div)
+                elif e.tag == 'forward':
+                    t += F(int(e.findtext('duration')), div)
+                elif e.tag == 'note':
+                    on = last if e.find('chord') is not None else t
+                    if e.find('chord') is None:
+                        last = t
+                        if e.find('grace') is None: t += F(int(e.findtext('duration') or 0), div)
+                    p = e.find('pitch')
+                    if p is None: continue
+                    k = int(e.findtext('staff') or 1)
+                    cl = [c for c in clefs.get(k, []) if (c[0], c[1]) <= (bi, on)]
+                    if not cl: continue
+                    d = 7 * int(p.findtext('octave')) + STEPS.index(p.findtext('step'))
+                    pos[(bi, base + k - 1)].add(cl[-1][2] - d)
+        base += nst
+    return pos, base
+
+
+def check_pitches(root, E):
+    """17: the staff positions of the noteheads printed in each bar of each staff are the ones
+    the file's pitches would print at. Reads the page with this script's own staff finder, so a
+    staff misread by the extractor (ledger lines taken for staff lines: every note a line off)
+    cannot pass by agreeing with itself."""
+    fpos, nst = file_positions(root)
+    order = [m.get('number') for m in root.find('part').findall('measure')]
+    bars = pdf_bars(E)
+    if len(bars) != len(order):
+        return report(17, 'Noteheads match the pitches', 'NOT RUN',
+                      f'PDF bar count {len(bars)} does not match the file ({len(order)})')
+    bad, skipped, seen = [], 0, 0
+    runs = defaultdict(list)
+    for bi, (page, sy, a, b, _) in enumerate(bars):
+        if len(sy) != nst: skipped += 1; continue
+        sp = page['sp']
+        allst = [s for y in page['systems'] for s in y]
+        got = defaultdict(set)
+        for c in page['chars']:
+            if not any(f in c['font'] for f in MUSIC_FONTS) or not (a + 1 < c['x0'] < b - 1): continue
+            code = ord(c['t'][0])
+            if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
+            s = min(allst, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
+            if not any(s is x for x in sy): continue
+            k = next(i for i, x in enumerate(sy) if x is s)
+            got[k].add(round((c['y'] - s['lines'][0]) / (sp / 2) - E.grid_base))
+        for k in range(nst):
+            seen += 1
+            want = fpos.get((bi, k), set())
+            if got[k] != want:
+                sh = {dd for dd in range(-9, 10) if dd and {w + dd for w in want} == got[k] and want}
+                what = (f'every head {min(sh, key=abs):+d} half-space(s) from the file' if sh else
+                        f'PDF only {sorted(got[k] - want)}, file only {sorted(want - got[k])}')
+                bad.append(f'bar {order[bi]}, staff {k + 1} of the system: {what}')
+                runs[k].append(bi)
+    if not seen:
+        return report(17, 'Noteheads match the pitches', 'NOT RUN',
+                      f'no system has as many staves as the file ({nst}): hidden staves, not understood')
+    note = f'; {skipped} bar(s) on systems with a different staff count not compared' if skipped else ''
+    report(17, 'Noteheads match the pitches', 'FAIL' if bad else 'PASS',
+           (f'{len(bad)} bar-staff(s) of {seen} where the printed heads and the file disagree' if bad
+            else f'{seen} bar-staves compared, printed heads and file pitches agree') + note, bad)
 
 
 # ----------------------------------------------------------------- main
@@ -771,7 +869,7 @@ def main():
             E = Engraving(a.pdf, a.lyric_font, a.lyric_size)
         except Exception as ex:
             E = None
-            for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid')):
+            for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid'), (17, 'Noteheads match the pitches')):
                 report(n, nm, 'NOT RUN', f'could not read the PDF: {ex}')
         if E:
             if a.lanes:
@@ -791,8 +889,10 @@ def main():
                        'the PDF has fewer staves than the file has parts (a closed score): pass --lanes')
             check_onsets(root, E)
             check_grid(E)
+            if hasattr(E, 'grid_base'): check_pitches(root, E)
+            else: report(17, 'Noteheads match the pitches', 'NOT RUN', 'no noteheads recognised (see check 12)')
     else:
-        for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid')):
+        for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid'), (17, 'Noteheads match the pitches')):
             report(n, nm, 'NOT RUN', 'needs --pdf')
     check_shared_staff(root)
     check_extend_runs(root, names, a.original)
