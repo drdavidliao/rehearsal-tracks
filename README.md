@@ -10,7 +10,16 @@ sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
 
+- [🎼 &nbsp;PDF → MusicXML](#pdf-to-musicxml)
+- [✍️ &nbsp;Plan an arrangement or revoicing](#plan-an-arrangement-or-revoicing)
+- [🔧 &nbsp;Add kludges for Cantai](#add-kludges-for-cantai)
+- [🎧 &nbsp;Make rehearsal tracks](#make-rehearsal-tracks)
+- [🎬 &nbsp;Make follow-along videos](#make-follow-along-videos)
+- [📋 &nbsp;Plan note-learning rehearsals](#plan-note-learning-rehearsals)
+
 ---
+
+<a id="pdf-to-musicxml"></a>
 
 ### 🎼 &nbsp;PDF → MusicXML
 
@@ -34,6 +43,8 @@ Newzik's attempt, in case that helps.
 It is worth handing over even when the OMR made a mess of the vocal staves; the
 accompaniment is usually salvageable.
 
+<a id="plan-an-arrangement-or-revoicing"></a>
+
 ### ✍️ &nbsp;Plan an arrangement or revoicing
 
 To prepare a list of edits by clicking to select measures and then typing
@@ -53,6 +64,8 @@ through measure 5 beat 4, someone might write something like:
 > reassign the soprano part to tenor 2, alto part to bass, tenor part to tenor 1,
 > and bass part to baritone
 
+<a id="add-kludges-for-cantai"></a>
+
 ### 🔧 &nbsp;Add kludges for Cantai
 
 To deliberately damage the arrangement to work around Cantai bugs — for example
@@ -67,10 +80,10 @@ Make the attached MusicXML compatible with Cantai.
 **This file is for learning tracks only. Never print from it.** You always get the
 faithful file as well.
 
----
-
 Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
 [Cantai](https://cantai.app).
+
+<a id="make-rehearsal-tracks"></a>
 
 ### 🎧 &nbsp;Make rehearsal tracks
 
@@ -163,6 +176,8 @@ Connection:
   around you (lowest behind-left, highest behind-right, the middle voices just
   either side of straight ahead). Headphones only.
 
+<a id="make-follow-along-videos"></a>
+
 ### 🎬 &nbsp;Make follow-along videos
 
 Once the rehearsal tracks are made, write something like:
@@ -187,6 +202,8 @@ Dots before each line show who sings it; one bold word per line, with an emoji,
 gives the eye somewhere to land. The first time round, Claude drafts the sheet's
 plan, names the sections from the music (not the words) and picks the bold words
 before rendering; the plan stays in the song's folder.
+
+<a id="plan-note-learning-rehearsals"></a>
 
 ### 📋 &nbsp;Plan note-learning rehearsals
 
