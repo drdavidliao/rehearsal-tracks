@@ -217,6 +217,39 @@ class Stamper:
                     x1 = max(it['xr'] for it in last) + 7
                 self.marks.setdefault(pi, []).append(('rect', x0, top['top'] - 1.3 * sp, x1, bot['bot'] + 1.3 * sp, dashed, pm.H))
 
+    def beat_lines(self, bar, parts):
+        """dashed beat lines through a tricky bar, on the staves of the parts it is tricky for: like bar lines,
+        just before the first note on each beat (between notes where no note starts on it)"""
+        b = self.r.bars[bar - 1]
+        pm = self.r.pms[b['page']]
+        sy = pm.systems[b['sys']]
+        known = sorted({(it['on'], it['x']) for sb in b['staves'] for it in sb['items'] if 'on' in it})
+        if not known: return
+        barlen = self.barlen
+        pts = [(it_on, x) for it_on, x in known]
+        firsts = {}
+        for on, x in pts: firsts[on] = min(x, firsts.get(on, x))
+        xs = sorted(firsts.items())
+        end = (barlen, b['xb'])
+        for t in range(1, int(barlen)):
+            if t in firsts:
+                x = firsts[t] - 2.2
+            else:
+                before = [q for q in xs if q[0] < t] or [(0, b['xa'])]
+                after = [q for q in xs if q[0] > t] or [end]
+                (t0, x0), (t1, x1) = before[-1], after[0]
+                x = x0 + (x1 - x0) * float((t - t0) / (t1 - t0)) - 1
+            for p in parts:
+                s = sy[PART_K[p]]
+                self.marks.setdefault(b['page'], []).append(('beat', x, s['top'] - 0.4 * s['sp'], s['bot'] + 0.4 * s['sp'], pm.H))
+
+    def _beat(self, c, x, top, bot, H):
+        c.saveState()
+        c.setStrokeColor(colors.HexColor('#C0392B')); c.setStrokeAlpha(0.85); c.setLineWidth(0.9)
+        c.setDash(2.4, 1.8)
+        c.line(x, H - top, x, H - bot)
+        c.restoreState()
+
     def _rect(self, c, x0, y0, x1, y1, dashed, H):
         col = colors.HexColor(UNI)
         c.saveState()
@@ -238,7 +271,7 @@ class Stamper:
         c.restoreState()
 
 
-def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6):
+def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, plan_obj=None):
     rd = dex.Reader(pdf, pages, nstaves=nstaves).read().voices()
     st = Stamper(rd)
     st.letter_bars = {sec['a'] for sec in plan if sec['letter'] != 'Intro'}
@@ -260,6 +293,14 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6):
             if octv: st.shade(bars, octv, dashed=True)
         else:
             st.shade(bars, uni + octv, dashed=True)
+    # beat lines through the bars flagged as rhythmically tricky, whether the plan drills them or slows them down
+    st.barlen = 4
+    if score is not None:
+        from . import analyze as _an
+        lens = _an.bar_lengths(score)
+    for n, ps in sorted(getattr(plan_obj, 'flagged', {}).items()):
+        if score is not None: st.barlen = lens[n]
+        st.beat_lines(n, sorted(ps, key=lambda p: PART_K[p]))
     st.whys = {}
     for sec in plan:
         for blk in sec['items']:

@@ -2275,6 +2275,11 @@ main director says, so the plan always covers every letter.
     caption; a caption with no room on the right goes left, else above.
   - "Everyone" steps sit a row higher, by the letter; a spoken drill for everyone
     shares that row.
+  - Bars flagged as rhythmically tricky get dashed red beat lines through the
+    staves of the parts they are tricky for, like bar lines just before the first
+    note of each beat (interpolated where no note starts on it), so the beats can be
+    seen in a bar full of 16ths and off-beat entries. They are drawn in both rhythm
+    modes: slowing a bar down does not make its beats easier to find.
   - A small `Rh` circle marks a part's own rhythm spot; a pale yellow "why" tag sits
     on the highest staff a near-repeat's micro-work touches.
   - **Unison is shaded amber:** a solid box over the parts on the very same notes,

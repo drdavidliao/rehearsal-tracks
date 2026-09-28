@@ -96,7 +96,7 @@ def main():
         dst = os.path.join(a.out, os.path.splitext(os.path.basename(a.pdf))[0] + ' (lesson marks).pdf')
         root = ET.parse(a.score).getroot()
         nst = sum(max([int(x.text) for x in p.iter('staves')] or [1]) for p in root.findall('part'))
-        overlay.annotate(a.pdf, pages(a.pages, n), pl, steps, dst, a.rhythm, score=S, nstaves=nst)
+        overlay.annotate(a.pdf, pages(a.pages, n), pl, steps, dst, a.rhythm, score=S, nstaves=nst, plan_obj=P)
         print('wrote', dst)
 
 

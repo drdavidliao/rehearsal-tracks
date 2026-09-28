@@ -57,6 +57,7 @@ class Planner:
         self.lead = {p: 0 for p in PARTS}
         self.last_lead = None
         self.rhythm_done = set()     # (part, bar-shape) already drilled
+        self.flagged = {}            # bar -> parts whose rhythm there is tricky (the score marks their beats)
 
     # -------------------------------------------------------------- where a passage really starts
     def pickup(self, a):
@@ -169,10 +170,13 @@ class Planner:
             byr = {r: sorted(ps, key=PARTS.index) for r, ps in byr.items()}
             for r, ps in byr.items():
                 if len(ps) >= 2 and any(p in have for p in ps):
+                    self.flagged.setdefault(n, set()).update(ps)
                     for p in ps: self.rhythm_done.add((p, r))
                     for p in ps: spots[p].discard(n)
                     if joint and joint[-1][0][-1] == n - 1 and joint[-1][1] == ps: joint[-1][0].append(n)
                     else: joint.append(([n], ps))
+        for q, bars in spots.items():
+            for n in bars: self.flagged.setdefault(n, set()).add(q)
         if self.mode == 'slow' and joint:
             # shared tricky bars: learn the notes part by part, then everyone sings it down tempo together
             self.slow_all = True
