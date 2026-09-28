@@ -89,7 +89,7 @@ too (the closed score the singers hold is best) and say which is which; the
 videos show the print file.
 That is Step 10: one mp4 per mp3 used, the score lighting up note by note, rests
 included, in each part's colour. The lyric sheet comes with them (10.1): a
-PDF of everyone's words (a landscape page, then the portrait page to print), and
+PDF of everyone's words (the portrait page to print, then a landscape page), and
 beside each video two more of that page, 16:9 and iPad portrait, with each
 syllable lighting up as it is sung. The first time, Claude drafts how the
 words fall into sections and rows, names the sections from the music, and picks
@@ -2238,10 +2238,10 @@ what the user settled on:
   score videos; nothing is lit while everyone rests. In a part's own video that part's
   syllables light in its colour, the whole height, and syllables only others sing light
   grey.
-- **One PDF, two pages: landscape first, then portrait.** Page 1 is landscape letter with
-  the 16:9 video's page on it, exactly, the full width at the top and the paper below it
-  left empty; page 2 is the portrait page to print (and the iPad video's page). One file
-  on Chorus Connection, so nobody downloads the wrong one.
+- **One PDF, two pages: portrait first, then landscape.** Page 1 is the portrait page to
+  print (and the iPad video's page); page 2 is landscape letter with the 16:9 video's page
+  on it, exactly, the full width at the top and the paper below it left empty. One file on
+  Chorus Connection, so nobody downloads the wrong one. The order is the user's rule.
 
 **The plan.** How the words fall into rows is a judgement the file cannot make alone, so
 it lives in `TITLE - lyric sheet plan.json` beside the videos (it holds the words: never
@@ -5030,7 +5030,7 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
-part's words on one printable page (and, as its first page, the 16:9 video's page), and beside each
+part's words on one printable page (and, as its second page, the 16:9 video's page), and beside each
 video "<mp3 name>, lyrics.mp4" (16:9) and "<mp3 name>, lyrics, iPad.mp4" (3:4 portrait, the printed
 page), each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
 plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
@@ -7720,8 +7720,8 @@ The plan is JSON, written as a draft and finished by hand:
 Every row prints on one line: the page's font is the largest at which the longest row fits, and a row
 too long for a readable size is split, with "continues", only where the music rests. The video uses the
 same rows in three columns at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows
-the printed page itself. The PDF has two pages: first the 16:9 video's page, landscape, the full width
-with the paper below it empty; then the portrait page to print.
+the printed page itself. The PDF has two pages: first the portrait page to print; then the 16:9
+video's page, landscape, the full width with the paper below it empty.
 
 Needs lxml, numpy, pycairo, pillow, the Noto Color Emoji font and one of Carlito, Lato or
 Liberation Sans; imports score_video.py (for its MusicXML reader), so keep it beside that.
@@ -8363,8 +8363,8 @@ FOOTNOTE = ('Dots: who sings the row.  Italic words with a small tag: only those
 
 def layouts(S):
     """The two layouts, each computed once, so every copy of a layout is the same:
-    'page', the letter portrait page in two columns (the PDF's second page, and the iPad video);
-    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's first page)."""
+    'page', the letter portrait page in two columns (the PDF's first page, and the iPad video);
+    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's second page)."""
     if not hasattr(S, '_layouts'):
         S._layouts = {
             'page': fit(S, 612, 792, 34, 2, 12.0, 0.1, 2.75, lambda fs: 18, 30, True),
@@ -8382,28 +8382,26 @@ def footnote(cx, L):
 
 
 def pdf(S, out):
-    """Two pages. First, landscape letter: the 16:9 video's page, the full width, with the paper
-    below it left empty. Second, portrait letter: the page to print (and the iPad video's page).
+    """Two pages. First, portrait letter: the page to print (and the iPad video's page). Second,
+    landscape letter: the 16:9 video's page, the full width, with the paper below it left empty.
     One file, so nobody downloads the wrong one."""
     lay = layouts(S)
     Ls, fs_s, _ = lay['screen']
     Lp, fs_p, lead_p = lay['page']
-    surf = cairo.PDFSurface(out, 792, 612)
-    cx = cairo.Context(surf)
-    cx.save()
-    k = 792 / Ls.W
-    cx.scale(k, k)
-    Ls.draw(cx)
-    cx.restore()
-    cx.show_page()
-    surf.set_size(612, 792)
+    surf = cairo.PDFSurface(out, 612, 792)
     cx = cairo.Context(surf)
     Lp.draw(cx)
     footnote(cx, Lp)
+    cx.show_page()
+    surf.set_size(792, 612)
+    cx = cairo.Context(surf)
+    k = 792 / Ls.W
+    cx.scale(k, k)
+    Ls.draw(cx)
     surf.finish()
-    print(f'lyric sheet: {os.path.basename(out)}: page 1 landscape, the 16:9 video\'s page '
-          f'({fs_s * k:.1f} pt type, {612 - Ls.H * k:.0f} pt empty below); page 2 portrait, to print '
-          f'({fs_p:.1f} pt type, line spacing {lead_p:.2f}); '
+    print(f'lyric sheet: {os.path.basename(out)}: page 1 portrait, to print ({fs_p:.1f} pt type, line '
+          f'spacing {lead_p:.2f}); page 2 landscape, the 16:9 video\'s page ({fs_s * k:.1f} pt type, '
+          f'{612 - Ls.H * k:.0f} pt empty below); '
           f'{sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)} rows, all on one line each')
     return out
 

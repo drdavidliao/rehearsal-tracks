@@ -196,8 +196,8 @@ too, with a bar that fills beat by beat, so nobody has to count. In a part's
 own video, only that part lights up and everyone else is grey.
 
 The lyric sheet comes with the videos: every part's words on one page
-(`Shenandoah - lyric sheet.pdf`: a landscape copy of the video's page first, then
-the portrait page to print), and beside each video two more with each syllable
+(`Shenandoah - lyric sheet.pdf`: the portrait page to print first, then a
+landscape copy of the video's page), and beside each video two more with each syllable
 lighting up as it's sung: `Shenandoah - Balanced, lyrics.mp4` for a screen, and
 `Shenandoah - Balanced, lyrics, iPad.mp4`, the printed page in portrait for an
 iPad in a music folder.

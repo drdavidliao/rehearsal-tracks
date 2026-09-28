@@ -32,8 +32,8 @@ The plan is JSON, written as a draft and finished by hand:
 Every row prints on one line: the page's font is the largest at which the longest row fits, and a row
 too long for a readable size is split, with "continues", only where the music rests. The video uses the
 same rows in three columns at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows
-the printed page itself. The PDF has two pages: first the 16:9 video's page, landscape, the full width
-with the paper below it empty; then the portrait page to print.
+the printed page itself. The PDF has two pages: first the portrait page to print; then the 16:9
+video's page, landscape, the full width with the paper below it empty.
 
 Needs lxml, numpy, pycairo, pillow, the Noto Color Emoji font and one of Carlito, Lato or
 Liberation Sans; imports score_video.py (for its MusicXML reader), so keep it beside that.
@@ -675,8 +675,8 @@ FOOTNOTE = ('Dots: who sings the row.  Italic words with a small tag: only those
 
 def layouts(S):
     """The two layouts, each computed once, so every copy of a layout is the same:
-    'page', the letter portrait page in two columns (the PDF's second page, and the iPad video);
-    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's first page)."""
+    'page', the letter portrait page in two columns (the PDF's first page, and the iPad video);
+    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's second page)."""
     if not hasattr(S, '_layouts'):
         S._layouts = {
             'page': fit(S, 612, 792, 34, 2, 12.0, 0.1, 2.75, lambda fs: 18, 30, True),
@@ -694,28 +694,26 @@ def footnote(cx, L):
 
 
 def pdf(S, out):
-    """Two pages. First, landscape letter: the 16:9 video's page, the full width, with the paper
-    below it left empty. Second, portrait letter: the page to print (and the iPad video's page).
+    """Two pages. First, portrait letter: the page to print (and the iPad video's page). Second,
+    landscape letter: the 16:9 video's page, the full width, with the paper below it left empty.
     One file, so nobody downloads the wrong one."""
     lay = layouts(S)
     Ls, fs_s, _ = lay['screen']
     Lp, fs_p, lead_p = lay['page']
-    surf = cairo.PDFSurface(out, 792, 612)
-    cx = cairo.Context(surf)
-    cx.save()
-    k = 792 / Ls.W
-    cx.scale(k, k)
-    Ls.draw(cx)
-    cx.restore()
-    cx.show_page()
-    surf.set_size(612, 792)
+    surf = cairo.PDFSurface(out, 612, 792)
     cx = cairo.Context(surf)
     Lp.draw(cx)
     footnote(cx, Lp)
+    cx.show_page()
+    surf.set_size(792, 612)
+    cx = cairo.Context(surf)
+    k = 792 / Ls.W
+    cx.scale(k, k)
+    Ls.draw(cx)
     surf.finish()
-    print(f'lyric sheet: {os.path.basename(out)}: page 1 landscape, the 16:9 video\'s page '
-          f'({fs_s * k:.1f} pt type, {612 - Ls.H * k:.0f} pt empty below); page 2 portrait, to print '
-          f'({fs_p:.1f} pt type, line spacing {lead_p:.2f}); '
+    print(f'lyric sheet: {os.path.basename(out)}: page 1 portrait, to print ({fs_p:.1f} pt type, line '
+          f'spacing {lead_p:.2f}); page 2 landscape, the 16:9 video\'s page ({fs_s * k:.1f} pt type, '
+          f'{612 - Ls.H * k:.0f} pt empty below); '
           f'{sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)} rows, all on one line each')
     return out
 

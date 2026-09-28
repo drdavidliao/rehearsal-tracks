@@ -72,7 +72,7 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
-part's words on one printable page (and, as its first page, the 16:9 video's page), and beside each
+part's words on one printable page (and, as its second page, the 16:9 video's page), and beside each
 video "<mp3 name>, lyrics.mp4" (16:9) and "<mp3 name>, lyrics, iPad.mp4" (3:4 portrait, the printed
 page), each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
 plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
