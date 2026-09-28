@@ -89,10 +89,11 @@ too (the closed score the singers hold is best) and say which is which; the
 videos show the print file.
 That is Step 10: one mp4 per mp3 used, the score lighting up note by note, rests
 included, in each part's colour. The lyric sheet comes with them (10.1): a
-one-page PDF of everyone's words to print, and beside each video a second one of
-that page with each syllable lighting up as it is sung. The first time, Claude
-drafts how the words fall into sections and rows, names the sections from the
-music, and picks a bold key word and an emoji for each row, before rendering.
+PDF of everyone's words (a landscape page, then the portrait page to print), and
+beside each video two more of that page, 16:9 and iPad portrait, with each
+syllable lighting up as it is sung. The first time, Claude drafts how the
+words fall into sections and rows, names the sections from the music, and picks
+a bold key word and an emoji for each row, before rendering.
 
 **Plan note-learning rehearsals.** Put the MusicXML and the score PDF in the
 song's folder, connect or attach it, and write something like:
@@ -2194,8 +2195,8 @@ arrive a few KB larger; compare the streams, not the files:
 ### 10.1 The lyric sheet: made with the videos, every time
 
 **What it is.** Every sung part's words on one printable page (`TITLE - lyric sheet.pdf`),
-and beside each score video `TITLE - … , lyrics.mp4`: that page, with each syllable lit
-while it is sung. A memory aid: the score videos teach the notes, this teaches the words
+and beside each score video `TITLE - … , lyrics.mp4` and `TITLE - … , lyrics, iPad.mp4`:
+that page, with each syllable lit while it is sung. A memory aid: the score videos teach the notes, this teaches the words
 and who sings them. `score_video.py` makes both in the same run, with the same timing, so
 they are never made separately and never out of step. Asked for on the two-soloist TTBB;
 what the user settled on:
@@ -2228,11 +2229,19 @@ what the user settled on:
   is split only where the music rests (`"continues": true`), and only if the rest is really
   there: on that piece an eleven-word line with no rest in it set the size.
   Room left on the page goes into line spacing.
-- **On video: the same rows, three columns at 1920×1080.** The portrait page shrunk onto a
-  16:9 screen is unreadable. A syllable lights in stacked bands, one per part singing it,
-  top to bottom in score order as in the score videos; nothing is lit while everyone rests.
-  In a part's own video that part's syllables light in its colour, the whole height, and
-  syllables only others sing light grey. The bar number shows at the top.
+- **Two videos per mp3: 16:9, and 3:4 portrait for an iPad.** `…, lyrics.mp4` is the
+  same rows in three columns at 1920×1080 (the portrait page shrunk onto a 16:9 screen is
+  unreadable). `…, lyrics, iPad.mp4` is 1536×2048 and shows the printed page exactly,
+  scaled to the full width at the top, so a singer can read along on the iPad already in
+  their music folder; the bar number sits in the band left below the page. A syllable
+  lights in stacked bands, one per part singing it, top to bottom in score order as in the
+  score videos; nothing is lit while everyone rests. In a part's own video that part's
+  syllables light in its colour, the whole height, and syllables only others sing light
+  grey.
+- **One PDF, two pages: landscape first, then portrait.** Page 1 is landscape letter with
+  the 16:9 video's page on it, exactly, the full width at the top and the paper below it
+  left empty; page 2 is the portrait page to print (and the iPad video's page). One file
+  on Chorus Connection, so nobody downloads the wrong one.
 
 **The plan.** How the words fall into rows is a judgement the file cannot make alone, so
 it lives in `TITLE - lyric sheet plan.json` beside the videos (it holds the words: never
@@ -2257,7 +2266,9 @@ which. Finish the draft by hand:
 The words come from a print-faithful MusicXML with one part per sung part (`--lyrics`;
 by default `--display` when it has one part per staff, else the score). Never the Cantai
 learning file: its split syllables would print. `--no-lyrics` makes the score videos
-alone. Each lyric video takes about a minute beside its score video's three.
+alone. After changing a finished plan, `--lyrics-only` remakes the PDF and the lyric videos
+with the timing fitted as usual and leaves the score videos alone. Each mp3's two lyric
+videos take about two and a half minutes on 2 cores.
 
 ## Step 11 — Note-learning lesson plans
 
@@ -4953,7 +4964,7 @@ if __name__ == '__main__':
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
         [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N] [--proof DIR]
-        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics]
+        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics | --lyrics-only]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -5019,13 +5030,14 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
-part's words on one printable page, and beside each video "<mp3 name>, lyrics.mp4", that page with
-each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
+part's words on one printable page (and, as its first page, the 16:9 video's page), and beside each
+video "<mp3 name>, lyrics.mp4" (16:9) and "<mp3 name>, lyrics, iPad.mp4" (3:4 portrait, the printed
+page), each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
 plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
 rows and which word in each row is bold, with an emoji. With no plan the script writes a draft from
 the words (--lyrics, else --display when it has one part per staff, else the score) and stops
 before rendering anything; it refuses a plan that is not finished. --no-lyrics makes the score
-videos alone.
+videos alone; --lyrics-only the lyric sheet and its videos alone.
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
 8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
@@ -6984,6 +6996,8 @@ def main():
     ap.add_argument('--lyric-plan', help='the lyric sheet plan (default: "<title> - lyric sheet plan.json" '
                     'beside the videos)')
     ap.add_argument('--no-lyrics', action='store_true', help='the score videos only: no lyric sheet')
+    ap.add_argument('--lyrics-only', action='store_true', help='the lyric sheet and its videos only (after the '
+                    'plan changes): the timing is fitted as usual, the score videos are not remade')
     ap.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = ap.parse_args()
     if not (a.child or a.stills or a.clip):
@@ -7406,9 +7420,32 @@ def main():
     numbers = [m.get('number') for m in src_parts[0].findall('measure')]
     bar_sec = [(usec(us), numbers[mi]) for mi, us in ubars]
 
+    def lyric_videos(T, view, mp3, stem):
+        """The lyric sheet's two videos for this mp3 (16:9 and iPad), lit by this video's timing: every
+        syllable of every part, at every time its bar is played; the last ones held, as the score video's
+        are, until the sound stops."""
+        import lyric_sheet
+        LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
+        if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
+            sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
+                     f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
+        lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
+                                                         for s0, s1 in times_of(mi, q0, q1)],
+                                 last_audio=min(T.last_audio, T.dur))
+        feat = None
+        if view != 'all':
+            feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
+            if feat is None:
+                sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
+        lbars = [(float(T(s0)), n_) for s0, n_ in bar_sec]
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics.mp4', featured=feat, crf=a.crf)
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics, iPad.mp4', featured=feat, crf=a.crf,
+                          shape='ipad')
+
     for mp3, view, stem in jobs:
-        pages, bar_page, ctrl = layout(view)
-        if a.proof and view == 'all':
+        if not a.lyrics_only:
+            pages, bar_page, ctrl = layout(view)
+        if a.proof and view == 'all' and not a.lyrics_only:
             from PIL import Image
             os.makedirs(a.proof, exist_ok=True)
             nums = [m.get('number') for m in src_parts[0].findall('measure')]
@@ -7467,6 +7504,9 @@ def main():
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
         if why:
             print(f'   {why}')
+        if a.lyrics_only:
+            lyric_videos(T, view, mp3, stem)
+            continue
         # page turns (audio seconds), in the order the bars are played: a repeat turns back.
         # Up to --lead s before the next screen's first bar, never before the last note on the old
         # screen has begun
@@ -7631,23 +7671,7 @@ def main():
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
         check_frames(out, [ms for ms, _ in segs])
         if lyric_plan:
-            # the lyric sheet video, lit by this video's timing: every syllable of every part, at every
-            # time its bar is played; the last ones held, as here, until the sound stops
-            import lyric_sheet
-            LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
-            if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
-                sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
-                         f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
-            lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
-                                                             for s0, s1 in times_of(mi, q0, q1)],
-                                     last_audio=min(T.last_audio, T.dur))
-            feat = None
-            if view != 'all':
-                feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
-                if feat is None:
-                    sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
-            lyric_sheet.video(LS, lw, [(float(T(s0)), n_) for s0, n_ in bar_sec], mp3, stem + ', lyrics.mp4',
-                              featured=feat, crf=a.crf)
+            lyric_videos(T, view, mp3, stem)
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
     if not (a.child or a.stills or a.clip):
@@ -7695,7 +7719,9 @@ The plan is JSON, written as a draft and finished by hand:
 
 Every row prints on one line: the page's font is the largest at which the longest row fits, and a row
 too long for a readable size is split, with "continues", only where the music rests. The video uses the
-same rows in three columns at 1920x1080.
+same rows in three columns at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows
+the printed page itself. The PDF has two pages: first the 16:9 video's page, landscape, the full width
+with the paper below it empty; then the portrait page to print.
 
 Needs lxml, numpy, pycairo, pillow, the Noto Color Emoji font and one of Carlito, Lato or
 Liberation Sans; imports score_video.py (for its MusicXML reader), so keep it beside that.
@@ -8331,39 +8357,84 @@ def fit(S, W, H, margin, ncols, start, step, gutter_k, col_gap, bottom, subtitle
     return L, fs, lead
 
 
-def pdf(S, out):
-    W, H = 612, 792
-    L, fs, lead = fit(S, W, H, 34, 2, 12.0, 0.1, 2.75, lambda fs: 18, 30, True)
-    surf = cairo.PDFSurface(out, W, H)
-    cx = cairo.Context(surf)
-    L.draw(cx)
+FOOTNOTE = ('Dots: who sings the row.  Italic words with a small tag: only those parts sing them.  '
+            'Grey numbers: the bar where the row starts.')
+
+
+def layouts(S):
+    """The two layouts, each computed once, so every copy of a layout is the same:
+    'page', the letter portrait page in two columns (the PDF's second page, and the iPad video);
+    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's first page)."""
+    if not hasattr(S, '_layouts'):
+        S._layouts = {
+            'page': fit(S, 612, 792, 34, 2, 12.0, 0.1, 2.75, lambda fs: 18, 30, True),
+            'screen': fit(S, 1920, 1080, 34, 3, 32.0, 0.25, 2.75, lambda fs: fs * 1.3, 20, False, title_k=1.45),
+        }
+    return S._layouts
+
+
+def footnote(cx, L):
     cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
     cx.set_font_size(7.5)
     cx.set_source_rgb(*rgb('#888888'))
-    cx.move_to(34, H - 20)
-    cx.show_text('Dots: who sings the row.  Italic words with a small tag: only those parts sing them.  '
-                 'Grey numbers: the bar where the row starts.')
+    cx.move_to(34, L.H - 20)
+    cx.show_text(FOOTNOTE)
+
+
+def pdf(S, out):
+    """Two pages. First, landscape letter: the 16:9 video's page, the full width, with the paper
+    below it left empty. Second, portrait letter: the page to print (and the iPad video's page).
+    One file, so nobody downloads the wrong one."""
+    lay = layouts(S)
+    Ls, fs_s, _ = lay['screen']
+    Lp, fs_p, lead_p = lay['page']
+    surf = cairo.PDFSurface(out, 792, 612)
+    cx = cairo.Context(surf)
+    cx.save()
+    k = 792 / Ls.W
+    cx.scale(k, k)
+    Ls.draw(cx)
+    cx.restore()
+    cx.show_page()
+    surf.set_size(612, 792)
+    cx = cairo.Context(surf)
+    Lp.draw(cx)
+    footnote(cx, Lp)
     surf.finish()
-    print(f'lyric sheet: {os.path.basename(out)}, one page, {fs:.1f} pt type, line spacing {lead:.2f}, '
+    print(f'lyric sheet: {os.path.basename(out)}: page 1 landscape, the 16:9 video\'s page '
+          f'({fs_s * k:.1f} pt type, {612 - Ls.H * k:.0f} pt empty below); page 2 portrait, to print '
+          f'({fs_p:.1f} pt type, line spacing {lead_p:.2f}); '
           f'{sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)} rows, all on one line each')
     return out
 
 
-def video(S, wins, bars, mp3, out, featured=None, crf=20):
-    """The sheet at 1920x1080 in three columns, each syllable lit while it is sung: in the colours of
-    every part singing it (stacked), or in a part's own video, that part's colour where it sings and
-    grey where only others do. wins: (audio start, audio end, token id, part name). bars: (audio
-    time, bar number) for the bar number shown. One frame per change, exact to the millisecond."""
-    W, H = 1920, 1080
-    L, fs, lead = fit(S, W, H, 34, 3, 32.0, 0.25, 2.75, lambda fs: fs * 1.3, 20, False, title_k=1.45)
+SHAPES = {
+    # 16:9, the three-column layout at its own size
+    'screen': dict(size=(1920, 1080), layout='screen'),
+    # 3:4 for an iPad in portrait: the printed page, scaled to the full width, at the top; the band
+    # left below it carries the bar number
+    'ipad': dict(size=(1536, 2048), layout='page'),
+}
+
+
+def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
+    """The sheet with each syllable lit while it is sung: in the colours of every part singing it
+    (stacked), or in a part's own video, that part's colour where it sings and grey where only others
+    do. shape 'screen': 1920x1080, three columns. shape 'ipad': 1536x2048 (3:4 portrait), exactly the
+    printed page. wins: (audio start, audio end, token id, part name). bars: (audio time, bar
+    number) for the bar number shown. One frame per change, exact to the millisecond."""
+    W, H = SHAPES[shape]['size']
+    L, fs, lead = layouts(S)[SHAPES[shape]['layout']]
+    k = min(W / L.W, H / L.H)
+    band = H - L.H * k                       # below the page: the iPad's bar number goes here
     dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0',
                                 mp3], capture_output=True, text=True).stdout)
     bar_t = np.array([b[0] for b in bars])
 
     def state(t):
         act = tuple(sorted((tid, p) for t0, t1, tid, p in wins if t0 <= t < t1))
-        k = int(np.searchsorted(bar_t, t, side='right')) - 1
-        return act, (bars[k][1] if k >= 0 else None)
+        j = int(np.searchsorted(bar_t, t, side='right')) - 1
+        return act, (bars[j][1] if j >= 0 else None)
 
     def draw(st, path):
         act, bar = st
@@ -8371,6 +8442,9 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20):
         cx = cairo.Context(surf)
         cx.set_source_rgb(1, 1, 1)
         cx.paint()
+        cx.save()
+        cx.translate((W - L.W * k) / 2, 0)
+        cx.scale(k, k)
         by = {}
         for tid, p in act:
             by.setdefault(tid, []).append(p)
@@ -8380,18 +8454,38 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20):
             else:
                 L.highlight(cx, tid, [S.colours[featured] if featured in ps else GREY])
         L.draw(cx)
+        if shape == 'ipad':
+            footnote(cx, L)
+        cx.restore()
+        # the bar number, and whose video it is: in the header on the 16:9 screen, below the page on
+        # the iPad
+        size = fs * 0.7 * k if shape == 'screen' else min(band * 0.45, 30)
+        y = L.head_y * k if shape == 'screen' else H - band / 2 + size * 0.35
         cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        cx.set_font_size(fs * 0.7)
+        cx.set_font_size(size)
+        bits = []
         if bar is not None:
-            cx.set_source_rgb(*rgb('#8a8a8a'))
-            s = f'bar {bar}'
-            cx.move_to(W / 2 - cx.text_extents(s).x_advance / 2, L.head_y)
-            cx.show_text(s)
+            bits.append((f'bar {bar}', '#8a8a8a', False))
         if featured is not None:
-            cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
-            cx.set_source_rgb(*rgb(S.colours[featured]))
-            cx.move_to(W / 2 + fs * 3, L.head_y)
-            cx.show_text(f'{S.short(featured)} in colour, other parts grey')
+            bits.append((f'{S.short(featured)} in colour, other parts grey', S.colours[featured], True))
+        if shape == 'screen':
+            x = W / 2
+            for s, c, b in bits:
+                cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                    cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+                cx.set_source_rgb(*rgb(c))
+                w = cx.text_extents(s).x_advance
+                cx.move_to(x - (w / 2 if not b else 0) + (fs * 3 * k if b else 0), y)
+                cx.show_text(s)
+        else:
+            x = 34 * k
+            for s, c, b in bits:
+                cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                    cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+                cx.set_source_rgb(*rgb(c))
+                cx.move_to(x, y)
+                cx.show_text(s)
+                x += cx.text_extents(s).x_advance + size * 1.5
         surf.write_to_png(path)
 
     times = sorted({0.0} | {x for w in wins for x in w[:2] if 0 <= x < dur} | {b for b in bar_t if 0 <= b < dur})
@@ -8409,11 +8503,11 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20):
     lines, files = ['ffconcat version 1.0'], {}
     with ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
         futs = []
-        for k, (ms, st) in enumerate(segs_):
+        for j, (ms, st) in enumerate(segs_):
             if st not in files:
                 files[st] = os.path.join(tmpd, f'{len(files):06d}.png')
                 futs.append(pool.submit(draw, st, files[st]))
-            nxt = segs_[k + 1][0] if k + 1 < len(segs_) else end_ms
+            nxt = segs_[j + 1][0] if j + 1 < len(segs_) else end_ms
             lines += [f"file '{files[st]}'", 'option framerate 1000', f'duration {(nxt - ms) / 1000:.3f}']
         for f in futs:
             f.result()
@@ -8431,9 +8525,9 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20):
     pts = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time',
                           '-of', 'csv=p=0', out], capture_output=True, text=True).stdout.replace(',', '').split()
     err = (max(abs(float(p) * 1000 - s[0]) for p, s in zip(pts, segs_)) if len(pts) == len(segs_) else None)
-    print(f'   wrote {os.path.basename(out)}: {fs:.2f} px type, {len(segs_)} frames, one per change of lights; '
-          + (f'every frame where planned (within {err:.0f} ms)' if err is not None
-             else f'{len(pts)} frames in the file, {len(segs_)} planned'))
+    print(f'   wrote {os.path.basename(out)}: {W}x{H}, {fs * k:.1f} px type, {len(segs_)} frames, one per change '
+          f'of lights; ' + (f'every frame where planned (within {err:.0f} ms)' if err is not None
+                            else f'{len(pts)} frames in the file, {len(segs_)} planned'))
     return out
 
 

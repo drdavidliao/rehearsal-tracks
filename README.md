@@ -195,9 +195,12 @@ its word lights up in the part's colour while it sounds. Each rest lights up
 too, with a bar that fills beat by beat, so nobody has to count. In a part's
 own video, only that part lights up and everyone else is grey.
 
-The lyric sheet comes with the videos: every part's words on one page to print
-(`Shenandoah - lyric sheet.pdf`), and beside each video a second one of that page
-with each syllable lighting up as it's sung (`Shenandoah - Balanced, lyrics.mp4`).
+The lyric sheet comes with the videos: every part's words on one page
+(`Shenandoah - lyric sheet.pdf`: a landscape copy of the video's page first, then
+the portrait page to print), and beside each video two more with each syllable
+lighting up as it's sung: `Shenandoah - Balanced, lyrics.mp4` for a screen, and
+`Shenandoah - Balanced, lyrics, iPad.mp4`, the printed page in portrait for an
+iPad in a music folder.
 Dots before each line show who sings it; one bold word per line, with an emoji,
 gives the eye somewhere to land. The first time round, Claude drafts the sheet's
 plan, names the sections from the music (not the words) and picks the bold words

@@ -6,7 +6,7 @@
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
         [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N] [--proof DIR]
-        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics]
+        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics | --lyrics-only]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -72,13 +72,14 @@ and nothing is encoded twice. With several mp3s, each renders in its own process
 CPU core (--jobs).
 
 The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
-part's words on one printable page, and beside each video "<mp3 name>, lyrics.mp4", that page with
-each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
+part's words on one printable page (and, as its first page, the 16:9 video's page), and beside each
+video "<mp3 name>, lyrics.mp4" (16:9) and "<mp3 name>, lyrics, iPad.mp4" (3:4 portrait, the printed
+page), each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
 plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
 rows and which word in each row is bold, with an emoji. With no plan the script writes a draft from
 the words (--lyrics, else --display when it has one part per staff, else the score) and stops
 before rendering anything; it refuses a plan that is not finished. --no-lyrics makes the score
-videos alone.
+videos alone; --lyrics-only the lyric sheet and its videos alone.
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
 8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
@@ -2037,6 +2038,8 @@ def main():
     ap.add_argument('--lyric-plan', help='the lyric sheet plan (default: "<title> - lyric sheet plan.json" '
                     'beside the videos)')
     ap.add_argument('--no-lyrics', action='store_true', help='the score videos only: no lyric sheet')
+    ap.add_argument('--lyrics-only', action='store_true', help='the lyric sheet and its videos only (after the '
+                    'plan changes): the timing is fitted as usual, the score videos are not remade')
     ap.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = ap.parse_args()
     if not (a.child or a.stills or a.clip):
@@ -2459,9 +2462,32 @@ def main():
     numbers = [m.get('number') for m in src_parts[0].findall('measure')]
     bar_sec = [(usec(us), numbers[mi]) for mi, us in ubars]
 
+    def lyric_videos(T, view, mp3, stem):
+        """The lyric sheet's two videos for this mp3 (16:9 and iPad), lit by this video's timing: every
+        syllable of every part, at every time its bar is played; the last ones held, as the score video's
+        are, until the sound stops."""
+        import lyric_sheet
+        LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
+        if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
+            sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
+                     f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
+        lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
+                                                         for s0, s1 in times_of(mi, q0, q1)],
+                                 last_audio=min(T.last_audio, T.dur))
+        feat = None
+        if view != 'all':
+            feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
+            if feat is None:
+                sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
+        lbars = [(float(T(s0)), n_) for s0, n_ in bar_sec]
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics.mp4', featured=feat, crf=a.crf)
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics, iPad.mp4', featured=feat, crf=a.crf,
+                          shape='ipad')
+
     for mp3, view, stem in jobs:
-        pages, bar_page, ctrl = layout(view)
-        if a.proof and view == 'all':
+        if not a.lyrics_only:
+            pages, bar_page, ctrl = layout(view)
+        if a.proof and view == 'all' and not a.lyrics_only:
             from PIL import Image
             os.makedirs(a.proof, exist_ok=True)
             nums = [m.get('number') for m in src_parts[0].findall('measure')]
@@ -2520,6 +2546,9 @@ def main():
         T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
         if why:
             print(f'   {why}')
+        if a.lyrics_only:
+            lyric_videos(T, view, mp3, stem)
+            continue
         # page turns (audio seconds), in the order the bars are played: a repeat turns back.
         # Up to --lead s before the next screen's first bar, never before the last note on the old
         # screen has begun
@@ -2684,23 +2713,7 @@ def main():
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
         check_frames(out, [ms for ms, _ in segs])
         if lyric_plan:
-            # the lyric sheet video, lit by this video's timing: every syllable of every part, at every
-            # time its bar is played; the last ones held, as here, until the sound stops
-            import lyric_sheet
-            LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
-            if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
-                sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
-                         f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
-            lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
-                                                             for s0, s1 in times_of(mi, q0, q1)],
-                                     last_audio=min(T.last_audio, T.dur))
-            feat = None
-            if view != 'all':
-                feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
-                if feat is None:
-                    sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
-            lyric_sheet.video(LS, lw, [(float(T(s0)), n_) for s0, n_ in bar_sec], mp3, stem + ', lyrics.mp4',
-                              featured=feat, crf=a.crf)
+            lyric_videos(T, view, mp3, stem)
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
     if not (a.child or a.stills or a.clip):
