@@ -6,6 +6,7 @@
         [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
         [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
         [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N] [--proof DIR]
+        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics]
 
 The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
 Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
@@ -69,6 +70,15 @@ The video has a variable frame rate: one frame per change of lights or page,
 each shown from the exact millisecond of the change, so nothing is rounded to a frame grid
 and nothing is encoded twice. With several mp3s, each renders in its own process, one per
 CPU core (--jobs).
+
+The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
+part's words on one printable page, and beside each video "<mp3 name>, lyrics.mp4", that page with
+each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
+plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
+rows and which word in each row is bold, with an emoji. With no plan the script writes a draft from
+the words (--lyrics, else --display when it has one part per staff, else the score) and stops
+before rendering anything; it refuses a plan that is not finished. --no-lyrics makes the score
+videos alone.
 
 Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
 8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
@@ -1905,12 +1915,46 @@ class Tee:
         self.f.flush()
 
 
+def title_of(a):
+    """What the mp3 names share before their ' - ', and the output folder."""
+    names = [os.path.basename(m) for m in a.mp3s]
+    title = os.path.commonprefix(names).split(' - ')[0].strip() or os.path.splitext(os.path.basename(a.score))[0]
+    return title, a.out or os.path.dirname(os.path.abspath(a.mp3s[0]))
+
+
+def lyric_gate(a):
+    """The lyric sheet's plan, finished, before anything renders (SKILL.md 10.1). With none, write a
+    draft and stop; with an unfinished one, say what is missing and stop. The parent process also
+    makes the PDF. Returns the plan's path."""
+    import lyric_sheet
+    title, out_dir = title_of(a)
+    path = a.lyric_plan or os.path.join(out_dir, f'{title} - lyric sheet plan.json')
+    if not os.path.exists(path):
+        src = a.lyrics
+        if not src and a.display and \
+                len(read_xml(a.display).findall('part')) == len(read_xml(a.score).findall('part')):
+            src = a.display
+        src = src or a.score
+        lyric_sheet.draft(src, path, title=title)
+        sys.exit(f'\nlyric sheet: no plan, so a draft is written: {path}\n'
+                 f'   Finish it (SKILL.md 10.1): name the sections from the musical structure, check the rows '
+                 f'break only where the music rests, give every row a bold key word and its emoji, set '
+                 f'"reviewed": true. Then run this again. (--no-lyrics: the score videos alone.)')
+    S = lyric_sheet.Sheet(path)
+    if S.problems:
+        sys.exit('\nlyric sheet plan not finished, ' + path + ':\n   ' + '\n   '.join(S.problems) +
+                 '\n   (--no-lyrics: the score videos alone)')
+    if not a.child:
+        print(f'lyric sheet plan: {os.path.basename(path)}, words from {S.plan["lyrics"]}')
+        lyric_sheet.pdf(S, os.path.join(out_dir, f'{title} - lyric sheet.pdf'))
+    return path
+
+
 def checks_file(a):
     """<title> - video checks.txt in the output folder, the title being what the mp3 names share."""
     import datetime, hashlib
     names = [os.path.basename(m) for m in a.mp3s]
-    title = os.path.commonprefix(names).split(' - ')[0].strip() or os.path.splitext(os.path.basename(a.score))[0]
-    out_dir = a.out or os.path.dirname(os.path.abspath(a.mp3s[0]))
+    title, out_dir = title_of(a)
     path = os.path.join(out_dir, f'{title} - video checks.txt')
     sys.stdout = Tee(path, sys.stdout)
     ver = hashlib.md5(open(os.path.abspath(__file__), 'rb').read()).hexdigest()[:8]
@@ -1988,10 +2032,16 @@ def main():
     ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
     ap.add_argument('--proof', help='folder for one unlit PNG per screen of the all-parts view, to compare '
                     'with the print PDF (SKILL.md Step 10)')
+    ap.add_argument('--lyrics', help='the print-faithful MusicXML, one part per sung part, that the lyric sheet '
+                    'takes its words from (default: --display when it is open, else the score)')
+    ap.add_argument('--lyric-plan', help='the lyric sheet plan (default: "<title> - lyric sheet plan.json" '
+                    'beside the videos)')
+    ap.add_argument('--no-lyrics', action='store_true', help='the score videos only: no lyric sheet')
     ap.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
     a = ap.parse_args()
     if not (a.child or a.stills or a.clip):
         checks_file(a)
+    lyric_plan = None if (a.no_lyrics or a.stills or a.clip) else lyric_gate(a)
     if len(a.mp3s) > 1 and a.jobs != 1 and not a.stills:
         sys.exit(run_parallel(a))
     set_theme(a.dark)
@@ -2633,6 +2683,24 @@ def main():
         print(f'   wrote {os.path.basename(out)}: {len(segs)} frames, one per change of lights or page; '
               f'audio in the mp4 is {lag:+.1f} ms from the mp3')
         check_frames(out, [ms for ms, _ in segs])
+        if lyric_plan:
+            # the lyric sheet video, lit by this video's timing: every syllable of every part, at every
+            # time its bar is played; the last ones held, as here, until the sound stops
+            import lyric_sheet
+            LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
+            if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
+                sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
+                         f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
+            lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
+                                                             for s0, s1 in times_of(mi, q0, q1)],
+                                     last_audio=min(T.last_audio, T.dur))
+            feat = None
+            if view != 'all':
+                feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
+                if feat is None:
+                    sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
+            lyric_sheet.video(LS, lw, [(float(T(s0)), n_) for s0, n_ in bar_sec], mp3, stem + ', lyrics.mp4',
+                              featured=feat, crf=a.crf)
         if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
             layouts.pop(view, None)              # its screens are not needed again: free them
     if not (a.child or a.stills or a.clip):

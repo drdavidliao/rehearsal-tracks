@@ -180,6 +180,14 @@ its word lights up in the part's colour while it sounds. Each rest lights up
 too, with a bar that fills beat by beat, so nobody has to count. In a part's
 own video, only that part lights up and everyone else is grey.
 
+The lyric sheet comes with the videos: every part's words on one page to print
+(`Shenandoah - lyric sheet.pdf`), and beside each video a second one of that page
+with each syllable lighting up as it's sung (`Shenandoah - Balanced, lyrics.mp4`).
+Dots before each line show who sings it; one bold word per line, with an emoji,
+gives the eye somewhere to land. The first time round, Claude drafts the sheet's
+plan, names the sections from the music (not the words) and picks the bold words
+before rendering; the plan stays in the song's folder.
+
 ### 📋 &nbsp;Plan note-learning rehearsals
 
 For teaching the notes from tracks, section by section, put the MusicXML and the
@@ -229,6 +237,7 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 | `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
 | `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
 | `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
+| `lyric_sheet.py` | The lyric sheet made with the follow-along videos: every part's words on one printable page, and a video of that page per mp3 with each syllable lit in the colours of the parts singing it. Drafts the plan (sections, rows, bold words) and prints the melody bar by bar for naming sections. | `pycairo`, `pillow`, `numpy`, `lxml`, Noto Color Emoji; `score_video.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 | `dorico_reader.py` | Reads a Dorico vector PDF (open SATB score, piano on two staves) straight into MusicXML: notes, ties, slurs, lyrics and their extender lines, dynamics, hairpins, chord symbols. | `pdfplumber`; `chorale/` to finish |
 | `lesson/` | Note-learning lesson plans: the checklist PDF and the marked score (`python3 -m lesson`). | `reportlab`, `pypdf`, `pdfplumber`, DejaVu fonts |
@@ -237,10 +246,11 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 ## Setup
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf pycairo
 ```
 
-Plus `poppler-utils` for `pdftoppm` / `pdftotext`. The only thing fetched from the
+Plus `poppler-utils` for `pdftoppm` / `pdftotext`, and the Noto Color Emoji font
+(`fonts-noto-color-emoji`) for the lyric sheet. The only thing fetched from the
 network is the MusicXML schema, at verification time.
 
 ## Running the scripts directly
@@ -256,6 +266,8 @@ python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
 python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav" "Piano=Piano.wav"
 python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
 python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant.mp3" --display Shenandoah.musicxml
+python3 lyric_sheet.py structure Shenandoah.musicxml
+python3 lyric_sheet.py pdf "Shenandoah - lyric sheet plan.json"
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m lesson Shenandoah.musicxml --pdf "Shenandoah - Full score.pdf" --pages 1-13 --rhythm slow
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2

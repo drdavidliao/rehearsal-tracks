@@ -17,3 +17,6 @@ __pycache__/
 *.dorico
 bench/
 .musicxml-schema/
+*.mp4
+# a lyric sheet plan holds the song's words
+*lyric sheet plan.json
