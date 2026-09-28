@@ -153,6 +153,21 @@ of read from the PDF (2.5), check 10 was never run, and the user found the
 missing hyphen in "long-in'" by eye. A check that exists as a script that fails
 out loud does not get skipped.
 
+**Nothing is copied to the user's computer until its checksum there matches.** Every
+file, every time: scores, PDFs, mp3s, mp4s, plans, and this repository's own files.
+The desktop bridge's copy reports success for a file it has written, not for what it
+wrote: sending a newer version from a workspace path already sent from earlier put
+the earlier copy on the user's computer, twice in one afternoon (a one-page lyric
+sheet where the two-page one was reported delivered, and four repository files left
+at their previous versions), and the user found the first by opening the folder.
+Send each version from a path never used before (a fresh folder per round), then
+compare `md5sum` on both sides, and for an mp4, whose copy can arrive a few KB larger
+with the same content, the streams instead:
+`ffmpeg -i x.mp4 -map 0:v -c copy -f md5 -` (and `0:a`). Staging a file from the
+user's computer into the workspace gets the same check before it is edited: a stale
+copy edited and sent back overwrites the user's newer work. Say a file is delivered
+only after the checksums agree.
+
 ```
 pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf pycairo
 # and poppler-utils for pdftoppm / pdftotext
@@ -2188,9 +2203,10 @@ way and 9 minutes this way, on 2 cores.
 4:48 at 1920×1080). A desktop bridge that kills background jobs and stops each
 command at three minutes cannot render a whole song, and the people this repo
 is for should never be asked to install Homebrew packages or paste Terminal
-commands. Running it on the user's own machine is only for someone who asks. Copies
-arrive a few KB larger; compare the streams, not the files:
-`ffmpeg -i x.mp4 -map 0:a -c copy -f md5 -` (and `0:v`) on both sides.
+commands. Running it on the user's own machine is only for someone who asks. Check
+every copy as the rule near the top says: the mp4s arrive a few KB larger, so compare
+the streams, not the files: `ffmpeg -i x.mp4 -map 0:a -c copy -f md5 -` (and `0:v`) on
+both sides.
 
 ### 10.1 The lyric sheet: made with the videos, every time
 
