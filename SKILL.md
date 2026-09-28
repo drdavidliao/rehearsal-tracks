@@ -90,6 +90,26 @@ videos show the print file.
 That is Step 10: one mp4 per mp3 used, the score lighting up note by note, rests
 included, in each part's colour.
 
+**Plan note-learning rehearsals.** Put the MusicXML and the score PDF in the
+song's folder, connect or attach it, and write something like:
+
+```
+Make a note-learning lesson plan for the Shenandoah folder.
+```
+
+If the choir already knows the tune (a pop song they have in their ears), add:
+
+```
+They already know this one: take the tricky bits down tempo instead of drilling rhythms.
+```
+
+That is Step 11: a printable checklist (landscape, two columns) of every
+lettered section, in the order to teach it: which part is played first, how
+many times (P = play, S = sing), what is a repeat, what is almost a repeat and
+why, and the bar to type into Logic for each start. And a copy of the score
+PDF with the same steps stamped on it (circled A1, A2 … on the part's staff)
+and the unison passages shaded, for forScore.
+
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
 `python3 -m chorale.instructions`.
@@ -107,7 +127,8 @@ rewrites lyrics so Sibelius's Cantai singer sounds every note; its output is *no
 for printing. Steps 7–8 are for the other common ask: re-voicing the piece for a
 different ensemble and laying it out to be printed and sung from. Step 9 turns
 the finished score into rehearsal tracks, and Step 10 turns those into follow-along
-score videos. Never mix the
+score videos. Step 11 plans the rehearsals where a section leader teaches the notes
+from tracks. Never mix the
 Cantai file with the rest — deliver the faithful file always, and the Cantai file
 in addition when asked for learning tracks.
 
@@ -115,7 +136,10 @@ in addition when asked for learning tracks.
 full under *Scripts* near the end. Write them out to disk verbatim before you
 start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
 `cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `stem_audit.py`,
-`verify.py`, `rehearsal_mix.py`, `score_video.py`. There are no other files to obtain.
+`verify.py`, `rehearsal_mix.py`, `score_video.py`. Three larger pieces live in the
+repository beside this file instead of being printed here: the `chorale` package
+(Steps 7–8), `dorico_reader.py` (a Dorico PDF read into MusicXML, 2.7) and the
+`lesson` package (Step 11).
 
 **Nothing is delivered until `verify.py` has run on it** (Step 5), and its table
 goes into the handback as printed. The rules in this file are prose, and prose
@@ -125,7 +149,7 @@ missing hyphen in "long-in'" by eye. A check that exists as a script that fails
 out loud does not get skipped.
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf
 # and poppler-utils for pdftoppm / pdftotext
 ```
 
@@ -564,6 +588,57 @@ warping against the audio's chroma, then onsets to fix bar starts):
   where the measurement differs from what the user hears (MAESTOSO measured 88 on one
   recording where the user heard about 100) and which value went into the file.
 
+### 2.7 A Dorico export: `dorico_reader.py`
+
+Dorico writes its noteheads in Bravura at the font's *optional* code points —
+black `U+F4BE`, half `U+F4BD`, whole `U+F4BC` — not at the SMuFL ones
+(`U+E0A2`–`E0A4`); rests, accidentals, dots, flags and clefs are standard SMuFL
+(`E4E3`–`E4E7`, `E260`–`E262`, `E1E7`, `E240`–`E243`, `E050`/`E052`/`E062`).
+Chord-symbol accidentals are BravuraText `ED60`–`ED62`, the slash in `B/E`
+is `E87B`, the metronome note `ECA5`. Beams are filled rects (flat) and filled
+4-point polygons (slanted); ties and slurs are filled crescents (`m c l c l h`);
+hairpins are open 7-point polylines. With those, `dorico_reader.py` reads an open
+score (one voice per vocal staff, piano on two) straight into MusicXML: glyph
+baselines sit exactly on their staff positions, so no offset needs calibrating.
+Its `Reader` runs `read().voices().pitches().ties_slurs().lyrics(...).marks(...)`,
+then `emit()`; a per-piece build script holds only the page range, the lyric
+font and size, the parts, and any word fixes (`lyric_fix`), and calls `finish()`,
+which writes the print file and the copy before `break_words_at_melismas` that a
+Cantai file is made from. Keep that script and its log in the song's `_build/`
+folder, never here.
+
+What the first two Dorico SATB + piano arrangements taught:
+
+- **One PDF can hold the full score and the parts.** A 29-page file was 13 pages
+  of score then each singer's part and the piano part, at other staff sizes. Read
+  the score pages only (`range(13)`), and give `verify.py` a PDF of just those
+  pages. The parts are then a free independent check: read each with
+  `Reader(..., nstaves=1)` (the piano with `nstaves=2`) and compare the note and
+  syllable sequences with the score's. On one piece every voice agreed note for
+  note and syllable for syllable.
+- **The piano can be set smaller than the voices.** Staff space is per staff, not
+  per page (`verify.py` checks 12 and 17 measure each staff's own).
+- **Dorico's lyric extenders are short.** A two-note melisma prints a line of 6 pt,
+  under two staff spaces; take lines of more than one staff space. Lines stop a
+  few points short of the right margin: a line ending within two staff spaces of
+  it runs on to the next system.
+- **A hyphen typed after a word's last syllable prints as a hyphen, or several.**
+  `rol- -  a-way` (the `ling` never typed), `see-` before a rest, `long-`
+  before a new word. The chain then joins two words (`rolaway`);
+  read the word list (check 9) and fix each by hand with `lyric_fix`, saying so in
+  the handback. Where a syllable is missing (a repeated note with only hyphens under
+  it while every other part sings the syllable there), add it and say so.
+- **A syllable set wide can cover a slurred note.** Choose the note that starts a
+  syllable from the notes *not* inside a slur (`ri-` over a slurred pair, then
+  `ver`): the slur is the melisma.
+- **Academico's `fi` ligature has no Unicode.** pdfplumber reports `(cid:57)`, so
+  "find" reads `(cid:57)nd`; map it.
+- **A tie runs from the last note of a system.** An arc leaving the right margin is
+  a tie only when it leaves the system's last note on that staff and the arc on the
+  next system arrives at the same pitch; otherwise it is a slur continuing.
+- **Two same-pitch notes with a note between are not tied.** Check that nothing
+  in the voice sits between them before calling the arc a tie.
+
 ## Step 3 — Exploding a condensed score into one part per voice
 
 For singing synthesis you need one monophonic part per voice, because a synth
@@ -734,6 +809,16 @@ only the most common lyric size, missing two pages Finale had scaled a few perce
 check 11 counted the courtesy key and time at a system's end as bars. Give `--lanes` every
 lane the lyric lines land in: the tenor line between the staves came out as `0b` on one
 system and `1a` on the rest.
+
+On two Dorico SATB + piano exports the checks needed more, now in the script:
+Dorico's notehead and rest code points (checks 11, 12 and 17 otherwise did not run);
+each staff's own staff space (a piano set smaller than the voices put 1,516 heads
+"off the grid"); extension lines down to one staff space long, and lines ending up
+to two staff spaces short of the margin counted as running on; leading segments on
+the next system matched to their lyric lane; `--lanes` taking `4a=-` to ignore chord
+symbols set in the lyric font; the `fi` ligature; and a line where the page prints
+only a hyphen after the syllable (2.5). `musicxml_qc.py` also stopped calling curly
+quotes and an ellipsis garbled.
 
 Tested on the unaccompanied TTBB: the delivered file passes; a copy with the two mistakes that
 reached the user put back (extenders on mid-word syllables, extenders on
@@ -2102,6 +2187,110 @@ commands. Running it on the user's own machine is only for someone who asks. Cop
 arrive a few KB larger; compare the streams, not the files:
 `ffmpeg -i x.mp4 -map 0:a -c copy -f md5 -` (and `0:v`) on both sides.
 
+## Step 11 — Note-learning lesson plans
+
+A different job from tracks and revoicing. A section leader teaches notes and
+rhythms online (Jamulus for the singers, muted listeners on Zoom), playing each
+part from existing tracks in Logic: "Tenors, listen once, then sing it twice." The
+plan says, for every lettered section, who is played first, how many times, what
+is a repeat and what is nearly one, and where to cue Logic. They used to work it
+out by eye and scribble circled labels on the PDF in forScore; this does both.
+
+```
+python3 -m lesson "Shenandoah.musicxml" --pdf "Shenandoah - Full score.pdf" --pages 1-13 --out .
+python3 -m lesson "Shenandoah.musicxml" --pdf "Shenandoah - Full score.pdf" --rhythm slow
+```
+
+It writes `<title> - lesson plan.pdf` (a checklist to print: US Letter, landscape,
+two columns) and, with `--pdf`, `<pdf name> (lesson marks).pdf`: the score with
+the steps stamped on it. The MusicXML is what the plan is worked out from, SATB
+with one voice per staff (any piano ignored). The PDF must be the vector
+engraving it was read from, since the marks are placed from that PDF's own staff
+and bar positions (`dorico_reader.py`, 2.7); `--pages` picks the full-score pages
+when parts follow. The director prepares the whole piece and stops wherever the
+main director says, so the plan always covers every letter.
+
+### 11.1 The rules, as the director teaches
+
+- **The unit is the lettered section.** An intro whose only singing is the pickup
+  into A is "piano only".
+- **The same notes as an earlier letter** (at any transposition, words free to
+  differ): everyone sings it once, **all S**. The plan names the most recent
+  identical letter ("= L"); a key change adds "give the starting pitches".
+- **Nearly the same:** at most a third of the sung bars differ (and under half).
+  Only the parts that changed, only the bars that changed, from one bar earlier
+  for a run-in; then everyone from the top of the letter. A "why" note says which
+  bars against which bars of the earlier letter, and for each part whether the
+  notes, the rhythm or the words are new.
+- **Otherwise it is taught part by part:** **P** (play, they listen), then **SS**
+  (play twice, they sing), or **S** once when the part is easy, or has the same
+  rhythm and words as a part already taught. Parts in unison for most of the
+  letter are taught together.
+- **Who goes first rotates:** never the part that led the previous letter, the
+  part that has led least otherwise. Nobody wants "the basses, yet again".
+- **Long or hard letters are taught in halves** (10+ bars and not easy, or 8+ bars
+  and hard), split at the bar line nearest the middle where most parts breathe:
+  the part whole once (P), then each half P+SS; a half the part has already sung
+  elsewhere is sung once, S(known). A dashed line marks the split on the score.
+- **Rhythm.** Bars a part finds tricky (attacks on 16ths, off-beat notes held over
+  the beat, ties across it, dotted figures) are found by score. Two ways to treat
+  them, chosen per piece with `--rhythm`:
+  - `drill`: slow spoken rhythm work, **Rh m24**. Where several parts share the
+    rhythm in those bars (flagged or not), it is one step for all of them, first
+    in the letter, and it leaves their own turns.
+  - `slow`: for a song the choir already has in its ears. No drills: a part with
+    its own tricky bit gets **P↓+S↓+S** (listen and sing down tempo, then at
+    tempo); shared tricky bars make the closing everyone step **S↓+S**.
+- Difficulty is measured, not heard (`--easy`, `--hard`, `--rhythm-threshold`).
+  Expect the director to overrule some of it; the plan is a draft for their pen.
+
+### 11.2 What the director asked for, and why
+
+- **One label per step, with the plays in shorthand** after it: `A1 Tenor P+SS`,
+  not a box per play. `P`, `S`, `SS`, `Rh m24`, `↓`, `m26–29 P+SS`.
+- **"Say" lines only where they earn their place:** a repeat ("Letter J is the same
+  as letter F, so let's sing it together just once"), a near repeat, taking a
+  letter in halves, parts in unison, and the closing "now everyone together". The
+  arrangers this was built for write homorhythm as a matter of course: never
+  remark on parts sharing rhythm and words, in a letter's opener or before a part.
+  A letter taught in full gets no remarks about resembling earlier material.
+- **Printable, and dense:** landscape, two columns, 7.5–8.5 pt. A part's step stays
+  in one piece but a letter may break across columns; keeping whole letters
+  together left half-empty columns.
+- **Logic cues.** `/72` is what to type (Logic's Go to Position). Logic counts every
+  bar in the project's first time signature, so a 2/4 bar or a meter change moves
+  its bar numbers off the printed ones; `analyze.logic_positions` works out where
+  each printed bar falls ("/32 3" for printed m34) and the checklist prints both.
+  A phrase with a pickup is cued at the pickup bar's downbeat, "in on beat 4½",
+  so the singers hear a lead-in. There is a blank for a track that does not start
+  on bar 1.
+- **The marks go on the PDF, not the MusicXML.** MusicXML can carry circled,
+  coloured words as directions, but where and how they appear is up to the reader,
+  and forScore reads only PDF. The engraving's own geometry places each mark:
+  - A step's badge: a translucent circle in the part's colour (Okabe–Ito:
+    soprano vermilion, alto gold, tenor green, bass blue; everyone purple) above
+    that part's staff at the bar the step starts, below the words of the staff
+    above, stepped right of a dynamic under it and clear of the boxed rehearsal
+    letter, with the shorthand beside it. Several on one staff and bar share one
+    caption; a caption with no room on the right goes left, else above.
+  - "Everyone" steps sit a row higher, by the letter; a spoken drill for everyone
+    shares that row.
+  - A small `Rh` circle marks a part's own rhythm spot; a pale yellow "why" tag sits
+    on the highest staff a near-repeat's micro-work touches.
+  - **Unison is shaded amber:** a solid box over the parts on the very same notes,
+    bar by bar, and a dashed box of the same shade over a part doubling it at the
+    octave, as though extending the first. Boxes run from the first sung note to
+    the last, one per system and per run of adjacent staves. Two parts only an
+    octave apart get dashed boxes if it lasts two bars or more; single bars of
+    that are everywhere and are left alone.
+
+### 11.3 Not done yet
+
+- Unisons shorter than most of a letter are shaded on the score but not yet taught
+  together in the plan (a letter whose first four bars are S+A+T in unison still
+  teaches them one at a time).
+- SATB only, one voice per staff; the marks need a PDF `dorico_reader.py` can read.
+
 ## Scripts
 
 All ten are complete and standalone. Write them out as-is; nothing else is
@@ -2320,7 +2509,7 @@ def load(path):
     return ET.parse(path).getroot()
 
 # A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
-OK_CHARS=re.compile(r"^[\"'’]?[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$")
+OK_CHARS=re.compile(r"^[\"'’‘“]?[A-Za-z][A-Za-z'’‘\-\.,!?;:\"”…]*$")   # curly quotes and an ellipsis are punctuation too
 
 def syllable_onsets(part):
     """Where each syllable of one part starts (quarters from the start), and whether any staff of
@@ -4007,9 +4196,17 @@ def syllables(chars):
     out = []
     for t in toks:
         if not t['t'].strip(): continue
-        if t['t'] == '-': continue
+        if t['t'] == '-':
+            if out: out[-1]['hyph'] = True       # the page prints a hyphen after it
+            continue
+        t['t'] = LIGATURES.get(t['t'], t['t'])
+        for a, b in LIGATURES.items(): t['t'] = t['t'].replace(a, b)
         out.append(t)
     return out
+
+
+# ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N)
+LIGATURES = {'(cid:57)': 'fi'}      # Academico (Dorico's default text font)
 
 
 def check_instructions(pdf):
@@ -4032,6 +4229,7 @@ def check_extender_lines(root, names, E, lanes):
     off the previous system by count and vertical order, not by lane."""
     rows = E.lyric_rows()
     unknown = sorted({r[2] for r in rows if r[2] not in lanes})
+    rows = [r for r in rows if lanes.get(r[2]) != '-']
     size = E.lyric_size
     printed = defaultdict(list)       # part name -> [[text, has_line, where]]
     consumed = set()
@@ -4041,22 +4239,22 @@ def check_extender_lines(root, names, E, lanes):
         page = E.pages[pi]; sp = page['sp']
         right = page['systems'][si][0]['x1']
         for k, s in enumerate(syls):
-            band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 2.25 * sp]
+            band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 1.0 * sp]
             hit = [ln for ln in band if s['x1'] - 1 <= ln[0] <= s['x1'] + 2.5 * sp]
             for ln in hit: consumed.add((pi, tuple(ln)))
-            entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}"]
+            entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}", bool(s.get('hyph'))]
             printed[lanes[lane]].append(entry)
-            if any(ln[1] > right - 3 for ln in hit):
-                runs[(pi, si)].append((s['top'], entry, False))
+            if any(ln[1] > right - 2 * sp for ln in hit):
+                runs[(pi, si)].append((s['top'], entry, False, lane))
             elif not hit and k == len(syls) - 1 and s['x1'] > right - 12 * sp:
-                runs[(pi, si)].append((s['top'], entry, True))    # its whole line may be on the next system
+                runs[(pi, si)].append((s['top'], entry, True, lane))    # its whole line may be on the next system
     bad = []
     for pi, page in enumerate(E.pages):
         sp = page['sp']
         tops = sorted({x['top'] for r in rows if r[0] == pi for x in r[4]})
         for si, sy in enumerate(page['systems']):
             left = sy[0]['x0']
-            lead = sorted((ln for ln in page['hlines'] if ln[1] - ln[0] > 2.25 * sp and ln[0] < left + 15 * sp
+            lead = sorted((ln for ln in page['hlines'] if ln[1] - ln[0] > 1.0 * sp and ln[0] < left + 15 * sp
                            and E.home(page, ln[2])[0] == si and (pi, tuple(ln)) not in consumed), key=lambda ln: ln[2])
             prev = [k for k in runs if next_system(E, *k) == (pi, si)]
             ran = sorted(runs[prev[0]], key=lambda r: r[0]) if prev else []
@@ -4065,12 +4263,16 @@ def check_extender_lines(root, names, E, lanes):
             if len(lead) < len(must):
                 pass                                  # a line may end exactly at the margin
             extra = len(lead) - len(must)
-            for r in maybe[:max(extra, 0)]:
+            # Dorico draws the leading segment on its own lyric line: match by lane where the lanes say so
+            lead_lanes = [E.home(page, ln[2] - 0.75 * E.lyric_size)[1] for ln in lead]
+            by_lane = [r for r in maybe if r[3] in lead_lanes and r[3] not in [m[3] for m in must]]
+            pick = by_lane if by_lane else maybe[:max(extra, 0)]
+            for r in pick[:max(extra, 0)]:
                 r[1][1] = True                        # its line is the leading segment here
             for ln in lead[:len(must) + len(maybe)]:
                 consumed.add((pi, tuple(ln)))
         for ln in page['hlines']:
-            if ln[1] - ln[0] <= 2.25 * sp or (pi, tuple(ln)) in consumed: continue
+            if ln[1] - ln[0] <= 1.0 * sp or (pi, tuple(ln)) in consumed: continue
             si, lane = E.home(page, ln[2])
             in_band = any(t + 0.35 * size <= ln[2] <= t + 1.5 * size for t in tops)
             at_left = si is not None and lane is not None and ln[0] < page['systems'][si][0]['x0'] + 15 * sp
@@ -4089,15 +4291,15 @@ def check_extender_lines(root, names, E, lanes):
                 mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
                 xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid))
         ps = printed[nm]
-        sm = difflib.SequenceMatcher(a=[t.strip() for t, _, _ in ps], b=[x[0].strip() for x in xs], autojunk=False)
+        sm = difflib.SequenceMatcher(a=[t.strip() for t, *_ in ps], b=[x[0].strip() for x in xs], autojunk=False)
         blocks = sm.get_matching_blocks()
         for a0, b0, n in blocks:
             for k in range(n):
-                t, has, where = ps[a0 + k]
+                t, has, where, hyph = ps[a0 + k]
                 xt, ext, mn, slurred = xs[b0 + k]
                 matched += 1
-                if ext and not has and slurred:
-                    continue          # a slurred or mid-word melisma keeps its line even where none is printed (SKILL.md 2.5)
+                if ext and not has and (slurred or hyph):
+                    continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
                 if has != ext:
                     bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
                                f"file {'has' if ext else 'has no'} <extend/>")
@@ -4119,7 +4321,8 @@ def next_system(E, pi, si):
     return None
 
 
-HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4}
+HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4,
+         0xF4BC, 0xF4BD, 0xF4BE, 0xE0A9}   # Dorico's Bravura writes its noteheads at the optional code points F4BC-F4BE
 
 
 def check_grid(E):
@@ -4133,7 +4336,8 @@ def check_grid(E):
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
             s = min(st, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
-            d = (c['y'] - s['lines'][0]) / (sp / 2)
+            # each staff's own space: a score can set the piano smaller than the voices
+            d = (c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8)
             offs.append((d, page['n'], c['x0']))
     if not offs:
         return report(12, 'Noteheads on the grid', 'NOT RUN', 'no noteheads recognised (music font not in the list)')
@@ -4163,7 +4367,7 @@ def pdf_bars(E):
                 bars.append(x)
             glyphs = sorted(c['x0'] for c in page['chars'] if any(f in c['font'] for f in MUSIC_FONTS)
                             and top - 6 * sp < c['y'] < bot + 6 * sp
-                            and (ord(c['t'][0]) in HEADS | {0xF0E4, 0xF0CE, 0xF0EE, 0xF0C5, 0x2030, 0x152, 0xD3}
+                            and (ord(c['t'][0]) in HEADS | {0xF0E4, 0xF0CE, 0xF0EE, 0xF0C5, 0x2030, 0x152, 0xD3, 0xE4E3, 0xE4E4, 0xE4E5, 0xE4E6, 0xE4E7}
                                  or (c['t'] == 'w' and 'Helsinki' in c['font'])))
             for a, b in zip(bars, bars[1:]):
                 g = [x for x in glyphs if a + 1 < x < b - 1]
@@ -4270,7 +4474,7 @@ def check_pitches(root, E):
             s = min(allst, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
             if not any(s is x for x in sy): continue
             k = next(i for i, x in enumerate(sy) if x is s)
-            got[k].add(round((c['y'] - s['lines'][0]) / (sp / 2) - E.grid_base))
+            got[k].add(round((c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8) - E.grid_base))
         for k in range(nst):
             seen += 1
             want = fpos.get((bi, k), set())
@@ -4328,7 +4532,7 @@ def main():
                 pn = [names[p.get('id')] for p in root.findall('part')]
                 lanes = {f'{k}b': pn[k] for k in range(len(pn))} if per_sys == {len(pn)} else None
             if lanes:
-                missing = [v for v in lanes.values() if v not in names.values()]
+                missing = [v for v in lanes.values() if v not in names.values() and v != '-']
                 if missing:
                     report(10, 'Extension lines match the PDF', 'NOT RUN', f'--lanes names parts the file does not have: {missing}')
                 else:
@@ -7374,6 +7578,11 @@ points — sharp `U+EA66`. See 8.4.
 ## Credits
 
 Pieces are described, not named (see *No song titles in this repository*).
+
+`dorico_reader.py`, 2.7, the Dorico changes to `verify.py` and the whole of Step 11
+come from two Dorico SATB + piano pop arrangements for a community chorus's
+note-learning rehearsals, where the section leader's own hand-marked scores and
+checklists were the model.
 
 The Cantai section, the extension-line-as-source rule, the shared-hyphen rule,
 the Helsinki appendix, the clap-part encoding and checks 8–11 come from

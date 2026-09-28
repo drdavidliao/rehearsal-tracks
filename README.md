@@ -5,7 +5,7 @@ tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
 down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
-any of the scripts in this repository yourself — Claude does that. The five
+any of the scripts in this repository yourself — Claude does that. The six
 sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
@@ -180,6 +180,39 @@ its word lights up in the part's colour while it sounds. Each rest lights up
 too, with a bar that fills beat by beat, so nobody has to count. In a part's
 own video, only that part lights up and everyone else is grey.
 
+### 📋 &nbsp;Plan note-learning rehearsals
+
+For teaching the notes from tracks, section by section, put the MusicXML and the
+score PDF in the song's folder, connect it (or attach them), and write something
+like:
+
+```
+Make a note-learning lesson plan for the Shenandoah folder.
+```
+
+If the choir already knows the song by ear, add:
+
+```
+They already know this one: take the tricky bits down tempo instead of drilling rhythms.
+```
+
+You get two PDFs:
+
+- `Shenandoah - lesson plan.pdf`, a checklist to print (landscape, two columns).
+  For every rehearsal letter: which part to play first, and how many times, in a
+  shorthand: `A1 Tenor P+SS` means play the tenor part once for them to listen,
+  then twice for them to sing. It says which letters are repeats ("= F", sing it
+  once all together), which are nearly repeats (learn only the bars that differ,
+  and why), where to slow down, and a short line to say out loud where one helps.
+  Each start has the bar to type into Logic after `/`; if a 2/4 bar or a change of
+  meter makes Logic's bar numbers differ from the printed ones, it gives both.
+- `Shenandoah - Full score (lesson marks).pdf`, the score with the same steps
+  stamped on it for forScore: a circled `A1` on the tenor staff where A starts, and
+  so on, in each part's colour, and the passages where parts sing in unison shaded
+  (dashed where a part doubles them an octave away).
+
+It is a draft for your pen: it measures difficulty rather than hearing it.
+
 ---
 
 ## What is here
@@ -197,12 +230,14 @@ own video, only that part lights up and everyone else is grey.
 | `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
 | `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
+| `dorico_reader.py` | Reads a Dorico vector PDF (open SATB score, piano on two staves) straight into MusicXML: notes, ties, slurs, lyrics and their extender lines, dynamics, hairpins, chord symbols. | `pdfplumber`; `chorale/` to finish |
+| `lesson/` | Note-learning lesson plans: the checklist PDF and the marked score (`python3 -m lesson`). | `reportlab`, `pypdf`, `pdfplumber`, DejaVu fonts |
 | `stem_audit.py` | Audits a whole set of stems against the MusicXML they came from: silent stretches of written notes (Cantai's unfinished rendering), a stem singing another part's line (the export plug-in's leak), stems holding the same audio, and the basic file checks. | `numpy`, `ffmpeg` |
 
 ## Setup
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf
 ```
 
 Plus `poppler-utils` for `pdftoppm` / `pdftotext`. The only thing fetched from the
@@ -222,6 +257,7 @@ python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav" "Pian
 python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
 python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant.mp3" --display Shenandoah.musicxml
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
+python3 -m lesson Shenandoah.musicxml --pdf "Shenandoah - Full score.pdf" --pages 1-13 --rhythm slow
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
 ```
 
@@ -236,5 +272,5 @@ bench pages and mp3s belong in each song's own folder, outside this repo;
 ## Licence
 
 `LICENSE.txt` — the Unlicense, a public-domain dedication. It covers the tooling
-in this repository: the skill, the scripts and the `chorale` package. It has no
+in this repository: the skill, the scripts and the `chorale` and `lesson` packages. It has no
 bearing on any published arrangement; no score content is included here.

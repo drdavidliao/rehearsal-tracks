@@ -558,9 +558,17 @@ def syllables(chars):
     out = []
     for t in toks:
         if not t['t'].strip(): continue
-        if t['t'] == '-': continue
+        if t['t'] == '-':
+            if out: out[-1]['hyph'] = True       # the page prints a hyphen after it
+            continue
+        t['t'] = LIGATURES.get(t['t'], t['t'])
+        for a, b in LIGATURES.items(): t['t'] = t['t'].replace(a, b)
         out.append(t)
     return out
+
+
+# ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N)
+LIGATURES = {'(cid:57)': 'fi'}      # Academico (Dorico's default text font)
 
 
 def check_instructions(pdf):
@@ -583,6 +591,7 @@ def check_extender_lines(root, names, E, lanes):
     off the previous system by count and vertical order, not by lane."""
     rows = E.lyric_rows()
     unknown = sorted({r[2] for r in rows if r[2] not in lanes})
+    rows = [r for r in rows if lanes.get(r[2]) != '-']
     size = E.lyric_size
     printed = defaultdict(list)       # part name -> [[text, has_line, where]]
     consumed = set()
@@ -592,22 +601,22 @@ def check_extender_lines(root, names, E, lanes):
         page = E.pages[pi]; sp = page['sp']
         right = page['systems'][si][0]['x1']
         for k, s in enumerate(syls):
-            band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 2.25 * sp]
+            band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 1.0 * sp]
             hit = [ln for ln in band if s['x1'] - 1 <= ln[0] <= s['x1'] + 2.5 * sp]
             for ln in hit: consumed.add((pi, tuple(ln)))
-            entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}"]
+            entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}", bool(s.get('hyph'))]
             printed[lanes[lane]].append(entry)
-            if any(ln[1] > right - 3 for ln in hit):
-                runs[(pi, si)].append((s['top'], entry, False))
+            if any(ln[1] > right - 2 * sp for ln in hit):
+                runs[(pi, si)].append((s['top'], entry, False, lane))
             elif not hit and k == len(syls) - 1 and s['x1'] > right - 12 * sp:
-                runs[(pi, si)].append((s['top'], entry, True))    # its whole line may be on the next system
+                runs[(pi, si)].append((s['top'], entry, True, lane))    # its whole line may be on the next system
     bad = []
     for pi, page in enumerate(E.pages):
         sp = page['sp']
         tops = sorted({x['top'] for r in rows if r[0] == pi for x in r[4]})
         for si, sy in enumerate(page['systems']):
             left = sy[0]['x0']
-            lead = sorted((ln for ln in page['hlines'] if ln[1] - ln[0] > 2.25 * sp and ln[0] < left + 15 * sp
+            lead = sorted((ln for ln in page['hlines'] if ln[1] - ln[0] > 1.0 * sp and ln[0] < left + 15 * sp
                            and E.home(page, ln[2])[0] == si and (pi, tuple(ln)) not in consumed), key=lambda ln: ln[2])
             prev = [k for k in runs if next_system(E, *k) == (pi, si)]
             ran = sorted(runs[prev[0]], key=lambda r: r[0]) if prev else []
@@ -616,12 +625,16 @@ def check_extender_lines(root, names, E, lanes):
             if len(lead) < len(must):
                 pass                                  # a line may end exactly at the margin
             extra = len(lead) - len(must)
-            for r in maybe[:max(extra, 0)]:
+            # Dorico draws the leading segment on its own lyric line: match by lane where the lanes say so
+            lead_lanes = [E.home(page, ln[2] - 0.75 * E.lyric_size)[1] for ln in lead]
+            by_lane = [r for r in maybe if r[3] in lead_lanes and r[3] not in [m[3] for m in must]]
+            pick = by_lane if by_lane else maybe[:max(extra, 0)]
+            for r in pick[:max(extra, 0)]:
                 r[1][1] = True                        # its line is the leading segment here
             for ln in lead[:len(must) + len(maybe)]:
                 consumed.add((pi, tuple(ln)))
         for ln in page['hlines']:
-            if ln[1] - ln[0] <= 2.25 * sp or (pi, tuple(ln)) in consumed: continue
+            if ln[1] - ln[0] <= 1.0 * sp or (pi, tuple(ln)) in consumed: continue
             si, lane = E.home(page, ln[2])
             in_band = any(t + 0.35 * size <= ln[2] <= t + 1.5 * size for t in tops)
             at_left = si is not None and lane is not None and ln[0] < page['systems'][si][0]['x0'] + 15 * sp
@@ -640,15 +653,15 @@ def check_extender_lines(root, names, E, lanes):
                 mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
                 xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid))
         ps = printed[nm]
-        sm = difflib.SequenceMatcher(a=[t.strip() for t, _, _ in ps], b=[x[0].strip() for x in xs], autojunk=False)
+        sm = difflib.SequenceMatcher(a=[t.strip() for t, *_ in ps], b=[x[0].strip() for x in xs], autojunk=False)
         blocks = sm.get_matching_blocks()
         for a0, b0, n in blocks:
             for k in range(n):
-                t, has, where = ps[a0 + k]
+                t, has, where, hyph = ps[a0 + k]
                 xt, ext, mn, slurred = xs[b0 + k]
                 matched += 1
-                if ext and not has and slurred:
-                    continue          # a slurred or mid-word melisma keeps its line even where none is printed (SKILL.md 2.5)
+                if ext and not has and (slurred or hyph):
+                    continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
                 if has != ext:
                     bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
                                f"file {'has' if ext else 'has no'} <extend/>")
@@ -670,7 +683,8 @@ def next_system(E, pi, si):
     return None
 
 
-HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4}
+HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4,
+         0xF4BC, 0xF4BD, 0xF4BE, 0xE0A9}   # Dorico's Bravura writes its noteheads at the optional code points F4BC-F4BE
 
 
 def check_grid(E):
@@ -684,7 +698,8 @@ def check_grid(E):
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
             s = min(st, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
-            d = (c['y'] - s['lines'][0]) / (sp / 2)
+            # each staff's own space: a score can set the piano smaller than the voices
+            d = (c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8)
             offs.append((d, page['n'], c['x0']))
     if not offs:
         return report(12, 'Noteheads on the grid', 'NOT RUN', 'no noteheads recognised (music font not in the list)')
@@ -714,7 +729,7 @@ def pdf_bars(E):
                 bars.append(x)
             glyphs = sorted(c['x0'] for c in page['chars'] if any(f in c['font'] for f in MUSIC_FONTS)
                             and top - 6 * sp < c['y'] < bot + 6 * sp
-                            and (ord(c['t'][0]) in HEADS | {0xF0E4, 0xF0CE, 0xF0EE, 0xF0C5, 0x2030, 0x152, 0xD3}
+                            and (ord(c['t'][0]) in HEADS | {0xF0E4, 0xF0CE, 0xF0EE, 0xF0C5, 0x2030, 0x152, 0xD3, 0xE4E3, 0xE4E4, 0xE4E5, 0xE4E6, 0xE4E7}
                                  or (c['t'] == 'w' and 'Helsinki' in c['font'])))
             for a, b in zip(bars, bars[1:]):
                 g = [x for x in glyphs if a + 1 < x < b - 1]
@@ -821,7 +836,7 @@ def check_pitches(root, E):
             s = min(allst, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
             if not any(s is x for x in sy): continue
             k = next(i for i, x in enumerate(sy) if x is s)
-            got[k].add(round((c['y'] - s['lines'][0]) / (sp / 2) - E.grid_base))
+            got[k].add(round((c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8) - E.grid_base))
         for k in range(nst):
             seen += 1
             want = fpos.get((bi, k), set())
@@ -879,7 +894,7 @@ def main():
                 pn = [names[p.get('id')] for p in root.findall('part')]
                 lanes = {f'{k}b': pn[k] for k in range(len(pn))} if per_sys == {len(pn)} else None
             if lanes:
-                missing = [v for v in lanes.values() if v not in names.values()]
+                missing = [v for v in lanes.values() if v not in names.values() and v != '-']
                 if missing:
                     report(10, 'Extension lines match the PDF', 'NOT RUN', f'--lanes names parts the file does not have: {missing}')
                 else:

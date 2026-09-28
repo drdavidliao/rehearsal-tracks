@@ -17,7 +17,7 @@ def load(path):
     return ET.parse(path).getroot()
 
 # A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
-OK_CHARS=re.compile(r"^[\"'’]?[A-Za-z][A-Za-z'’\-\.,!?;:\"]*$")
+OK_CHARS=re.compile(r"^[\"'’‘“]?[A-Za-z][A-Za-z'’‘\-\.,!?;:\"”…]*$")   # curly quotes and an ellipsis are punctuation too
 
 def syllable_onsets(part):
     """Where each syllable of one part starts (quarters from the start), and whether any staff of
