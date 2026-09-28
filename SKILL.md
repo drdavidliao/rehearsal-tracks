@@ -2280,6 +2280,12 @@ main director says, so the plan always covers every letter.
     note of each beat (interpolated where no note starts on it), so the beats can be
     seen in a bar full of 16ths and off-beat entries. They are drawn in both rhythm
     modes: slowing a bar down does not make its beats easier to find.
+  - Over the same staves, the count to speak, each syllable over the moment it
+    names: `1 & 2 &`, or `1 e & a` where the part's run of flagged bars has
+    16ths (decided per run, so one passage reads one way). A beat with no note on
+    its `e` or `a` shows only `2 &`. The count sits just above the staff, higher
+    where notes climb over it; a badge's caption moves back into the bar before so
+    the count can run on, and a count syllable under a badge's circle is left out.
   - A small `Rh` circle marks a part's own rhythm spot; a pale yellow "why" tag sits
     on the highest staff a near-repeat's micro-work touches.
   - **Unison is shaded amber:** a solid box over the parts on the very same notes,

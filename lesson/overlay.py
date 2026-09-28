@@ -1,6 +1,7 @@
 """Stamp the lesson plan's steps onto the score PDF: a translucent circled label (A1, A2 ...) on the staff of the
 part(s) that step teaches, at the bar where it starts, with the play counts beside it."""
 import io, os, re, sys
+from fractions import Fraction as F
 from reportlab.pdfgen import canvas as rlcanvas
 from reportlab.lib import colors
 from reportlab.pdfbase import pdfmetrics
@@ -26,6 +27,7 @@ class Stamper:
         self.r = reader
         self.marks = {}      # page index -> [draw ops]
         self.used = {}       # (page, sys, staff, bar) -> x already taken
+        self.hide = {}       # page -> [(x0, x1, y0, y1)] where badges sit: counts under them are left out
 
     def geom(self, bar, k):
         b = self.r.bars[bar - 1]
@@ -74,12 +76,19 @@ class Stamper:
             def clear(a0, a1):
                 return a0 > 8 and a1 < pw - 8 and all(g.x1 < a0 or g.x0 > a1 for g in dyn)
             side = 'right'
-            if cap and not clear(x + span + 1.5, x + span + capw + 8):
+            counted = (bar, k) in getattr(self, 'count_y', {}) and lift < 6
+            if cap and counted and clear(x - capw - 8, x - 1.5) and x - capw - 8 > self.r.pms[b['page']].systems[b['sys']][k]['x0']:
+                side = 'left'          # the count runs along the right: the caption goes back into the bar before
+            elif cap and not clear(x + span + 1.5, x + span + capw + 8):
                 side = 'left' if clear(x - capw - 8, x - 1.5) else 'above'
             circles = []
             for m, (lab, c, col) in enumerate(bs):
                 circles.append((x + r + m * (2 * r + 1.5), lab, col))
             self.marks.setdefault(b['page'], []).append(('group', circles, cy, r, cap, side, bs[0][2], pm.H))
+            # a count written over this bar gives way to the badge: the badge says where to start
+            x_lo = x - 2 if side != 'left' else x - capw - 10
+            x_hi = x + span + (capw + 10 if cap and side == 'right' else 2)
+            self.hide.setdefault(b['page'], []).append((x_lo, x_hi, cy - r - 0.5, cy + r + 0.5))
             why = getattr(self, 'whys', {}).get((bar, k))
             if why and lift < 6:
                 ww = text_w(why, 'Sans-Oblique', 5.8) + 8
@@ -114,7 +123,10 @@ class Stamper:
                 if i == 0:
                     c.setFont('Sans-Oblique', 6.5); c.setFillColor(colors.HexColor('#666666'))
                     c.drawRightString(w - 30, h - 16, legend)
+                hide = self.hide.get(i, [])
                 for op in sorted(ops, key=lambda op: op[0] != 'rect'):
+                    if op[0] == 'count' and any(x0 - 3 <= op[1] <= x1 + 3 and op[2] - 5.6 < y1 - 1.5 and op[2] > y0 + 1.5 for x0, x1, y0, y1 in hide):
+                        continue
                     getattr(self, '_' + op[0])(c, *op[1:])
                 c.save()
                 buf.seek(0)
@@ -243,6 +255,62 @@ class Stamper:
                 s = sy[PART_K[p]]
                 self.marks.setdefault(b['page'], []).append(('beat', x, s['top'] - 0.4 * s['sp'], s['bot'] + 0.4 * s['sp'], pm.H))
 
+    def counts(self, bar, parts, sub):
+        """the count to speak, written over each affected staff: '1 & 2 &' (sub=2) or '1 e & a 2 e & a' (sub=4),
+        each syllable over the moment it names"""
+        b = self.r.bars[bar - 1]
+        pm = self.r.pms[b['page']]
+        sy = pm.systems[b['sys']]
+        names = {2: ['&'], 4: ['e', '&', 'a']}[sub]
+        for p in parts:
+            k = PART_K[p]
+            s = sy[k]
+            own = {}
+            for it in b['staves'][k]['items']:
+                if 'on' in it: own[it['on']] = min(it['x'], own.get(it['on'], it['x']))
+            every = {}
+            for sb in b['staves']:
+                for it in sb['items']:
+                    if 'on' in it: every[it['on']] = min(it['x'], every.get(it['on'], it['x']))
+            pts = sorted({**every, **own}.items())
+            first_x = min(own.values()) if own else b['xa'] + 4
+            if not pts: continue
+            def xat(t):
+                if t in own: return own[t]
+                if t in every: return every[t]
+                before = [q for q in pts if q[0] < t] or [(0, first_x)]
+                after = [q for q in pts if q[0] > t] or [(self.barlen, b['xb'] - 4)]
+                (t0, x0), (t1, x1) = before[-1], after[0]
+                return x0 + (x1 - x0) * float((t - t0) / (t1 - t0))
+            # 'e' and 'a' only in beats where this part has a note on one: a beat of 8ths reads '2 &'
+            starts = {e_on for e_on in own}
+            labs = []
+            for beat in range(int(self.barlen)):
+                labs.append((F(beat), str(beat + 1), True))
+                busy = sub == 4 and any(F(beat) + F(m, 4) in starts for m in (1, 3))
+                for m, nm in enumerate(names, 1):
+                    if sub == 4 and nm != '&' and not busy: continue
+                    labs.append((F(beat) + F(m, sub), nm, False))
+            # above the staff, and above any note that climbs over it
+            heads = [h.y for it in b['staves'][k]['items'] if it['kind'] == 'chord' for h in it['heads']]
+            y = min([s['top'] - 1.15 * s['sp']] + [hy - 1.6 * s['sp'] for hy in heads])
+            self.count_y = getattr(self, 'count_y', {})
+            self.count_y[(bar, k)] = y
+            for t, lab, strong in labs:
+                self.marks.setdefault(b['page'], []).append(('count', xat(t) + 2.2, y, lab, strong, pm.H))
+
+    def _count(self, c, x, y, lab, strong, H, page=None):
+        c.saveState()
+        font = 'Sans-Bold' if strong else 'Sans'
+        size = 6.4 if strong else 5.6
+        w = text_w(lab, font, size)
+        c.setFillColor(colors.white); c.setFillAlpha(0.75)
+        c.rect(x - w / 2 - 0.6, H - y - 1.6, w + 1.2, size + 0.6, stroke=0, fill=1)
+        c.setFillAlpha(1); c.setFillColor(colors.HexColor('#C0392B'))
+        c.setFont(font, size)
+        c.drawCentredString(x, H - y, lab)
+        c.restoreState()
+
     def _beat(self, c, x, top, bot, H):
         c.saveState()
         c.setStrokeColor(colors.HexColor('#C0392B')); c.setStrokeAlpha(0.85); c.setLineWidth(0.9)
@@ -298,9 +366,26 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
     if score is not None:
         from . import analyze as _an
         lens = _an.bar_lengths(score)
-    for n, ps in sorted(getattr(plan_obj, 'flagged', {}).items()):
+    flagged = getattr(plan_obj, 'flagged', {})
+    for n, ps in sorted(flagged.items()):
         if score is not None: st.barlen = lens[n]
         st.beat_lines(n, sorted(ps, key=lambda p: PART_K[p]))
+    # the count to speak over the same staves: 1 e & a where the passage has 16ths, else 1 &,
+    # decided per part over each run of flagged bars so one passage reads one way
+    if score is not None:
+        for p in PART_K:
+            bars = sorted(n for n, ps in flagged.items() if p in ps)
+            runs_ = []
+            for n in bars:
+                if runs_ and runs_[-1][-1] == n - 1: runs_[-1].append(n)
+                else: runs_.append([n])
+            for run in runs_:
+                # 16th-level if any note of this part starts or ends off the 8th grid in the run
+                fine = any(e['midi'] is not None and (e['on'].denominator == 4 or (e['on'] + e['dur']).denominator == 4)
+                           for n in run for e in score.bars[p].get(n, []))
+                for n in run:
+                    st.barlen = lens[n]
+                    st.counts(n, [p], 4 if fine else 2)
     st.whys = {}
     for sec in plan:
         for blk in sec['items']:
