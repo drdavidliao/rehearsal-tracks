@@ -1514,6 +1514,79 @@ tracks' loudness (9.4).
 - **The first export after a settings change can be silent.** Three stems were
   all zeros on the first run and fine on the second.
 
+### 9.3b Correct a wrong pitch in a finished stem, in audio
+
+When a score error is a wrong pitch and nothing else (same rhythm, same words),
+shift that note in the stem instead of re-exporting the staff. A re-export is a
+new Cantai render (9.1), so every hand repair made to the old stem has to be
+found and redone, and the new stem needs its level matched to the old one. A
+shift touches half a second of audio and leaves the rest of the stem
+sample-for-sample as it was. Done once, on one note a half step off in two
+tenor stems (the flat on the first of two sixteenths had not been carried to
+the second, which was tied over the barline); the user listened and approved it
+for learning tracks.
+
+1. **Find the note in the audio.** Track the pitch around the bar
+   (`pyworld.dio`, 5 ms frames) and find the wrong semitone. `dio` jumps an
+   octave on some frames of a tenor; `pyworld.harvest` with
+   `f0_floor=200, f0_ceil=450` is steadier for the final check. Take the whole
+   voiced note, not the written length: one stem held the note 80 ms past a dip
+   at the nasal ending its word, and a scoop into the note from the previous
+   pitch is part of the note too.
+2. **Shift a window a second or two wider than the note** with ffmpeg's
+   rubberband filter, formants kept:
+   `rubberband=pitch=0.9438743126816935:formant=preserved:pitchq=quality:window=standard`
+   (2^(-1/12), one half step down; 2^(1/12) = 1.0594630943592953 up). The filter
+   compensates its own latency: sine bursts came out 1.9 ms late, and the output
+   was 463 samples short at the end only, so the shifted window lines up with the
+   original to within a millisecond (the phase of the output moves by about 20
+   samples with where the window starts; the crossfades hide it). Measure the
+   latency again on another ffmpeg build.
+3. **Splice it in** with linear crossfades of 20–25 ms at each end, placed where
+   the pitch changes (the end of the previous note, the start of the next), and
+   the shifted audio scaled to the original's RMS over the note (the shift lost
+   0.6–1.7 dB). Write the result as a new file beside the old one, same
+   sample format.
+4. **Check:** `harvest` reads the target semitone through the note; `stem_audit.py`
+   gives the same results as before; remake the mixes (9.4) with the same
+   options, and decode each new mp3 against the one it replaces: outside the
+   note they differ only by encoder noise (-41 to -44 dB between two ffmpeg
+   builds), and inside it they differ. The 3D track is the one whose options
+   can't be read from the file: fit it the same way against a run with and
+   without the trims the notes mention, and use the one that matches. Then
+   remake the videos (Step 10) from the corrected score.
+5. **Record it** in the song folder: the note, the window in seconds, the gain,
+   and which stems the mixes now use. Keep the shift script with the song or in
+   this repository; a script left in a cloud workspace is gone with it, and the
+   next person has to reconstruct what was done from the notes.
+
+A shift of more than a whole step, or of a note whose vowel or consonant is
+also wrong, is a re-export.
+
+```python
+import numpy as np, soundfile as sf, subprocess
+def shift_note(src, dst, t0, t1, semitones, fade=0.02, pad=1.5):
+    """Shift src between t0 and t1 seconds by `semitones`, formants kept; write dst."""
+    x, sr = sf.read(src); info = sf.info(src)
+    w0 = max(0.0, t0 - pad)
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{w0}', '-t', f'{t1 - w0 + pad}', '-i', src,
+                        '-af', f'rubberband=pitch={2 ** (semitones / 12)}:formant=preserved:'
+                               'pitchq=quality:window=standard',
+                        '-f', 'f32le', '-ac', str(x.shape[1]), '-ar', str(sr), '-'],
+                       capture_output=True, check=True)
+    sh = np.frombuffer(r.stdout, np.float32).reshape(-1, x.shape[1]).astype(float)
+    base = int(round(w0 * sr)); sh = np.vstack([sh, np.zeros((sr, x.shape[1]))])
+    i0, i1 = int(round(t0 * sr)), int(round((t0 + fade) * sr))
+    j0, j1 = int(round((t1 - fade) * sr)), int(round(t1 * sr))
+    g = np.sqrt((x[i1:j0] ** 2).mean() / (sh[i1 - base:j0 - base] ** 2).mean())
+    w = np.zeros(len(x)); w[i0:i1] = np.linspace(0, 1, i1 - i0); w[i1:j0] = 1
+    w[j0:j1] = np.linspace(1, 0, j1 - j0)
+    k = np.arange(i0, j1); y = x.copy()
+    y[k] = x[k] * (1 - w[k, None]) + g * sh[k - base] * w[k, None]
+    sf.write(dst, y, sr, subtype=info.subtype)
+    return 20 * np.log10(g)
+```
+
 ### 9.4 Mix
 
 ```
