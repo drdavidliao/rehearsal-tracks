@@ -2344,9 +2344,25 @@ main director says, so the plan always covers every letter.
 - **Who goes first rotates:** never the part that led the previous letter, the
   part that has led least otherwise. Nobody wants "the basses, yet again".
 - **Long or hard letters are taught in halves** (10+ bars and not easy, or 8+ bars
-  and hard), split at the bar line nearest the middle where most parts breathe:
-  the part whole once (P), then each half P+SS; a half the part has already sung
-  elsewhere is sung once, S(known). A dashed line marks the split on the score.
+  and hard): the part whole once (P), then each half P+SS; a half the part has
+  already sung elsewhere is sung once, S(known). A dashed line marks the split on
+  the score.
+- **Halves split the learning, not the bars.** The split is a bar line where most
+  parts breathe that divides the effort evenly, with a pull towards the letter's
+  four-bar phrases. Effort is each bar's difficulty, cut where the part has sung
+  the bar before (earlier in the piece, or earlier in the letter) and cut less
+  where only its rhythm is familiar. In an 11-bar letter of three bars of one
+  motif, a cadence bar, two bars of a new and harder motif and five easy ones,
+  the split goes after the cadence (4 + 7 bars), keeping the new motif with the
+  easy tail rather than cutting at the middle bar.
+- **A part that sings over the split has its own.** Its second half starts at the
+  nearest new phrase of its own (after a beat's rest or more), scored by how long
+  the breath before it is, whether it comes back in with another part's rhythm
+  there, and how close it is. A countermelody that runs on over the others' split
+  finishes its phrase; a pickup into the split bar starts the second half. The
+  checklist gives that part's halves and cue ("altos: m78–83 and m84–88, in on
+  beat 4 of m83"), and the dashed line runs through that part's staff alone, just
+  before its pickup note.
 - **Rhythm.** Bars a part finds tricky (attacks on 16ths, off-beat notes held over
   the beat, ties across it, dotted figures) are found by score. Two ways to treat
   them, chosen per piece with `--rhythm`:

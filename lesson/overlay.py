@@ -101,11 +101,30 @@ class Stamper:
                     cyw = cy
                 self.marks[b['page']].append(('why', xa_, cyw, why, pm.H))
 
-    def split_line(self, bar, label):
+    def split_line(self, bar, label, parts=None, pu=None):
+        """the dashed line where a letter's second half starts: through all four staves, or, for parts whose
+        second half starts elsewhere, through theirs only, just before their pickup note when they have one"""
+        if pu is not None:
+            bar -= 1
         b = self.r.bars[bar - 1]
         pm = self.r.pms[b['page']]
         sy = pm.systems[b['sys']]
-        self.marks.setdefault(b['page'], []).append(('split', b['xa'], sy[0]['top'] - 14, sy[3]['bot'] + 4, label, pm.H))
+        xa = b['xa']
+        if b['first_in_system']:
+            # a system's first bar begins with clef and key: the line goes just before the first note or rest
+            xs = [it['x'] for sb in b['staves'][:4] for it in sb['items']]
+            if xs: xa = min(xs) - 6
+        if parts is None:
+            self.marks.setdefault(b['page'], []).append(('split', xa, sy[0]['top'] - 14, sy[3]['bot'] + 4, label, pm.H))
+            return
+        for i, p in enumerate(sorted(parts, key=PART_K.get)):
+            k = PART_K[p]
+            s = sy[k]
+            x = xa
+            if pu is not None:
+                at = [it['x'] for it in b['staves'][k]['items'] if it.get('on') == pu]
+                x = (min(at) if at else b['xa'] + (b['xb'] - b['xa']) * float(pu) / float(self.barlen)) - 4
+            self.marks.setdefault(b['page'], []).append(('split', x, s['top'] - 1.6 * s['sp'], s['bot'] + 1.6 * s['sp'], label if i == 0 else '', pm.H))
 
     def flag(self, bar, text):
         b = self.r.bars[bar - 1]
@@ -264,7 +283,7 @@ class Stamper:
         pm = self.r.pms[b['page']]
         sy = pm.systems[b['sys']]
         names = {2: ['&'], 4: ['e', '&', 'a']}[sub]
-        for p in parts:
+        for i, p in enumerate(sorted(parts, key=PART_K.get)):
             k = PART_K[p]
             s = sy[k]
             own = {}
@@ -414,10 +433,20 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
                 for p in it['parts']:
                     st.badge(int(re.search(r'\bm(\d+)', t).group(1)), PART_K[p], 'Rh', '', COL[p])
     for sec in plan:
-        for it in sec['items']:
-            if it.get('split'):
-                st.split_line(it['split'], f"{sec['letter']} 2nd half")
-                break
+        its = [it for it in sec['items'] if it.get('split')]
+        if not its: continue
+        main = max({it['split'] for it in its if it.get('split_pu') is None} or {its[0]['split']},
+                   key=lambda c: sum(len(it['parts']) for it in its if it['split'] == c and it.get('split_pu') is None))
+        own = [it for it in its if it['split'] != main or it.get('split_pu') is not None]
+        if not own:
+            st.split_line(main, f"{sec['letter']} 2nd half")
+            continue
+        # the parts' second halves start in different places: a line through each part's own staff
+        rest = [p for it in its if it not in own for p in it['parts']]
+        if rest: st.split_line(main, f"{sec['letter']} 2nd half", parts=rest)
+        for it in own:
+            st.split_line(it['split'], f"{sec['letter']} 2nd half" if not rest else f"{'+'.join(planmod.ABBR[p] for p in it['parts'])} 2nd half",
+                          parts=it['parts'], pu=it.get('split_pu'))
     st.layout()
     st.draw(pdf, dst, 'A1, A2 … = teaching order within each letter.   P = play (listen)   S = play and sing   '
             + ('Rh m24 = slow rhythm work on bar 24' if mode == 'drill' else '↓ = down tempo'))

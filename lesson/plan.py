@@ -48,6 +48,7 @@ def beat_str(on):
 
 
 class Planner:
+    PHRASE = 1.5     # pull towards a split at a four-bar phrase of the letter
     def __init__(self, S, rhythm_threshold, easy_threshold, hard_threshold, rhythm_mode='drill'):
         # 'drill': slow spoken rhythm work on the bars; 'slow': play and sing the passage down tempo first
         self.mode = rhythm_mode
@@ -60,11 +61,11 @@ class Planner:
         self.flagged = {}            # bar -> parts whose rhythm there is tricky (the score marks their beats)
 
     # -------------------------------------------------------------- where a passage really starts
-    def pickup(self, a):
+    def pickup(self, a, parts=None):
         """a phrase that starts in the bar before `a`: (bar, onset) of its first note, or None"""
         if a <= 1: return None
         best = None
-        for p in PARTS:
+        for p in parts or PARTS:
             evs = self.S.bars[p].get(a - 1, [])
             # trailing notes after the bar's last rest, if they lead straight into bar a
             tail = []
@@ -77,11 +78,12 @@ class Planner:
                 if best is None or first['on'] < best: best = first['on']
         return (a - 1, best) if best is not None else None
 
-    def cue(self, a):
-        """(printed bar to start from, pickup beat or None, where that is in Logic: 'bar' or 'bar beat')"""
+    def cue(self, a, parts=None):
+        """(printed bar to start from, pickup beat or None, where that is in Logic: 'bar' or 'bar beat');
+        with `parts`, only those parts' pickups count"""
         if not hasattr(self, '_logic'):
             self._logic = analyze.logic_positions(self.S)
-        pu = self.pickup(a)
+        pu = self.pickup(a, parts)
         bar = pu[0] if pu else a
         lb, lbeat = self._logic[bar]
         logic = f"{lb}" if lbeat == 1 else f"{lb} {beat_str(lbeat - 1)}"
@@ -122,23 +124,85 @@ class Planner:
                 else: spots.append([n, n])
         return spots
 
-    def split_point(self, a, b):
-        """a bar line near the middle where most parts breathe"""
-        mid = (a + b + 1) / 2
+    def rest_at(self, p, n):
+        """beats of rest either side of bar line n for part p (end of bar n-1, start of bar n)"""
+        t = F(0)
+        for e in reversed(self.S.bars[p].get(n - 1, [])):
+            if e['midi'] is not None: break
+            t += e['dur']
+        for e in self.S.bars[p].get(n, []):
+            if e['midi'] is not None: break
+            t += e['dur']
+        return float(t)
+
+    def breath_at(self, p, n):
+        """the breath part p takes at bar line n, in beats: its rest there, or the rest before a pickup it sings into
+        bar n (such a part starts its second half with the pickup)"""
+        r = self.rest_at(p, n)
+        if r: return r
+        evs = self.S.bars[p].get(n - 1, [])
+        tail = []
+        for e in reversed(evs):
+            if e['midi'] is None: break
+            tail.append(e)
+        if not tail or len(tail) == len(evs) or tail[-1]['on'] < 2: return 0.0
+        rest = F(0)
+        for e in reversed(evs[:len(evs) - len(tail)]):
+            if e['midi'] is not None: break
+            rest += e['dur']
+        return float(rest)
+
+    def effort(self, p, n, a, cov):
+        """what bar n costs part p to learn: its difficulty, less where the part has sung it before (earlier in
+        the piece, or earlier in this letter), a little less where only the rhythm is familiar"""
+        if not self.S.notes(p, n): return 0.0
+        d = self.S.rhythm_score(p, n) + self.S.pitch_score(p, n)
+        if n in cov[p] or any(self.S.line(p, m) == self.S.line(p, n) for m in range(a, n)): return 0.3 * d
+        if any(self.S.rhythm(p, m) == self.S.rhythm(p, n) for m in range(a, n)): return 0.6 * d
+        return d
+
+    def split_point(self, a, b, cov):
+        """where to cut a long letter in two: a bar line where the parts breathe, that splits the learning
+        effort evenly (not the bar count: a hard two bars and six easy ones is an even split), with a nudge
+        towards the letter's four-bar phrases"""
+        E = {n: sum(self.effort(p, n, a, cov) for p in PARTS) for n in range(a, b + 1)}
+        tot = sum(E.values()) or 1.0
         best = None
-        L = b - a + 1
-        lo, hi = a + max(3, L // 3), b - max(2, L // 3) + 1
-        for n in range(lo, hi + 1):
-            # parts with a rest at the end of bar n-1 or start of bar n
-            breathe = 0
-            for p in PARTS:
-                e1 = self.S.bars[p].get(n - 1, [])
-                e2 = self.S.bars[p].get(n, [])
-                if (e1 and e1[-1]['midi'] is None) or (e2 and e2[0]['midi'] is None): breathe += 1
-                elif e2 and e2[0]['tie_stop']: breathe -= 1
-            score = breathe - 1.2 * abs(n - mid)
-            if best is None or score > best[0]: best = (score, n)
-        return best[1] if best else None
+        for c in range(a + 2, b):                    # two bars at least on either side
+            breathe = sum(1 for p in PARTS if (self.S.notes(p, c - 1) or self.S.notes(p, c)) and self.breath_at(p, c) >= 0.5)
+            e1 = sum(E[n] for n in range(a, c))
+            score = breathe - 3.0 * abs(2 * e1 - tot) / tot + (self.PHRASE if (c - a) % 4 == 0 else 0)
+            if best is None or score > best[0]: best = (score, c)
+        return best[1]
+
+    def part_split(self, g, c, a, b):
+        """where group g's second half starts: the letter's split c if g breathes there; otherwise the nearest
+        start of a new phrase of its own (after a beat's rest or more), scored by how long the breath before it
+        is, whether it joins another part's rhythm there (a countermelody that runs over the split finishes, and
+        the part comes back in with the others), and how far it is from c. Returns (bar, pickup onset in the bar before, or None)."""
+        p = g[0]
+        if self.rest_at(p, c) >= 0.5 or not (self.S.notes(p, c - 1) and self.S.notes(p, c)):
+            return (c, None)
+        def shape(q, n, o):
+            out = [(m, e['on'], e['dur'], e['midi'] is None, bool(e['lyric'])) for m in (n, n + 1)
+                   for e in self.S.bars[q].get(m, []) if (m, e['on']) >= (n, o)]
+            return out
+        cands = []
+        for n in range(max(a + 2, c - 1) - 1, min(b, c + 2)):
+            rest = F(0)
+            evs = [(m, e) for m in (n - 1, n) for e in self.S.bars[p].get(m, [])]
+            for m, e in evs:
+                if e['midi'] is None: rest += e['dur']; continue
+                if m == n and rest >= 1 and e['lyric'] and not e['tie_stop']:
+                    s_, pu = (n, None) if e['on'] < 2 else (n + 1, e['on'])
+                    if a + 2 <= s_ <= b - 1:
+                        joins = any(shape(q, n, e['on']) == shape(p, n, e['on']) for q in PARTS if q not in g)
+                        pos = n + float(e['on']) / 4
+                        cands.append((min(float(rest), 2.0) + 2 * joins - abs(pos - c), s_, pu))
+                rest = F(0)
+        if not cands: return (c, None)
+        _, s_, pu = max(cands)
+        return (s_, pu)
 
     # -------------------------------------------------------------- ordering
     def order(self, groups):
@@ -345,39 +409,52 @@ class Planner:
             dmax = max(self.difficulty(p, a, b) for p in PARTS)
             long_ = ((b - a + 1) >= 10 and dmax > self.easy) or ((b - a + 1) >= 8 and dmax > self.hard)
             if long_:
-                c = self.split_point(a, b)
-                halves = [(a, c - 1), (c, b)]
+                c = self.split_point(a, b, cov)
                 sec['notes'].append(f"Long or hard: taught in halves, {mrange(a, c - 1)} and {mrange(c, b)}.")
                 sec['say'] = sec.get('say', '') + (f" This one is {'long' if b - a + 1 >= 10 else 'tricky'}, so we'll hear each part whole, then learn it in two halves: "
                                                    f"{bars_said(a, c - 1)}, then {bars_said(c, b)}.")
                 groups, rel = self.groups(a, b)
                 gs = self.order(groups)
-                allp = [p for g in gs for p in g]
-                hj = {h: self.rhythm_plan(h[0], h[1], allp) for h in halves}
-                for h in halves:
-                    for bars, ps in hj[h][0]:
-                        sec['items'].append(dict(kind='rhythm', bar=bars[0], bar_end=bars[-1], parts=ps, text=f"Rhythm work {mrange(bars[0], bars[-1])}, slowly: "
-                                                 + ('everyone' if len(ps) == 4 else '+'.join(ps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0]),
-                                                 say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if len(ps) == 4 else f"{Cap(who(ps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
+                # each part's own second half: a line that runs over the split finishes its phrase first
+                gsplit = {tuple(g): self.part_split(g, c, a, b) for g in gs}
                 for g in gs:
+                    s_, pu = gsplit[tuple(g)]
+                    if s_ != c:
+                        where = f" (in on beat {beat_str(pu)} of m{s_ - 1})" if pu is not None else ''
+                        sec['notes'][-1] = sec['notes'][-1].rstrip('.') + f"; {who(g)}: {mrange(a, s_ - 1)} and {mrange(s_, b)}{where}."
+                        sec['say'] += f" {Cap(who(g))}, your second half starts at bar {s_}" + (f", coming in on beat {beat_str(pu)} of bar {s_ - 1}." if pu is not None else '.')
+                hj = {}
+                for key in sorted({v[0] for v in gsplit.values()}):
+                    ps = [p for g in gs if gsplit[tuple(g)][0] == key for p in g]
+                    for h in ((a, key - 1), (key, b)):
+                        hj[h] = self.rhythm_plan(h[0], h[1], ps)
+                        for bars, rps in hj[h][0]:
+                            sec['items'].append(dict(kind='rhythm', bar=bars[0], bar_end=bars[-1], parts=rps, text=f"Rhythm work {mrange(bars[0], bars[-1])}, slowly: "
+                                                     + ('everyone' if len(rps) == 4 else '+'.join(rps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0], rps),
+                                                     say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if len(rps) == 4 else f"{Cap(who(rps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
+                for g in gs:
+                    s_, pu = gsplit[tuple(g)]
+                    halves = [(a, s_ - 1), (s_, b)]
                     sub = [('Play whole section 1x, listen', sec['cue'])]
                     for h in halves:
+                        hc = self.cue(h[0], g)
                         if all(n in cov[p] for p in g for n in range(h[0], h[1] + 1) if self.S.notes(p, n)):
                             m0 = cov[g[0]].get(h[0], (None,))[0]
-                            sub.append((f"{mrange(*h)}: play 1x, sing (already sung" + (f" at m{m0})" if m0 else ")"), self.cue(h[0])))
+                            sub.append((f"{mrange(*h)}: play 1x, sing (already sung" + (f" at m{m0})" if m0 else ")"), hc))
                             continue
-                        hs = [s_ for p in g for s_ in hj[h][1].get(p, [])]
+                        hs = [s2 for p in g for s2 in hj[h][1].get(p, [])]
                         if hs and self.mode == 'slow':
-                            sub.append((f"{mrange(*h)}: play 1x slow, listen", self.cue(h[0])))
+                            sub.append((f"{mrange(*h)}: play 1x slow, listen", hc))
                             sub.append((f"{mrange(*h)}: play 1x slow, sing", None))
                             sub.append((f"{mrange(*h)}: play 1x, sing", None))
                             continue
-                        sub.append((f"{mrange(*h)}: play 1x, listen", self.cue(h[0])))
+                        sub.append((f"{mrange(*h)}: play 1x, listen", hc))
                         for p in g:
                             for s0, s1 in hj[h][1].get(p, []):
-                                sub.append((f"Rhythm work {mrange(s0, s1)}, slowly", self.cue(s0)))
+                                sub.append((f"Rhythm work {mrange(s0, s1)}, slowly", self.cue(s0, g)))
                         sub.append((f"{mrange(*h)}: play 2x, sing", None))
-                    sec['items'].append(dict(kind='part', who='+'.join(g), note='in unison' if len(g) > 1 else '', sub=sub, bar=a, parts=list(g), split=c))
+                    sec['items'].append(dict(kind='part', who='+'.join(g), note='in unison' if len(g) > 1 else '', sub=sub, bar=a, parts=list(g),
+                                             split=s_, split_pu=pu))
             else:
                 self.teach(a, b, sec['items'])
             if getattr(self, 'slow_all', False):
