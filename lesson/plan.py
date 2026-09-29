@@ -251,7 +251,7 @@ class Planner:
             ks = sorted(ks, key=['notes', 'rhythm', 'words'].index)
             k = ('new ' + (', '.join(ks[:-1]) + ' and ' + ks[-1] if len(ks) > 1 else ks[0])) if ks else 'changed'
             kinds.setdefault(k, []).append(p)
-        where = f"{mrange(r0, r1)} ≠ {mrange(r0 + off, r1 + off)} ({srcname[0]})"
+        where = f"{mrange(r0, r1)} differs from {mrange(r0 + off, r1 + off)} (in {srcname[0]})"
         return where + ': ' + '; '.join(f"{who(ps)} {k}" for k, ps in kinds.items())
 
     def texture(self, a, b):
@@ -281,7 +281,7 @@ class Planner:
                 sec['notes'].append('Piano only; the voices come in on the pickup to the next letter.' if sung else 'Piano only.')
                 continue
             cov = analyze.coverage(self.S, a, b)
-            sungbars = {p: [n for n in range(a, b + 1) if self.S.notes(p, n)] for p in PARTS}
+            sungbars = {p: [n for n in range(a, b + 1) if self.S.line(p, n)] for p in PARTS}
             new = {p: [n for n in sungbars[p] if n not in cov[p]] for p in PARTS}
             allnew = sorted({n for v in new.values() for n in v})
             nsung = len({n for v in sungbars.values() for n in v})

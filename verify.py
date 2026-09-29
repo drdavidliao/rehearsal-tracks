@@ -642,33 +642,54 @@ def check_extender_lines(root, names, E, lanes):
                 bad.append(f"p{page['n']}: printed line x{ln[0]:.0f}-{ln[1]:.0f} y{ln[2]:.0f} belongs to no syllable")
     # compare with the MusicXML, part by part, by aligning the syllable texts
     matched = skipped = 0
+    pairs = []                        # (part, printed entry, file syllable), aligned
     for part in root.findall('part'):
         nm = names[part.get('id')]
         if nm not in printed: continue
         xs = []
-        for mn, n, v, _ in notes_of(part):
+        nts = notes_of(part)
+        for i, (mn, n, v, _) in enumerate(nts):
+            fig = None
+            if any(x.get('type') == 'start' for x in n.findall('tie')):
+                held = int(n.findtext('duration') or 0)
+                for mn2, n2, v2, _ in nts[i + 1:]:
+                    if v2 != v or n2.find('chord') is not None: continue
+                    if not any(x.get('type') == 'stop' for x in n2.findall('tie')) or n2.find('lyric') is not None: break
+                    held += int(n2.findtext('duration') or 0)
+                    if not any(x.get('type') == 'start' for x in n2.findall('tie')): break
+                fig = (n.findtext('type'), held)
             for l in n.findall('lyric'):
                 e = l.find('extend')
                 slurred = any(x.get('type') == 'start' for x in n.iter('slur'))
                 mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
-                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid))
+                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid,
+                           None if mid else fig))
         ps = printed[nm]
         sm = difflib.SequenceMatcher(a=[t.strip() for t, *_ in ps], b=[x[0].strip() for x in xs], autojunk=False)
         blocks = sm.get_matching_blocks()
         for a0, b0, n in blocks:
             for k in range(n):
-                t, has, where, hyph = ps[a0 + k]
-                xt, ext, mn, slurred = xs[b0 + k]
-                matched += 1
-                if ext and not has and (slurred or hyph):
-                    continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
-                if has != ext:
-                    bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
-                               f"file {'has' if ext else 'has no'} <extend/>")
+                pairs.append((nm, ps[a0 + k], xs[b0 + k]))
         skipped += len(xs) - sum(b[2] for b in blocks)
         lost = len(ps) - sum(b[2] for b in blocks)
         if lost:
             bad.append(f"{nm}: {lost} printed syllable(s) could not be matched to the file's lyrics - a missing or misspelt syllable?")
+    # a word-end held only by a tie whose line the engraver dropped: most of the same words on the same figure
+    # (note value, length tied through) print one, so the file gives it one too (SKILL.md 2.5)
+    fig_lined = defaultdict(list)
+    for nm, (t, has, *_), (xt, ext, mn, slurred, fig) in pairs:
+        if fig: fig_lined[(xt.strip(), fig)].append(has)
+    for nm, (t, has, where, hyph), (xt, ext, mn, slurred, fig) in pairs:
+        matched += 1
+        if ext and not has and (slurred or hyph):
+            continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
+        if ext and not has and fig:
+            lined = fig_lined[(xt.strip(), fig)]
+            if sum(lined) / len(lined) > 0.5:
+                continue
+        if has != ext:
+            bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
+                       f"file {'has' if ext else 'has no'} <extend/>")
     if unknown:
         bad.append(f"lyric lines in lanes {unknown} have no part: add them to --lanes")
     summary = (f'{matched} printed syllables compared, {len(bad)} disagreement(s)'

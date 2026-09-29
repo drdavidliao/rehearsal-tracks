@@ -1037,6 +1037,32 @@ class Reader:
                                       f"the page prints {'a hyphen' if t['syllabic'] in ('begin','middle') else 'nothing'}, the file an extender")
         return self
 
+    def matching_lines(self, vocal_staves, share=0.5):
+        """a word-end syllable held only by a tie, printed without a line, gets one when the same word on the same
+        figure (its note value and the length it is tied through) is printed with a line more often than not
+        elsewhere in the piece: the engraver dropped it in a few places (SKILL.md 2.5)"""
+        figs = {}
+        for k in vocal_staves:
+            seq = [it for bar in self.bars for it in sorted((it for v in bar['staves'][k]['voices'].values() for it in v), key=lambda it: it['on'])]
+            for i, it in enumerate(seq):
+                t = it.get('lyric')
+                if not t or t['syllabic'] not in ('single', 'end') or not it.get('tie_start'): continue
+                held = it['dur']
+                for nx in seq[i + 1:]:
+                    if nx['kind'] != 'chord' or nx.get('lyric') or not nx.get('tie_stop'): break
+                    held += nx['dur']
+                    if not nx.get('tie_start'): break
+                figs.setdefault((t['t'], it['dur'], held), []).append((k, it, t))
+        for (word, dur, held), occ in figs.items():
+            lined = sum(1 for _, _, t in occ if t.get('extend'))
+            if not lined or lined / len(occ) <= share: continue
+            for k, it, t in occ:
+                if t.get('extend'): continue
+                t['extend'] = True; t['added_line'] = True
+                self.notes.append(f"LINE bar {it['bar']} {['S','A','T','B'][k]}: {word!r} tied through, printed with no line; "
+                                  f"{lined} of the {len(occ)} same words on the same figure have one")
+        return self
+
 
 LIGATURES = {'(cid:57)': 'fi'}   # Academico's fi ligature has no Unicode mapping in these PDFs
 

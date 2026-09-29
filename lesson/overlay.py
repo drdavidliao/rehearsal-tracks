@@ -93,8 +93,10 @@ class Stamper:
             if why and lift < 6:
                 ww = text_w(why, 'Sans-Oblique', 5.8) + 8
                 xa_ = (x + span + capw + 10) if (cap and side == 'right') else x + span + 3
-                if xa_ + ww > pw - 8:
-                    xa_, cyw = x, cy - 2 * r - 3          # a row above
+                if xa_ + ww > pw - 8 and x - 4 - ww >= 30:
+                    xa_, cyw = x - 4 - ww, cy                  # no room to the right: to the left of the badge
+                elif xa_ + ww > pw - 8:
+                    xa_, cyw = min(x, pw - 8 - ww), cy - 2 * r - 3          # a row above, kept on the page
                 else:
                     cyw = cy
                 self.marks[b['page']].append(('why', xa_, cyw, why, pm.H))

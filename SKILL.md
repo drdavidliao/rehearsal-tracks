@@ -549,6 +549,15 @@ learned on the unaccompanied TTBB (TTBB closed score, Finale/Maestro):
 - **A syllable held only by a tie often has no line.** `hands,` tied over the
   barline into an eighth, `man` likewise, a third word tied from an eighth into a half:
   the engraving prints none, so the file carries none.
+- **Unless the same word on the same figure prints one nearly everywhere else.**
+  A word-end syllable on an eighth tied into a quarter, printed with a line 28
+  times and without one 4 times in the same arrangement: the 4 are the engraver
+  dropping it, and a singer reading them sees a clipped word where every other
+  statement is held. Give those the line and list them in the handback.
+  "Same figure" is the word, its note value and the length it is tied through;
+  "nearly everywhere" is more than half of those statements.
+  `dorico_reader.matching_lines` does it; check 10 accepts the line on the
+  same count, so an `<extend/>` that nothing else on the page backs still fails.
 - **A syllable in the middle of a word held only by a tie gets no extender.**
   `long-` held over a tie into `-in'` prints a hyphen, and an `<extend/>` on
   `long` makes Sibelius draw a line where the hyphen should be. The note model
@@ -621,7 +630,7 @@ hairpins are open 7-point polylines. With those, `dorico_reader.py` reads an ope
 score (one voice per vocal staff, piano on two) straight into MusicXML: glyph
 baselines sit exactly on their staff positions, so no offset needs calibrating.
 Its `Reader` runs `read().voices().pitches().ties_slurs().lyrics(...).marks(...)`,
-then `emit()`; a per-piece build script holds only the page range, the lyric
+then `melisma_lines(...)` and `matching_lines(...)` (2.5), then `emit()`; a per-piece build script holds only the page range, the lyric
 font and size, the parts, and any word fixes (`lyric_fix`), and calls `finish()`,
 which writes the print file and the copy before `break_words_at_melismas` that a
 Cantai file is made from. Keep that script and its log in the song's `_build/`
@@ -2316,10 +2325,17 @@ main director says, so the plan always covers every letter.
 - **The same notes as an earlier letter** (at any transposition, words free to
   differ): everyone sings it once, **all S**. The plan names the most recent
   identical letter ("= L"); a key change adds "give the starting pitches".
+- **A lead-in belongs to the letter it leads into.** Notes after the last rest of
+  a letter's last bar, starting on beat 3 or later, with words, are the pickup to
+  the next letter (its cue starts there), so they are left out when two letters
+  are compared. Otherwise a letter that repeats an earlier one exactly, except
+  that the earlier one's basses pick up into the letter after it, reads as a
+  near repeat with a "new notes, rhythm and words" bar to drill.
 - **Nearly the same:** at most a third of the sung bars differ (and under half).
   Only the parts that changed, only the bars that changed, from one bar earlier
   for a run-in; then everyone from the top of the letter. A "why" note says which
-  bars against which bars of the earlier letter, and for each part whether the
+  bars differ from which bars of the earlier letter ("m62–63 differs from m30–31
+  (in C)"), and for each part whether the
   notes, the rhythm or the words are new.
 - **Otherwise it is taught part by part:** **P** (play, they listen), then **SS**
   (play twice, they sing), or **S** once when the part is easy, or has the same
@@ -4392,33 +4408,54 @@ def check_extender_lines(root, names, E, lanes):
                 bad.append(f"p{page['n']}: printed line x{ln[0]:.0f}-{ln[1]:.0f} y{ln[2]:.0f} belongs to no syllable")
     # compare with the MusicXML, part by part, by aligning the syllable texts
     matched = skipped = 0
+    pairs = []                        # (part, printed entry, file syllable), aligned
     for part in root.findall('part'):
         nm = names[part.get('id')]
         if nm not in printed: continue
         xs = []
-        for mn, n, v, _ in notes_of(part):
+        nts = notes_of(part)
+        for i, (mn, n, v, _) in enumerate(nts):
+            fig = None
+            if any(x.get('type') == 'start' for x in n.findall('tie')):
+                held = int(n.findtext('duration') or 0)
+                for mn2, n2, v2, _ in nts[i + 1:]:
+                    if v2 != v or n2.find('chord') is not None: continue
+                    if not any(x.get('type') == 'stop' for x in n2.findall('tie')) or n2.find('lyric') is not None: break
+                    held += int(n2.findtext('duration') or 0)
+                    if not any(x.get('type') == 'start' for x in n2.findall('tie')): break
+                fig = (n.findtext('type'), held)
             for l in n.findall('lyric'):
                 e = l.find('extend')
                 slurred = any(x.get('type') == 'start' for x in n.iter('slur'))
                 mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
-                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid))
+                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid,
+                           None if mid else fig))
         ps = printed[nm]
         sm = difflib.SequenceMatcher(a=[t.strip() for t, *_ in ps], b=[x[0].strip() for x in xs], autojunk=False)
         blocks = sm.get_matching_blocks()
         for a0, b0, n in blocks:
             for k in range(n):
-                t, has, where, hyph = ps[a0 + k]
-                xt, ext, mn, slurred = xs[b0 + k]
-                matched += 1
-                if ext and not has and (slurred or hyph):
-                    continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
-                if has != ext:
-                    bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
-                               f"file {'has' if ext else 'has no'} <extend/>")
+                pairs.append((nm, ps[a0 + k], xs[b0 + k]))
         skipped += len(xs) - sum(b[2] for b in blocks)
         lost = len(ps) - sum(b[2] for b in blocks)
         if lost:
             bad.append(f"{nm}: {lost} printed syllable(s) could not be matched to the file's lyrics - a missing or misspelt syllable?")
+    # a word-end held only by a tie whose line the engraver dropped: most of the same words on the same figure
+    # (note value, length tied through) print one, so the file gives it one too (SKILL.md 2.5)
+    fig_lined = defaultdict(list)
+    for nm, (t, has, *_), (xt, ext, mn, slurred, fig) in pairs:
+        if fig: fig_lined[(xt.strip(), fig)].append(has)
+    for nm, (t, has, where, hyph), (xt, ext, mn, slurred, fig) in pairs:
+        matched += 1
+        if ext and not has and (slurred or hyph):
+            continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
+        if ext and not has and fig:
+            lined = fig_lined[(xt.strip(), fig)]
+            if sum(lined) / len(lined) > 0.5:
+                continue
+        if has != ext:
+            bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
+                       f"file {'has' if ext else 'has no'} <extend/>")
     if unknown:
         bad.append(f"lyric lines in lanes {unknown} have no part: add them to --lanes")
     summary = (f'{matched} printed syllables compared, {len(bad)} disagreement(s)'

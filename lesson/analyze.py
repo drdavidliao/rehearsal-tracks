@@ -55,6 +55,17 @@ class Score:
                 bars[n] = evs
             self.bars[nm] = bars
         self.nbars = max(self.bars['Soprano'])
+        # notes at the end of a letter's last bar that lead into the next letter (after the bar's last rest, on beat 3
+        # or later, with words) belong to the next letter: they are left out when a letter is compared with another
+        for p, bars in self.bars.items():
+            for n, evs in bars.items():
+                if n + 1 not in self.letters: continue
+                tail = []
+                for e in reversed(evs):
+                    if e['midi'] is None: break
+                    tail.append(e)
+                if tail and len(tail) < len(evs) and tail[-1]['on'] >= 2 and tail[-1]['lyric']:
+                    for e in tail: e['lead_in'] = True
 
     def notes(self, part, b):
         return [e for e in self.bars[part].get(b, []) if e['midi'] is not None]
@@ -65,14 +76,18 @@ class Score:
     # ---------------------------------------------------------------- relations
     def rhythm(self, part, n):
         """attack points (not tie continuations) and rests"""
-        return tuple((e['on'], e['dur'] if not e['tie_start'] else None) for e in self.bars[part].get(n, [])
+        return tuple((e['on'], e['dur'] if not e['tie_start'] else None) for e in self.own(part, n)
                      if e['midi'] is not None and not e['tie_stop'])
 
     def line(self, part, n):
-        return tuple((e['on'], e['dur'], e['midi'], e['tie_stop']) for e in self.bars[part].get(n, []) if e['midi'] is not None)
+        return tuple((e['on'], e['dur'], e['midi'], e['tie_stop']) for e in self.own(part, n) if e['midi'] is not None)
 
     def words(self, part, n):
-        return tuple(e['lyric'] for e in self.bars[part].get(n, []) if e['lyric'])
+        return tuple(e['lyric'] for e in self.own(part, n) if e['lyric'])
+
+    def own(self, part, n):
+        """bar n's events without a lead-in to the next letter"""
+        return [e for e in self.bars[part].get(n, []) if not e.get('lead_in')]
 
     def relation(self, p, q, a, b):
         """over bars a..b where both sing: 'unison' (same pitches), 'octave', 'duet' (same rhythm and words),
