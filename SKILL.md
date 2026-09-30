@@ -1,6 +1,6 @@
 ---
 name: "choral-pdf-to-singable-musicxml"
-description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant, part-left and balanced mp3s from Sibelius audio stems), or MusicXML/MIDI from sheet music."
+description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant, part-left and balanced mp3s from Sibelius audio stems), follow-along or memorization videos and sheets (any score animated over audio, including a commercial recording), or MusicXML/MIDI from sheet music."
 ---
 
 # Choral PDF → singable MusicXML
@@ -266,6 +266,15 @@ and each questioned bar to its own PNG and look at it. A crop of one bar answers
 to the same bars when the user reports a problem three rounds later, and a
 named crop library (`pf_b47rh.png`, `z05_b25.png`) is the difference between
 re-answering a question and re-deriving it.
+
+**Hand transcription from a scan: extend the text format first.** On a scanned
+unison TTBB with piano (a film song, 65 bars) the voice line and piano were typed from crops
+in the one-token-per-note format above, and the transcription itself went well.
+But `chorale.scoretext` has no triplet and no x-notehead: a 16th triplet
+ornament and a spoken passage printed in x-noteheads forced a separate
+piece-specific builder. Add a triplet mark (`s3`), an x-notehead prefix (`x`), a
+per-pitch tie (`A2~,D3`) and a hidden rest to the format before the next scan,
+rather than writing another builder.
 
 ## Step 2 — If it's vector: read the glyph stream
 
@@ -1628,6 +1637,18 @@ tracks' loudness (9.4).
 - **The first export after a settings change can be silent.** Three stems were
   all zeros on the first run and fine on the second.
 
+- **Cantai cannot speak.** Spoken lines printed as x-noteheads are sung on the
+  notehead's pitch, badly. Speech synthesis was no rescue: eSpeak with the MBROLA
+  voices is robotic, and a Piper neural voice placed word by word on the beat
+  (each word synthesised alone, squeezed to fit its notes with a phase vocoder,
+  a noise-based room tail added) was judged worse still. What worked was taking
+  those bars from a real recording of the song and splicing it into the Cantai
+  mix at the barlines (40 ms crossfades on the downbeats, the recording brought
+  to the mix's level), then timing any video from the spliced audio: each
+  section keeps its own timing, and everything after the splice moves by the
+  difference in length. A singer's phone recording of the spoken lines, cut to
+  the beat, is the other route worth trying before any synthesis.
+
 ### 9.3b Correct a wrong pitch in a finished stem, in audio
 
 When a score error is a wrong pitch and nothing else (same rhythm, same words),
@@ -2294,6 +2315,87 @@ learning file: its split syllables would print. `--no-lyrics` makes the score vi
 alone. After changing a finished plan, `--lyrics-only` remakes the PDF and the lyric videos
 with the timing fitted as usual and leaves the score videos alone. Each mp3's two lyric
 videos take about two and a half minutes on 2 cores.
+
+### 10.2 Any score animated over audio: the same lights, whatever draws them
+
+Step 10's lighting is the house style for **every** score shown moving over
+audio, not only for `score_video.py`'s output: a one-page memorization sheet, a
+closed-score summary, a page timed to a commercial recording. On a unison TTBB
+the job looked different enough (a one-page sheet, a film soundtrack instead of a
+Cantai render) that a new renderer was written, and it lit only notes and words.
+The user then asked, one round at a time, for everything this section already
+says. A renderer written fresh meets this list before its first video goes out:
+
+- **Rests** get a halo and a progress bar that fills in pulse jumps. A bar rest's
+  bar is centred on the rest glyph, as wide as the bar allows on both sides; the
+  first bar of a piece, where the left edge is a repeat sign or a clef, still
+  centres on the glyph.
+- **Ties** light while either of their notes sounds (a stroke along the tie's
+  curve, in its note's colour).
+- **Hyphens and extender lines** light with their syllable, including the piece
+  Verovio carries to the next system (`class="syl id-<syl id> spanning"`).
+- **Two voices on one staff**: shared notes in the everyone colour, each side of
+  a split in its own colour (pink above, cyan below was what this user chose, with
+  purple for everyone), rests of a split voice in that voice's colour.
+- **Portrait and landscape.** Not every singer has a tablet: make a 16:9
+  landscape video beside the portrait one (the same sheet laid out as fewer,
+  longer systems so it still fits one screen), and put both layouts in the PDF,
+  portrait page first. Name new videos with new filenames when the audio changes,
+  so earlier versions are not overwritten.
+- **One frames folder per render.** A command that hits the tool's time limit is
+  not always killed: its render kept writing frames in the background, a second
+  render into the same folder picked some of them up, and one bar's progress bar
+  vanished from the delivered video. Use a fresh temporary folder per render.
+
+**Compare-these boxes (a memorization sheet).** A sheet for memorising a
+strophic song marks what changes between verses by small amounts: a triplet
+ornament in three verses and two 16ths in the fourth, a note held into the next
+bar in one verse and not the other, C♯ against C♮.
+
+- Mark them as the lesson overlay marks unison (11.2): a translucent rounded box,
+  fill 0.2 and outline 0.6. Coloured noteheads alone were hard to see.
+- **One colour per comparison group**, every member of the group boxed in it
+  (three or four passages where the figure recurs, not only a pair), Okabe–Ito
+  colours, and a short label in that colour naming what differs and where the
+  partner is ("two 16ths (vs. m.19)").
+- **Shade only the part that differs**, in time as well as in pitch: where two
+  verses share a word's first note, the box starts after it. A box never covers
+  an unchanged neighbour; clamp its edges against every unboxed notehead, rest
+  and word on the system (estimate a word's width from its font size, about
+  0.45 em per character).
+- **Accidentals in labels as ♯ ♮ ♭**, not spelled out. Verovio's text font has no
+  glyphs for them: set those characters in a font that has them (DejaVu Serif)
+  in the SVG before converting.
+- Spread the systems over the whole page (`justifyVertically`, and a matching
+  `<system-distance>` so Sibelius spreads them too).
+- In the video, when a halo enters a box, that box and all its partners flicker
+  for at least a second. What this user settled on, after reporting a headache:
+  **16th-note flicker only** (dark = the resting opacity, then a dip to fill 0.16 /
+  outline 0.49); a burst of 32nds was too much. While the flicker starts, the
+  rest of the page **washes out** rather than darkening (ink 0–255 shown as
+  128–255, over a 16th, back over a quarter, from wherever the fade has got to
+  when the next box arrives): dimming the whole screen, even to 75%, read as
+  someone turning the lights off. Keep every change of this kind mild and slow;
+  the people watching include the photosensitive.
+
+**Timing to a commercial recording** (a soundtrack the score was engraved from,
+not a render of it):
+
+- Unconstrained chroma DTW of the whole piece piled the first 20 bars onto one
+  moment 50 s in. Constrain it (`global_constraints=True`, a band of about 8% of
+  the length around the printed tempo map) and it tracks.
+- Then fit one audio time per barline, with coordinate ascent on the onset
+  envelope at the score's note onsets and a penalty on tempo changes between
+  bars; check the result with a melody pitch track (pYIN on the harmonic part)
+  verse by verse, sweeping a shift of ±0.3 s: the right timing is the peak.
+- **A verse can run at its own tempo.** The second verse ran at about 96 where
+  the print says 100 and the whole-piece fit missed it; aligning that verse on
+  its own (chroma DTW over just its bars and its stretch of audio) put every bar
+  within 50 ms of a straight line. Anchor the last notes of a rallentando from the
+  pitch track by hand.
+- Dense orchestration hides the onsets: the onset check was flat there, and only
+  pitch told the fit apart from a shifted one.
+- Use gender-neutral part labels: "TTBB", or T1/T2/B1/B2, never "Men".
 
 ## Step 11 — Note-learning lesson plans
 
