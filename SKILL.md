@@ -168,6 +168,29 @@ user's computer into the workspace gets the same check before it is edited: a st
 copy edited and sent back overwrites the user's newer work. Say a file is delivered
 only after the checksums agree.
 
+**Every claim about pitch, interval, rhythm or harmony is computed, never
+eyeballed or recalled.** This covers what you tell the user, what goes in a
+handback, a commit message or a "why" note, and what you predict a change will
+or won't do. Work it out in code, in a form where the answer is arithmetic:
+- pitches as step/alter/octave and MIDI numbers
+- intervals as a count of diatonic steps plus a count of semitones, both
+  from those
+- rhythms as onsets and durations in exact fractions of the beat
+- harmony as pitch-class sets
+
+Only then put it into words. A notehead's position in a PDF goes from geometry
+to staff position to step/octave in code (2.2), not by eye and not by mental
+staff-space arithmetic.
+
+On an SATB with piano, a corrected engraving moved two soprano noteheads up
+6.8 pt, two staff spaces. That was reported as "up a third". One staff space
+is already a third, so it was E4 to B4: four steps and seven semitones, a
+fifth. The next claim was just as fluent and just as unchecked: the fix
+"wouldn't change any unison shading". But B4 put the soprano exactly an octave
+above the bass for the whole bar, and the lesson marks changed. Both were
+caught by the user, not by the work. If a musical fact can't be computed from
+what's at hand, say that instead of naming one.
+
 ```
 pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf pycairo
 # and poppler-utils for pdftoppm / pdftotext
