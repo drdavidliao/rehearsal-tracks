@@ -51,8 +51,10 @@ def logic_note(S):
                 f'another length (the first at m{first - 1 if first > 1 else 1}), so from there Logic\'s bar numbers differ from '
                 'the printed ones. Each ▶ gives the Logic position to type (bar, then beat), with the printed bar beside it. ')
     return (head + body + 'If the track doesn\'t start on bar 1, write the offset here and add it to every cue: <b>____</b> bars. '
-            '&nbsp;"in on beat 3½" = the singers come in on the &amp; of 3 of that bar; the cue starts at the downbeat so '
-            'they hear a lead-in.')
+            + ('&nbsp;"in on beat 2a" = the singers come in on the a of 2 of that bar, counting the dotted-quarter beats '
+               '1 &amp; a 2 &amp; a; ' if any(S.meter(n)[1] for n in range(1, S.nbars + 1)) else
+               '&nbsp;"in on beat 3½" = the singers come in on the &amp; of 3 of that bar; ')
+            + 'the cue starts at the downbeat so they hear a lead-in.')
 
 
 def shorthand(mode):

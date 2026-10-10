@@ -74,6 +74,7 @@ class PageModel:
         vl = [l for l in page.lines if abs(l['x0'] - l['x1']) < 0.3]
         self.stems = [dict(x=l['x0'], top=l['top'], bot=l['bottom']) for l in vl if l['linewidth'] < 0.55]
         self.bars_v = [l for l in vl if l['linewidth'] >= 0.55]
+        self.restaff_gap_heads()
         stafflines = {round(y, 1) for s_ in st for y in s_['lines']}
         self.hlines = [l for l in page.lines if abs(l['y0'] - l['y1']) < 0.3 and not (round(l['top'], 1) in stafflines and l['x1'] - l['x0'] > 150)]
         # beams: filled rects of beam thickness and filled 4-point polygons
@@ -107,6 +108,34 @@ class PageModel:
                 kind = 'crescendo' if tip[0] < min(p[0] for p in other) else 'diminuendo'
                 self.wedges.append(dict(x0=cv['x0'], x1=cv['x1'], y=(cv['top'] + cv['bottom']) / 2, kind=kind))
         self.barlines = [self.find_barlines(sy) for sy in self.systems]
+
+    def restaff_gap_heads(self):
+        """a notehead on ledger lines between two staves of a system belongs to the staff whose stem it hangs on:
+        the low notes of a piano RH chord sit nearer the LH staff (SKILL.md 2.2); its staccato goes with it"""
+        moved = []
+        heads = [g for g in self.glyphs if g.code in HEADS and g.code != WHOLE]
+        for g in heads:
+            s = g.staff
+            if s['top'] <= g.y <= s['bot']: continue
+            for t in self.stems:
+                if not (abs(g.x1 - t['x']) < 0.9 or abs(g.x0 - t['x']) < 0.9): continue
+                if not (t['top'] - 0.7 * s['sp'] <= g.y <= t['bot'] + 0.7 * s['sp']): continue
+                others = [h for h in heads if h is not g and (abs(h.x1 - t['x']) < 0.9 or abs(h.x0 - t['x']) < 0.9)
+                          and t['top'] - 0.7 * s['sp'] <= h.y <= t['bot'] + 0.7 * s['sp']]
+                # the staff the stem's far end reaches into, when another head on the stem is already that staff's
+                far = t['top'] if abs(t['top'] - g.y) > abs(t['bot'] - g.y) else t['bot']
+                s2 = self.nearest_staff(far)
+                if not (s2['top'] - 0.1 <= far <= s2['bot'] + 0.1) or not any(h.staff is s2 for h in others): continue
+                if s2 is s or s2['sys'] != s['sys'] or abs(s2['k'] - s['k']) != 1: continue
+                if not (min(s['top'], s2['top']) < g.y < max(s['bot'], s2['bot'])): continue
+                g.staff = s2; g.pos = round((g.y - s2['top']) / (s2['sp'] / 2)); moved.append((g, s, s2))
+                break
+        for g, s, s2 in moved:
+            for a in self.glyphs:
+                if (a.code in STACC or a.code in ACCENT) and a.staff is s and abs(a.cx - g.cx) < 1.5 * s['sp'] \
+                        and abs(a.y - g.y) < 2.5 * s['sp'] and not (s['top'] <= a.y <= s['bot']):
+                    a.staff = s2; a.pos = round((a.y - s2['top']) / (s2['sp'] / 2))
+        self.moved_heads = moved
 
     def nearest_staff(self, y):
         best = None
@@ -202,6 +231,7 @@ class Reader:
     def read(self):
         clef = {}
         key = None
+        meter = (4, 4)
         for pi, pm in enumerate(self.pms):
             for si, sy in enumerate(pm.systems):
                 bls = pm.barlines[si]
@@ -212,6 +242,15 @@ class Reader:
                     bar = dict(num=len(self.bars) + 1, page=pi, sys=si, xa=xa, xb=xb,
                                first_in_system=(bi == 0), barline=bls[bi], staves=[])
                     self.bars.append(bar)
+                    # time signature: Bravura digits E080-E089 on the top staff, numerator above denominator
+                    ts = [g for g in pm.glyphs if g.staff is sy[0] and 0xE080 <= g.code <= 0xE089 and xa < g.cx < xb]
+                    if ts:
+                        rows = {}
+                        for g in ts: rows.setdefault(g.pos, {})[round(g.x0, 1)] = g.code - 0xE080
+                        num_, den_ = [int(''.join(str(d) for _, d in sorted(rows[p_].items()))) for p_ in sorted(rows)][:2]
+                        meter = (num_, den_)
+                    bar['meter'] = meter
+                    bar['barlen'] = F(4 * meter[0], meter[1])
                     for k, s in enumerate(sy):
                         gl = [g for g in pm.glyphs if g.staff is s and xa < g.cx < xb]
                         bar['staves'].append(self.read_staff_bar(pm, s, gl, bar, k))
@@ -291,7 +330,7 @@ class Reader:
 
     def voices(self):
         for bar in self.bars:
-            barlen = self.BAR
+            barlen = bar.get('barlen', self.BAR)
             for k, sb in enumerate(bar['staves']):
                 items = sb['items']
                 sb['voices'] = self.split(items, sb['s'], barlen, bar, k)
@@ -467,6 +506,17 @@ class Reader:
             for arc in pm.arcs:
                 s = pm.nearest_staff((arc['yl'] + arc['yr']) / 2)
                 si, k = s['sys'], s['k']
+                # a tie under ledger-line notes in a grand-staff gap can sit nearer the staff below (or above):
+                # when the nearest staff has no head at either end and the neighbour on that side does, use it
+                def ends(kk):
+                    ss = pm.systems[si][kk]; spp = ss['sp']
+                    return [h for h, it, b in SH.get((pi, si, kk), [])
+                            if (h.x0 - 0.3 * spp <= arc['xl'] <= h.x1 + 3.2 * spp and abs(h.y - arc['yl']) < 2.2 * spp)
+                            or (h.x0 - 3.2 * spp <= arc['xr'] <= h.x1 + 0.3 * spp and abs(h.y - arc['yr']) < 2.2 * spp)]
+                if not ends(k):
+                    kk = k - 1 if (arc['yl'] + arc['yr']) / 2 < s['top'] else k + 1
+                    if 0 <= kk < len(pm.systems[si]) and ends(kk):
+                        s = pm.systems[si][kk]; k = kk
                 sp = s['sp']
                 hs = SH.get((pi, si, k), [])
                 sysr = s['x1']; sysl = pm.systems[si][0]['x0']
@@ -498,6 +548,12 @@ class Reader:
                     ha, ia = min(A, key=lambda p: abs(arc['xl'] - p[0].x1) + 0.3 * abs(p[0].y - arc['yl']))
                     pending.append(dict(pi=pi, si=si, k=k, arc=arc, h=ha, it=ia))
                     continue
+                if outgoing:
+                    # a slur set clear of the stems (beyond tie distance of any head) leaving the margin
+                    ca = self.chord_near(hs, arc['xl'], arc['yl'], sp, left=True, over=arc['over'])
+                    if ca is not None:
+                        pending.append(dict(pi=pi, si=si, k=k, arc=arc, h=None, it=ca))
+                        continue
                 if incoming:
                     # matched later against the pending list
                     pending.append(dict(pi=pi, si=si, k=k, arc=arc, incoming=True, B=B))
@@ -526,7 +582,7 @@ class Reader:
             hsn = self.sh.get((p['pi'], p['si'], p['k']), [])
             sp = self.pms[p['pi']].systems[p['si']][p['k']]['sp']
             ha, ia = o['h'], o['it']
-            first_same = [(h, it) for h, it, b in hsn if h.pos == ha.pos]
+            first_same = [(h, it) for h, it, b in hsn if ha is not None and h.pos == ha.pos]
             tie = None
             if first_same:
                 hb, ib = first_same[0]
@@ -584,7 +640,10 @@ class Reader:
                 for k in vocal_staves:
                     s = sy[k]; sp = s['sp']
                     lim = sy[k + 1]['top'] if k + 1 < len(sy) else s['bot'] + 14 * sp
-                    band = [c for c in cs if s['bot'] < c['top'] < (s['bot'] + lim) / 2 and s['x0'] - 5 < c['x0'] < s['x1'] + 5]
+                    # the words go below their staff; ledger notes under it can push them past the midpoint to the
+                    # next sung staff (which has no words above it), but never into the chord symbols over the piano
+                    hi = sy[k + 1]['top'] - sp if k + 1 in vocal_staves else (s['bot'] + lim) / 2
+                    band = [c for c in cs if s['bot'] < c['top'] < hi and s['x0'] - 5 < c['x0'] < s['x1'] + 5]
                     rows = []
                     for c in sorted(band, key=lambda c: c['top']):
                         for r in rows:
@@ -767,7 +826,8 @@ class Reader:
                     prev = sy[chord_staff - 1]
                     lo = (prev['bot'] + s['top']) / 2
                     cs = [c for c in pm.page.chars if lo < c['top'] < s['top'] and c['bottom'] < s['top']
-                          and (('BravuraText' in c['fontname']) or (re.search(chord_font, c['fontname']) and abs(c['size'] - chord_size) < 0.15))]
+                          and (('BravuraText' in c['fontname']) or (re.search(chord_font, c['fontname'])
+                               and any(abs(c['size'] - z) < 0.15 for z in (chord_size if isinstance(chord_size, (tuple, list)) else (chord_size,)))))]
                     cs.sort(key=lambda c: c['x0'])
                     toks = []
                     for c in cs:
@@ -782,6 +842,15 @@ class Reader:
                             it = min(cand, key=lambda it: abs(it['x'] - t[0]['x0']))
                             on = it['on']
                         self.harm[bar['num']].append((on, txt))
+            # "/B" alone: Dorico prints only the new bass when the chord stays; the file spells it out ("G/B")
+            prev = None
+            for n in sorted(self.harm):
+                for j, (on, txt) in enumerate(sorted(self.harm[n])):
+                    if txt.startswith('/') and prev:
+                        self.harm[n][self.harm[n].index((on, txt))] = (on, prev + txt)
+                        self.notes = getattr(self, 'notes', []) + [f"bar {n}: chord symbol {txt!r} printed alone; the file has {prev + txt!r}"]
+                    elif not txt.startswith('/'):
+                        prev = txt.split('/')[0]
         return self
 
     def end_onset(self, pi, si, k, x):
@@ -876,17 +945,22 @@ class Reader:
         for pn, (name, ab, ks, prog) in enumerate(parts, 1):
             w(f'<part id="P{pn}">')
             multi = len(ks) > 1
+            self._open_slurs = collections.defaultdict(list)   # (staff, voice) -> slur numbers open, innermost last
             cur_clefs = {}
             for bar in self.bars:
                 pm = self.pms[bar['page']]
                 attrs = ''
                 num = bar['num']
                 w(f'<measure number="{num}">')
-                if num == 1 or num in self.keys:
+                BARLEN = bar.get('barlen', self.BAR)
+                new_meter = num == 1 or bar.get('meter') != self.bars[num - 2].get('meter')
+                if num == 1 or num in self.keys or new_meter:
                     a = '<attributes>'
                     if num == 1: a += f'<divisions>{DIV}</divisions>'
-                    a += f'<key><fifths>{self.keys.get(num, bar["key"])}</fifths></key>'
-                    if num == 1: a += '<time><beats>4</beats><beat-type>4</beat-type></time>'
+                    if num == 1 or num in self.keys: a += f'<key><fifths>{self.keys.get(num, bar["key"])}</fifths></key>'
+                    if new_meter:
+                        bt, bty = bar.get('meter', (4, 4))
+                        a += f'<time><beats>{bt}</beats><beat-type>{bty}</beat-type></time>'
                     if num == 1 and multi: a += f'<staves>{len(ks)}</staves>'
                     if num == 1:
                         for si_, k in enumerate(ks, 1):
@@ -919,9 +993,9 @@ class Reader:
                         if pos > 0:
                             w(f'<backup><duration>{int(pos * DIV)}</duration></backup>'); pos = F(0)
                         if not seq:
-                            w(f'<note><rest measure="yes"/><duration>{int(self.BAR * DIV)}</duration><voice>{voice}</voice>'
+                            w(f'<note><rest measure="yes"/><duration>{int(BARLEN * DIV)}</duration><voice>{voice}</voice>'
                               + (f'<staff>{si_}</staff>' if multi else '') + '</note>')
-                            pos = self.BAR
+                            pos = BARLEN
                             continue
                         pend_d = dirs if vn == min(vs) else []
                         pend_h = harm if vn == min(vs) else []
@@ -931,7 +1005,7 @@ class Reader:
                                 w(f'<forward><duration>{int((it["on"] - pos) * DIV)}</duration><voice>{voice}</voice>'
                                   + (f'<staff>{si_}</staff>' if multi else '') + '</forward>')
                                 pos = it['on']
-                            nxt_on = seq[idx + 1]['on'] if idx + 1 < len(seq) else self.BAR + 1
+                            nxt_on = seq[idx + 1]['on'] if idx + 1 < len(seq) else BARLEN + 1
                             for d in [d for d in pend_d if d['on'] < nxt_on]:
                                 w(direction_xml(d, d['on'] - it['on'], si_ if multi else None, DIV))
                                 pend_d.remove(d)
@@ -942,10 +1016,10 @@ class Reader:
                             pos += it['dur']
                         for d in pend_d: w(direction_xml(d, d['on'] - pos, si_ if multi else None, DIV))
                         for h in pend_h: w(harmony_xml(h[1], h[0] - pos, si_ if multi else None, DIV))
-                        if pos < self.BAR:
-                            w(f'<forward><duration>{int((self.BAR - pos) * DIV)}</duration><voice>{voice}</voice>'
+                        if pos < BARLEN:
+                            w(f'<forward><duration>{int((BARLEN - pos) * DIV)}</duration><voice>{voice}</voice>'
                               + (f'<staff>{si_}</staff>' if multi else '') + '</forward>')
-                            pos = self.BAR
+                            pos = BARLEN
                 bl = bar['barline']
                 if bar is self.bars[-1]:
                     w('<barline location="right"><bar-style>light-heavy</bar-style></barline>')
@@ -959,7 +1033,7 @@ class Reader:
     def note_xml(self, it, voice, staff, DIV, pm, bar):
         stf = f'<staff>{staff}</staff>' if staff else ''
         if it['kind'] == 'rest':
-            meas = it.get('whole') and it['dur'] == self.BAR
+            meas = it.get('whole') and it['dur'] == bar.get('barlen', self.BAR)
             s = '<note>' + ('<rest measure="yes"/>' if meas else '<rest/>') + f'<duration>{int(it["dur"] * DIV)}</duration>'
             s += f'<voice>{voice}</voice>'
             if not meas: s += f'<type>{TYPE[it["base"]]}</type>' + '<dot/>' * it['dots']
@@ -987,8 +1061,12 @@ class Reader:
             if ts: nots += '<tied type="stop"/>'
             if tb: nots += '<tied type="start" orientation="%s"/>' % ('over' if it.get('tie_obj', {}).get(id(h)) else 'under')
             if i == 0:
-                for _ in range(it.get('slur_stop', 0)): nots += '<slur type="stop" number="1"/>'
-                for _ in range(it.get('slur_start', 0)): nots += '<slur type="start" number="1"/>'
+                # nested slurs (one inside another, or two ending on one note) need their own numbers
+                op = getattr(self, '_open_slurs', collections.defaultdict(list))[(staff, voice)]
+                for _ in range(it.get('slur_stop', 0)): nots += f'<slur type="stop" number="{op.pop() if op else 1}"/>'
+                for _ in range(it.get('slur_start', 0)):
+                    n_ = min(set(range(1, 7)) - set(op)); op.append(n_)
+                    nots += f'<slur type="start" number="{n_}"/>'
                 if it.get('artic'):
                     nots += '<articulations>' + ''.join(f'<{a}/>' for a in it['artic']) + '</articulations>'
             if nots: s += f'<notations>{nots}</notations>'
@@ -1064,7 +1142,7 @@ class Reader:
         return self
 
 
-LIGATURES = {'(cid:57)': 'fi'}   # Academico's fi ligature has no Unicode mapping in these PDFs
+LIGATURES = {'(cid:57)': 'fi', '(cid:51)': 'fi'}   # Academico's fi ligature has no Unicode mapping in these PDFs (57: Dorico 6.0, 51: Dorico 6.2)
 
 TYPE = {F(4): 'whole', F(2): 'half', F(1): 'quarter', F(1, 2): 'eighth', F(1, 4): '16th', F(1, 8): '32nd'}
 
@@ -1096,7 +1174,8 @@ def direction_xml(d, off, staff, DIV):
 
 KIND = [('maj7', 'major-seventh', None), ('m7', 'minor-seventh', None), ('sus2', 'suspended-second', None),
         ('sus4', 'suspended-fourth', None), ('sus', 'suspended-fourth', None), ('m', 'minor', None),
-        ('7', 'dominant', None), ('6', 'major-sixth', None), ('add9', 'major', 'add9'), ('', 'major', None)]
+        ('7', 'dominant', None), ('6', 'major-sixth', None), ('add9', 'major', 'add9'), ('11', 'dominant-11th', None),
+        ('', 'major', None)]
 
 
 def harmony_xml(txt, off, staff, DIV):
@@ -1105,13 +1184,19 @@ def harmony_xml(txt, off, staff, DIV):
     root, ra, rest, bass, ba = m.groups()
     alt = {'b': -1, '#': 1}
     kind = None
+    # Dorico sets "(add9)", "(add11)", "(omit3)" smaller after the kind: the kind text keeps them, degrees play them
+    degs = re.findall(r'\((add|omit)(\d+)\)', rest)
+    base = re.sub(r'\((?:add|omit)\d+\)', '', rest)
     for suf, k, deg in KIND:
-        if rest == suf: kind = (k, suf); break
+        if base == suf: kind = (k, suf); break
     if kind is None: raise ValueError(f'chord kind {rest!r} in {txt!r}')
     s = '<harmony print-frame="no"><root><root-step>%s</root-step>%s</root>' % (root, f'<root-alter>{alt[ra]}</root-alter>' if ra in alt else '')
     s += f'<kind text="{esc(rest)}">{kind[0]}</kind>'
     if bass:
         s += '<bass><bass-step>%s</bass-step>%s</bass>' % (bass, f'<bass-alter>{alt[ba]}</bass-alter>' if ba in alt else '')
+    for typ, n in degs:
+        s += (f'<degree print-object="no"><degree-value>{n}</degree-value><degree-alter>0</degree-alter>'
+              f'<degree-type>{"add" if typ == "add" else "subtract"}</degree-type></degree>')
     if off: s += f'<offset>{int(off * DIV)}</offset>'
     if staff: s += f'<staff>{staff}</staff>'
     return s + '</harmony>'

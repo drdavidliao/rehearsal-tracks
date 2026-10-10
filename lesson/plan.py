@@ -39,7 +39,14 @@ def runs(ns):
     return [tuple(r) for r in out]
 
 
-def beat_str(on):
+def beat_str(on, meter=(1, False)):
+    """beat 3½ (the & of 3) in a simple meter; in a compound one, beats are dotted quarters counted
+    '1 & a': 2a is the a of 2"""
+    beat, compound = meter
+    if compound:
+        k, pos = divmod(on, beat)
+        sub = {F(0): '', F(1, 2): '&', F(1): 'a'}.get(pos)
+        return f"{int(k) + 1}{sub}" if sub is not None else f"{int(k) + 1}+{pos}"
     b = 1 + on
     if b.denominator == 1: return str(b.numerator)
     whole = b.numerator // b.denominator
@@ -74,7 +81,7 @@ class Planner:
                 tail.append(e)
             if not tail or len(tail) == len(evs): continue
             first = tail[-1]
-            if first['on'] >= 2 and first['lyric']:
+            if first['on'] >= self.S.pickup_from(a - 1) and first['lyric']:
                 if best is None or first['on'] < best: best = first['on']
         return (a - 1, best) if best is not None else None
 
@@ -87,7 +94,7 @@ class Planner:
         bar = pu[0] if pu else a
         lb, lbeat = self._logic[bar]
         logic = f"{lb}" if lbeat == 1 else f"{lb} {beat_str(lbeat - 1)}"
-        return (bar, beat_str(pu[1]) if pu else None, logic)
+        return (bar, beat_str(pu[1], self.S.meter(bar)) if pu else None, logic)
 
     # -------------------------------------------------------------- per part difficulty
     def difficulty(self, p, a, b):
@@ -145,7 +152,7 @@ class Planner:
         for e in reversed(evs):
             if e['midi'] is None: break
             tail.append(e)
-        if not tail or len(tail) == len(evs) or tail[-1]['on'] < 2: return 0.0
+        if not tail or len(tail) == len(evs) or tail[-1]['on'] < self.S.pickup_from(n - 1): return 0.0
         rest = F(0)
         for e in reversed(evs[:len(evs) - len(tail)]):
             if e['midi'] is not None: break
@@ -194,7 +201,7 @@ class Planner:
             for m, e in evs:
                 if e['midi'] is None: rest += e['dur']; continue
                 if m == n and rest >= 1 and e['lyric'] and not e['tie_stop']:
-                    s_, pu = (n, None) if e['on'] < 2 else (n + 1, e['on'])
+                    s_, pu = (n, None) if e['on'] < self.S.pickup_from(n) else (n + 1, e['on'])
                     if a + 2 <= s_ <= b - 1:
                         joins = any(shape(q, n, e['on']) == shape(p, n, e['on']) for q in PARTS if q not in g)
                         pos = n + float(e['on']) / 4
@@ -420,9 +427,9 @@ class Planner:
                 for g in gs:
                     s_, pu = gsplit[tuple(g)]
                     if s_ != c:
-                        where = f" (in on beat {beat_str(pu)} of m{s_ - 1})" if pu is not None else ''
+                        where = f" (in on beat {beat_str(pu, self.S.meter(s_ - 1))} of m{s_ - 1})" if pu is not None else ''
                         sec['notes'][-1] = sec['notes'][-1].rstrip('.') + f"; {who(g)}: {mrange(a, s_ - 1)} and {mrange(s_, b)}{where}."
-                        sec['say'] += f" {Cap(who(g))}, your second half starts at bar {s_}" + (f", coming in on beat {beat_str(pu)} of bar {s_ - 1}." if pu is not None else '.')
+                        sec['say'] += f" {Cap(who(g))}, your second half starts at bar {s_}" + (f", coming in on beat {beat_str(pu, self.S.meter(s_ - 1))} of bar {s_ - 1}." if pu is not None else '.')
                 hj = {}
                 for key in sorted({v[0] for v in gsplit.values()}):
                     ps = [p for g in gs if gsplit[tuple(g)][0] == key for p in g]
@@ -438,6 +445,8 @@ class Planner:
                     sub = [('Play whole section 1x, listen', sec['cue'])]
                     for h in halves:
                         hc = self.cue(h[0], g)
+                        if not any(self.S.notes(p, n) for p in g for n in range(h[0], h[1] + 1)):
+                            continue        # the part rests through this half: nothing to sing, known or not
                         if all(n in cov[p] for p in g for n in range(h[0], h[1] + 1) if self.S.notes(p, n)):
                             m0 = cov[g[0]].get(h[0], (None,))[0]
                             sub.append((f"{mrange(*h)}: play 1x, sing (already sung" + (f" at m{m0})" if m0 else ")"), hc))

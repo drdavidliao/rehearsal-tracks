@@ -81,13 +81,19 @@ class Stamper:
                 side = 'left'          # the count runs along the right: the caption goes back into the bar before
             elif cap and not clear(x + span + 1.5, x + span + capw + 8):
                 side = 'left' if clear(x - capw - 8, x - 1.5) else 'above'
+                if side == 'above':
+                    # no room either side of the circles: 'above' lands on the words of the staff above, so
+                    # rather run the caption on to the right past the dynamic in its way, where that is clear
+                    past = max(g.x1 for g in dyn if g.x0 <= x + span + capw + 8) + 2
+                    if clear(past, past + capw + 6):
+                        side = ('right', past - (x + span + 1.5))
             circles = []
             for m, (lab, c, col) in enumerate(bs):
                 circles.append((x + r + m * (2 * r + 1.5), lab, col))
             self.marks.setdefault(b['page'], []).append(('group', circles, cy, r, cap, side, bs[0][2], pm.H))
             # a count written over this bar gives way to the badge: the badge says where to start
             x_lo = x - 2 if side != 'left' else x - capw - 10
-            x_hi = x + span + (capw + 10 if cap and side == 'right' else 2)
+            x_hi = x + span + (capw + 10 + (side[1] if isinstance(side, tuple) else 0) if cap and side != 'left' and side != 'above' else 2)
             self.hide.setdefault(b['page'], []).append((x_lo, x_hi, cy - r - 0.5, cy + r + 0.5))
             why = getattr(self, 'whys', {}).get((bar, k))
             if why and lift < 6:
@@ -167,7 +173,9 @@ class Stamper:
         y = H - cy
         col = colors.HexColor(color)
         tw = text_w(cap, 'Sans', 5.6)
-        if side == 'right': bx, by = x1 + 1.5, y - 4
+        sh = 0
+        if isinstance(side, tuple): side, sh = side          # to the right, stepped past a dynamic
+        if side == 'right': bx, by = x1 + 1.5 + sh, y - 4
         elif side == 'left': bx, by = x0 - 1.5 - (tw + 5), y - 4
         else: bx, by = (x0 + x1) / 2 - (tw + 5) / 2, y + r + 1
         c.saveState()
@@ -264,7 +272,8 @@ class Stamper:
         for on, x in pts: firsts[on] = min(x, firsts.get(on, x))
         xs = sorted(firsts.items())
         end = (barlen, b['xb'])
-        for t in range(1, int(barlen)):
+        beat = getattr(self, 'meter', (1, False))[0]
+        for t in (beat * k for k in range(1, int(barlen / beat) + (barlen % beat > 0))):
             if t in firsts:
                 x = firsts[t] - 2.2
             else:
@@ -306,7 +315,20 @@ class Stamper:
             # 'e' and 'a' only in beats where this part has a note on one: a beat of 8ths reads '2 &'
             starts = {e_on for e_on in own}
             labs = []
-            for beat in range(int(self.barlen)):
+            bt, compound = getattr(self, 'meter', (1, False))
+            if compound:
+                # dotted-quarter beats, '1 & a'; with 16ths, 'ta' between, only in beats that have a note on one
+                for j in range(int(self.barlen / bt)):
+                    b0 = bt * j
+                    labs.append((b0, str(j + 1), True))
+                    busy = sub == 4 and any(b0 + F(m, 4) in starts for m in (1, 3, 5))
+                    for m, nm in enumerate(['ta', '&', 'ta', 'a', 'ta'], 1):
+                        if nm == 'ta' and not busy: continue
+                        labs.append((b0 + F(m, 4), nm, False))
+                beats_ = []
+            else:
+                beats_ = range(int(self.barlen))
+            for beat in beats_:
                 labs.append((F(beat), str(beat + 1), True))
                 busy = sub == 4 and any(F(beat) + F(m, 4) in starts for m in (1, 3))
                 for m, nm in enumerate(names, 1):
@@ -389,7 +411,7 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
         lens = _an.bar_lengths(score)
     flagged = getattr(plan_obj, 'flagged', {})
     for n, ps in sorted(flagged.items()):
-        if score is not None: st.barlen = lens[n]
+        if score is not None: st.barlen, st.meter = lens[n], score.meter(n)
         st.beat_lines(n, sorted(ps, key=lambda p: PART_K[p]))
     # the count to speak over the same staves: 1 e & a where the passage has 16ths, else 1 &,
     # decided per part over each run of flagged bars so one passage reads one way
@@ -405,7 +427,7 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
                 fine = any(e['midi'] is not None and (e['on'].denominator == 4 or (e['on'] + e['dur']).denominator == 4)
                            for n in run for e in score.bars[p].get(n, []))
                 for n in run:
-                    st.barlen = lens[n]
+                    st.barlen, st.meter = lens[n], score.meter(n)
                     st.counts(n, [p], 4 if fine else 2)
     st.whys = {}
     for sec in plan:

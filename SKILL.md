@@ -700,6 +700,42 @@ What the first two Dorico SATB + piano arrangements taught:
 - **Two same-pitch notes with a note between are not tied.** Check that nothing
   in the voice sits between them before calling the arc a tie.
 
+What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
+
+- **Read the time signature; never assume 4/4.** Its digits are Bravura
+  `E080`–`E089` on the top staff, numerator row above denominator; each bar gets
+  its own `meter` and length, and `<time>` is written wherever it changes. A part
+  page's multi-bar rest prints its count in the same digits, as a lone row: do not
+  read that as a meter (the reader has no guard for it yet; it matters only when
+  reading parts for the cross-check).
+- **Low notes of a piano RH chord can sit nearer the LH staff.** On ledger lines in
+  the grand-staff gap, the nearest staff is the wrong one. A head outside its
+  staff belongs to the adjacent staff when its stem's far end is inside that staff
+  and another head on the same stem is already that staff's
+  (`restaff_gap_heads`); its staccato goes with it. `verify.py` checks 12 and 17
+  use the same rule (`head_staff`). Ties under such notes likewise go to the
+  neighbouring staff when the nearest has no head at either end.
+- **Words under ledger notes fall past the midpoint between staves.** Below a sung
+  staff whose next staff is also sung, take words down to a staff space above the
+  next staff; never into the chord symbols over the piano. A soprano line that
+  dips low had lost seven bars of words to the midpoint rule.
+- **Chord symbols come in two sizes.** Dorico sets `(add9)`, `(add11)`, `(omit3)`
+  smaller after the kind (5.5 pt after 8.5): pass `marks()` a tuple of sizes. The
+  kind keeps its printed text, and hidden `<degree>`s carry the additions. A lone
+  `/B` means the chord stays and only the bass moves: write `G/B`. A slash that
+  rises above the search band, or a 5-pt suffix at another size, is dropped: read
+  the last bar's symbols against the page.
+- **A slur can leave the margin clear of every stem**, beyond tie distance of any
+  head; catch it as outgoing from the nearest chord. Slurs nested or ending on one
+  note need their own `number`s (check 8 fails otherwise).
+- **The fi ligature's cid changes with the Dorico version:** `(cid:57)` in 6.0
+  exports, `(cid:51)` in 6.2. Map both, and read the word list for any other.
+- **Fermatas are not read** (Bravura `E4C0`); add them in the build's `finish.py`.
+- **Single-note extenders.** The score can print a line under a word sung on one
+  note, with nothing after it. Where the singers' parts print none, drop it and
+  say so (check 10 then reports it); where nothing else decides, keep what the
+  score prints (check 14 then reports it). Either way it is a handback item.
+
 ## Step 3 — Exploding a condensed score into one part per voice
 
 For singing synthesis you need one monophonic part per voice, because a synth
@@ -2470,8 +2506,9 @@ main director says, so the plan always covers every letter.
   part that has led least otherwise. Nobody wants "the basses, yet again".
 - **Long or hard letters are taught in halves** (10+ bars and not easy, or 8+ bars
   and hard): the part whole once (P), then each half P+SS; a half the part has
-  already sung elsewhere is sung once, S(known). A dashed line marks the split on
-  the score.
+  already sung elsewhere is sung once, S(known); a half the part rests through is
+  left out (not "S(known)" for bars it never sings). A dashed line marks the split
+  on the score.
 - **Halves split the learning, not the bars.** The split is a bar line where most
   parts breathe that divides the effort evenly, with a pull towards the letter's
   four-bar phrases. Effort is each bar's difficulty, cut where the part has sung
@@ -2497,6 +2534,14 @@ main director says, so the plan always covers every letter.
   - `slow`: for a song the choir already has in its ears. No drills: a part with
     its own tricky bit gets **P↓+S↓+S** (listen and sing down tempo, then at
     tempo); shared tricky bars make the closing everyone step **S↓+S**.
+- **Compound meter is counted in its own beats.** 6/8, 9/8 and 12/8 have
+  dotted-quarter beats, counted `1 & a 2 & a` (16ths `ta` between, only in a
+  beat with a note on one). 8ths on `&` and `a` are ordinary there, not
+  off-beats; an 8th held over the next dotted-quarter beat, a tie across it, 16ths
+  and dotted 8ths still count as tricky. The dashed beat lines fall on the dotted
+  quarters, a lead-in starts in the bar's second half, and cues read "in on beat
+  2a" (the a of 2). Counted in quarters, a 6/8 piece read `1 e & a 2 & 3`, put a
+  beat line mid-beat, and flagged most bars. Simple meters are untouched.
 - Difficulty is measured, not heard (`--easy`, `--hard`, `--rhythm-threshold`).
   Expect the director to overrule some of it; the plan is a draft for their pen.
 
@@ -2528,7 +2573,9 @@ main director says, so the plan always covers every letter.
     that part's staff at the bar the step starts, below the words of the staff
     above, stepped right of a dynamic under it and clear of the boxed rehearsal
     letter, with the shorthand beside it. Several on one staff and bar share one
-    caption; a caption with no room on the right goes left, else above.
+    caption; a caption with no room on the right goes left; with no room on
+    either side it runs on to the right past the dynamic in its way, and only
+    then above (where it lands on the words of the staff above).
   - "Everyone" steps sit a row higher, by the letter; a spoken drill for everyone
     shares that row.
   - Bars flagged as rhythmically tricky get dashed red beat lines through the
@@ -2557,6 +2604,8 @@ main director says, so the plan always covers every letter.
   together in the plan (a letter whose first four bars are S+A+T in unison still
   teaches them one at a time).
 - SATB only, one voice per staff; the marks need a PDF `dorico_reader.py` can read.
+- Captions can still collide where systems are tight (badges over the staff
+  above in a crowded last system), and counts crowd in a narrow bar of 16ths.
 
 ## Scripts
 
@@ -4475,7 +4524,7 @@ def syllables(chars):
 
 
 # ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N)
-LIGATURES = {'(cid:57)': 'fi'}      # Academico (Dorico's default text font)
+LIGATURES = {'(cid:57)': 'fi', '(cid:51)': 'fi'}      # Academico (Dorico's default text font): 57 in Dorico 6.0 exports, 51 in 6.2
 
 
 def check_instructions(pdf):
@@ -4615,6 +4664,23 @@ HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4,
          0xF4BC, 0xF4BD, 0xF4BE, 0xE0A9}   # Dorico's Bravura writes its noteheads at the optional code points F4BC-F4BE
 
 
+def head_staff(page, c, st):
+    """the staff a notehead belongs to: the nearest one, unless the head sits outside it on a stem whose far end
+    is inside another staff (the low notes of a piano RH chord hanging on ledger lines nearer the LH staff)"""
+    mid = lambda s: (s['lines'][0] + s['lines'][4]) / 2
+    s = min(st, key=lambda s: abs(mid(s) - c['y']))
+    if s['lines'][0] <= c['y'] <= s['lines'][4]: return s
+    sp = (s['lines'][4] - s['lines'][0]) / 4
+    for x, t, b in page['vlines']:
+        if b - t < 1.5 * sp or not (abs(x - c['x0']) < 0.9 or abs(x - c['x1']) < 0.9): continue
+        if not (t - 0.7 * sp <= c['y'] <= b + 0.7 * sp): continue
+        far = t if abs(t - c['y']) > abs(b - c['y']) else b
+        s2 = next((o for o in st if o['lines'][0] - 0.1 <= far <= o['lines'][4] + 0.1), None)
+        if s2 is None or s2 is s: continue
+        if min(s['lines'][0], s2['lines'][0]) < c['y'] < max(s['lines'][4], s2['lines'][4]): return s2
+    return s
+
+
 def check_grid(E):
     """12: every notehead sits a whole number of half staff spaces from its staff's top line."""
     offs = []
@@ -4625,7 +4691,7 @@ def check_grid(E):
             if not any(f in c['font'] for f in MUSIC_FONTS): continue
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
-            s = min(st, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
+            s = head_staff(page, c, st)
             # each staff's own space: a score can set the piano smaller than the voices
             d = (c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8)
             offs.append((d, page['n'], c['x0']))
@@ -4761,7 +4827,7 @@ def check_pitches(root, E):
             if not any(f in c['font'] for f in MUSIC_FONTS) or not (a + 1 < c['x0'] < b - 1): continue
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
-            s = min(allst, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
+            s = head_staff(page, c, allst)
             if not any(s is x for x in sy): continue
             k = next(i for i, x in enumerate(sy) if x is s)
             got[k].add(round((c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8) - E.grid_base))

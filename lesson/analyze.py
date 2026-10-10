@@ -64,8 +64,26 @@ class Score:
                 for e in reversed(evs):
                     if e['midi'] is None: break
                     tail.append(e)
-                if tail and len(tail) < len(evs) and tail[-1]['on'] >= 2 and tail[-1]['lyric']:
+                if tail and len(tail) < len(evs) and tail[-1]['on'] >= self.pickup_from(n) and tail[-1]['lyric']:
                     for e in tail: e['lead_in'] = True
+
+    # ---------------------------------------------------------------- meter
+    def meter(self, n):
+        """(beat in quarters, compound) for bar n: 6/8, 9/8, 12/8 are counted in dotted quarters, '1 & a 2 & a'"""
+        ts = (4, 4)
+        for m in sorted(self.times):
+            if m > n: break
+            ts = self.times[m]
+        if ts[1] >= 8 and ts[0] % 3 == 0 and ts[0] > 3:
+            return F(12, ts[1]), True
+        return F(4, ts[1]), False
+
+    def pickup_from(self, n):
+        """where a lead-in into the next bar may start: beat 3 of a simple bar, the second half of a compound one"""
+        beat, compound = self.meter(n)
+        if not compound: return 2
+        ts = max(((m, t) for m, t in self.times.items() if m <= n), default=(1, (6, 8)))[1]
+        return beat * (ts[0] // 3 // 2)
 
     def notes(self, part, b):
         return [e for e in self.bars[part].get(b, []) if e['midi'] is not None]
@@ -116,9 +134,20 @@ class Score:
         """syncopation / rhythmic trickiness of one bar: attacks off the beat, ties across a beat,
         16ths, dotted figures"""
         s = 0.0
+        beat, compound = self.meter(n)
         for e in self.bars[part].get(n, []):
             if e['midi'] is None or e['tie_stop']: continue
             on = e['on']
+            if compound:
+                # the beat is a dotted quarter: 8ths on '&' and 'a' are its ordinary subdivision
+                pos = on % beat
+                if on.denominator >= 4: s += 1.5        # attack on a 16th
+                elif pos:
+                    s += 1.2 if (pos + e['dur'] > beat or e['tie_start']) else 0.4
+                if e['tie_start'] and (on + e['dur']) % beat: s += 0.5
+                if e['dur'].denominator >= 4: s += 0.3
+                if e['dur'] in (F(3, 4), F(3, 8)): s += 0.6
+                continue
             if on.denominator >= 4: s += 1.5            # attack on a 16th
             elif on.denominator == 2:
                 # off-beat 8th: syncopated when it is held past the next beat

@@ -568,7 +568,7 @@ def syllables(chars):
 
 
 # ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N)
-LIGATURES = {'(cid:57)': 'fi'}      # Academico (Dorico's default text font)
+LIGATURES = {'(cid:57)': 'fi', '(cid:51)': 'fi'}      # Academico (Dorico's default text font): 57 in Dorico 6.0 exports, 51 in 6.2
 
 
 def check_instructions(pdf):
@@ -708,6 +708,23 @@ HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4,
          0xF4BC, 0xF4BD, 0xF4BE, 0xE0A9}   # Dorico's Bravura writes its noteheads at the optional code points F4BC-F4BE
 
 
+def head_staff(page, c, st):
+    """the staff a notehead belongs to: the nearest one, unless the head sits outside it on a stem whose far end
+    is inside another staff (the low notes of a piano RH chord hanging on ledger lines nearer the LH staff)"""
+    mid = lambda s: (s['lines'][0] + s['lines'][4]) / 2
+    s = min(st, key=lambda s: abs(mid(s) - c['y']))
+    if s['lines'][0] <= c['y'] <= s['lines'][4]: return s
+    sp = (s['lines'][4] - s['lines'][0]) / 4
+    for x, t, b in page['vlines']:
+        if b - t < 1.5 * sp or not (abs(x - c['x0']) < 0.9 or abs(x - c['x1']) < 0.9): continue
+        if not (t - 0.7 * sp <= c['y'] <= b + 0.7 * sp): continue
+        far = t if abs(t - c['y']) > abs(b - c['y']) else b
+        s2 = next((o for o in st if o['lines'][0] - 0.1 <= far <= o['lines'][4] + 0.1), None)
+        if s2 is None or s2 is s: continue
+        if min(s['lines'][0], s2['lines'][0]) < c['y'] < max(s['lines'][4], s2['lines'][4]): return s2
+    return s
+
+
 def check_grid(E):
     """12: every notehead sits a whole number of half staff spaces from its staff's top line."""
     offs = []
@@ -718,7 +735,7 @@ def check_grid(E):
             if not any(f in c['font'] for f in MUSIC_FONTS): continue
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
-            s = min(st, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
+            s = head_staff(page, c, st)
             # each staff's own space: a score can set the piano smaller than the voices
             d = (c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8)
             offs.append((d, page['n'], c['x0']))
@@ -854,7 +871,7 @@ def check_pitches(root, E):
             if not any(f in c['font'] for f in MUSIC_FONTS) or not (a + 1 < c['x0'] < b - 1): continue
             code = ord(c['t'][0])
             if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
-            s = min(allst, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - c['y']))
+            s = head_staff(page, c, allst)
             if not any(s is x for x in sy): continue
             k = next(i for i, x in enumerate(sy) if x is s)
             got[k].add(round((c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8) - E.grid_base))
