@@ -73,6 +73,10 @@ def lay_out(path, starts):
     """
     xml = open(path, encoding='utf-8').read()
     xml = re.sub(r'\s*<supports[^>]*element="print"[^>]*/>', '', xml)
+    # The file's own breaks go too.  A Sibelius export carries one per printed
+    # system, and where one lands on a bar that starts a bench system Verovio
+    # breaks twice and renders an empty page between them.
+    xml = re.sub(r'\s+new-(?:page|system)="yes"', '', xml)
 
     def ap(mo):
         n = int(mo.group(1))
