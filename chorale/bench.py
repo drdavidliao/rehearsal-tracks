@@ -180,7 +180,7 @@ def grid(src, starts, beats_per_bar, bar_quarters, staff_mm=7.0, page_width=2000
 
 
 # ---------------------------------------------------------------- the page
-def page(systems, beats_per_bar, score_line, doc_id, sub_line):
+def page(systems, beats_per_bar, score_line, doc_id, sub_line, meter='4/4'):
     meta = [{"w": s['w'], "h": s['h'],
              "measures": [{"n": m['n'], "edges": m['edges']} for m in s['measures']]}
             for s in systems]
@@ -215,6 +215,7 @@ def page(systems, beats_per_bar, score_line, doc_id, sub_line):
     return ((head + '\n'.join(blocks) + tail)
             .replace('__META__', json.dumps(meta, separators=(',', ':')))
             .replace('__BEATS__', str(beats_per_bar))
+            .replace('__METER__', meter)
             .replace('__SCORELINE__', escape(sub_line))
             .replace('__DOC__', doc_id)
             .replace('__SCORE__', json.dumps(score_line)[1:-1]))
@@ -235,7 +236,8 @@ def build(src, outdir, beats_per_bar=None, bars_per_system=4, title=None,
     for i, s in enumerate(systems):
         with open(os.path.join(outdir, 'sys', f'{i:02d}.svg'), 'w', encoding='utf-8') as fh:
             fh.write(s['svg'])
-    html = page(systems, bpb, score_line, doc_id, sub)
+    html = page(systems, bpb, score_line, doc_id, sub,
+                f"{info['beats']}/{info['beat_type']}")
     out = os.path.join(outdir, 'bench.html')
     with open(out, 'w', encoding='utf-8') as fh:
         fh.write(html)

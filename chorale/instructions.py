@@ -2,12 +2,20 @@
 
 The bench writes:
 
-    {"score": "...", "beats_per_bar": 4,
+    {"score": "...", "meter": "4/4", "beats_per_bar": 4,
      "instructions": [{"from": "24.1", "to": "26.4",
                        "tag": "P4to4", "text": "..."}, ...]}
 
 `from` and `to` are "bar.beat", both 1-based and both inclusive: "24.1" to
 "26.4" means every beat from the downbeat of 24 through the last beat of 26.
+
+A "beat" is a cell of the bench's grid, and a cell is a bar divided by
+`beats_per_bar`, whatever the notated beat is: in 12/8 with 12 cells, beat 10 is
+the tenth eighth, not the tenth quarter.  So turning a note's offset (in
+quarters) into a cell needs the bar's length, which is what `meter` is for.
+An export made before the bench wrote `meter` has none; pass `--meter`, or the
+cells are taken to be quarters, which is right only when the bar holds
+`beats_per_bar` quarters.
 
 Sibelius comments do not survive a MusicXML export — the format has no element
 for a reviewer's note, so there is nowhere standard to put one — which is why the
@@ -30,12 +38,13 @@ def parse_ref(s):
 class Span:
     """One instruction: a contiguous run of beats, and what to do with them."""
 
-    def __init__(self, start, end, text, tag=None, beats_per_bar=4):
+    def __init__(self, start, end, text, tag=None, beats_per_bar=4, cell=F(1)):
         self.bar0, self.beat0 = start
         self.bar1, self.beat1 = end
         self.text = text or ''
         self.tag = tag or None
         self.beats_per_bar = beats_per_bar
+        self.cell = F(cell)             # quarters per grid cell
         if (self.bar1, self.beat1) < (self.bar0, self.beat0):
             raise ValueError(f'{self} runs backwards')
 
@@ -71,7 +80,7 @@ class Span:
         A note that starts inside the span is in it even when it began off the
         beat; a note that started before the span and is still sounding is not.
         """
-        beat = int(F(offset)) + 1
+        beat = int(F(offset) / self.cell) + 1
         return self.contains(bar, beat)
 
     # ---- resolution against real music ----------------------------------
@@ -98,10 +107,11 @@ class Span:
 
 
 class Instructions:
-    def __init__(self, spans, score='', beats_per_bar=4):
+    def __init__(self, spans, score='', beats_per_bar=4, meter=None):
         self.spans = spans
         self.score = score
         self.beats_per_bar = beats_per_bar
+        self.meter = meter
 
     def __len__(self):
         return len(self.spans)
@@ -171,18 +181,28 @@ class Instructions:
         return '\n'.join(out)
 
 
-def load(path):
+def load(path, meter=None):
     with open(path, encoding='utf-8') as fh:
         d = json.load(fh)
-    return from_dict(d)
+    return from_dict(d, meter)
 
 
-def from_dict(d):
+def cell_quarters(meter, beats_per_bar):
+    """'12/8', 12 -> 1/2: how many quarters one grid cell lasts."""
+    if not meter:
+        return F(1)
+    beats, beat_type = (int(x) for x in str(meter).split('/'))
+    return F(beats * 4, beat_type) / beats_per_bar
+
+
+def from_dict(d, meter=None):
     bpb = int(d.get('beats_per_bar', 4))
+    meter = meter or d.get('meter')
+    cell = cell_quarters(meter, bpb)
     spans = [Span(parse_ref(it['from']), parse_ref(it.get('to', it['from'])),
-                  it.get('text', ''), it.get('tag'), bpb)
+                  it.get('text', ''), it.get('tag'), bpb, cell)
              for it in d.get('instructions', [])]
-    return Instructions(spans, d.get('score', ''), bpb)
+    return Instructions(spans, d.get('score', ''), bpb, meter)
 
 
 if __name__ == '__main__':
@@ -190,11 +210,23 @@ if __name__ == '__main__':
 
     from .scoretext import parse_score
 
-    if len(sys.argv) < 2:
-        raise SystemExit('usage: python3 -m chorale.instructions FILE.json [score.txt [blocks]]')
-    ins = load(sys.argv[1])
+    args = sys.argv[1:]
+    meter = None
+    if '--meter' in args:
+        k = args.index('--meter')
+        meter = args[k + 1]
+        del args[k:k + 2]
+    if not args:
+        raise SystemExit('usage: python3 -m chorale.instructions FILE.json [score.txt [blocks]] '
+                         '[--meter 12/8]')
+    sys.argv[1:] = args
+    ins = load(sys.argv[1], meter)
     print(f'{ins.score}\n{len(ins)} instruction(s), '
-          f'tags: {", ".join(ins.tags()) or "none"}\n')
+          f'tags: {", ".join(ins.tags()) or "none"}')
+    if ins.meter:
+        print(f'{ins.meter}, {ins.beats_per_bar} cells per bar\n')
+    else:
+        print(f'no meter in the file: cells taken as quarters (pass --meter if wrong)\n')
     if len(sys.argv) > 2:
         blocks = parse_score(sys.argv[2])
         want = sys.argv[3].split(',') if len(sys.argv) > 3 else sorted(blocks)

@@ -135,14 +135,19 @@ or `level` that Sibelius writes one into — so spans and prose come out of the
 Revoicing Bench instead, as JSON:
 
 ```json
-{"score": "...", "beats_per_bar": 4,
+{"score": "...", "meter": "4/4", "beats_per_bar": 4,
  "instructions": [{"from": "24.1", "to": "26.4", "tag": "P4to4", "text": "..."}]}
 ```
 
-`from` and `to` are `bar.beat`, 1-based and inclusive.
+`from` and `to` are `bar.beat`, 1-based and inclusive. A "beat" is a grid cell,
+the bar divided by `beats_per_bar`, so in 12/8 with 12 cells beat 10 is the
+tenth eighth. `meter` is what turns a note's offset in quarters into a cell; an
+export without it (benches built before it was added) needs `--meter 12/8`, or
+every cell is read as a quarter and a compound-meter span selects the wrong
+notes, or none.
 
 ```
-python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
+python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2 [--meter 12/8]
 ```
 
 prints each instruction with the notes it actually selects, per part, which is

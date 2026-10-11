@@ -36,7 +36,7 @@
 <script>
 (function(){
 "use strict";
-const META = __META__, BEATS = __BEATS__;
+const META = __META__, BEATS = __BEATS__, METER = "__METER__";
 const DOC = "__DOC__";
 const SCORE = "__SCORE__";
 
@@ -313,7 +313,7 @@ $("txtclose").addEventListener("click", () => $("dlgtext").close());
 function asJSON(){
   const items = state.annotations.slice().sort((x, y) => x.a - y.a || x.b - y.b);
   return JSON.stringify({
-    score: SCORE, beats_per_bar: BEATS,
+    score: SCORE, meter: METER, beats_per_bar: BEATS,
     instructions: items.map(a => ({ from: ref(a.a), to: ref(a.b),
                                     tag: a.tag || undefined, text: a.text }))
   }, null, 2);
