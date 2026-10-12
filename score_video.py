@@ -1694,6 +1694,7 @@ def closed_display(droot, src_names, src_notes, sung):
                                          and k in hit for k in hit)] or hit
         staff_parts[j] = sorted(hit)
     at, rests, syls = set(), set(), set()
+    at_dur = {}
     syl_text = {}
     count = {}
     for i, ns_ in enumerate(src_notes):
@@ -1704,6 +1705,7 @@ def closed_display(droot, src_names, src_notes, sung):
                 rests.add((i, n['mi'], n['rel'], n['dur']))
             else:
                 at.add((i, n['mi'], n['rel'], n['midi']))
+                at_dur[(i, n['mi'], n['rel'], n['midi'])] = n['dur']
                 count[i] = count.get(i, 0) + 1
                 if n['lyric']:
                     syls.add((i, n['mi'], n['rel']))
@@ -1728,14 +1730,17 @@ def closed_display(droot, src_names, src_notes, sung):
                         el = etree.SubElement(spp, tag)
                     el.text = val
                 dnames[j] = ' '.join(src_names[i] for i in sp)
-    owners, fall = {}, 0
+    owners, fall, split = {}, 0, 0
     for j, ns_ in enumerate(dnotes):
         sp = [i for i in staff_parts[j] if i in sung]
         if not sp:
             continue
         voices = {}
+        lens = {}                     # (bar, moment, pitch) -> lengths of the noteheads printed there
         for n in ns_:
             voices.setdefault(n['mi'], set()).add(n['voice'])
+            if not n['rest'] and not n['grace']:
+                lens.setdefault((n['mi'], n['rel'], n['midi']), set()).add(n['dur'])
         for n in ns_:
             if n['grace']:
                 continue
@@ -1743,6 +1748,19 @@ def closed_display(droot, src_names, src_notes, sung):
                 c = {i for i in sp if (i, n['mi'], n['rel'], n['dur']) in rests}
             else:
                 c = {i for i in sp if (i, n['mi'], n['rel'], n['midi']) in at}
+                # a unison the print splits by voice because the parts hold it for different
+                # lengths (one part's eighth inside the other's dotted quarter): two noteheads at
+                # one moment and pitch, and pitch alone gave each to both parts, so a part lit the
+                # other's note for the other's length and kept its syllable lit to that end too.
+                # Each part takes the notehead as long as its own note. Only where the part's own
+                # length is printed there: a closed score that ties a note differently from the
+                # open score keeps the match on pitch.
+                key = (n['mi'], n['rel'], n['midi'])
+                if len(c) > 1 and len(lens.get(key, ())) > 1:
+                    own = {i for i in c if at_dur[(i,) + key] == n['dur']}
+                    if own and all(at_dur[(i,) + key] in lens[key] for i in c - own):
+                        split += len(c - own)
+                        c = own
             if not c:
                 fall += 1
                 vs = sorted(voices[n['mi']], key=lambda v: int(v) if v.isdigit() else 0)
@@ -1751,6 +1769,10 @@ def closed_display(droot, src_names, src_notes, sung):
                 else:
                     c = {sp[0] if vs.index(n['voice']) == 0 else sp[-1]}
             owners[n['id']] = c
+    print('check, unisons split by voice: ' + (
+        f'{split} notehead-part pair(s) where a part holds the pitch for another length; each part '
+        'lights only the notehead as long as its own note' if split else
+        'none (no two noteheads at one moment and pitch with different lengths)'))
     # syllables: grouped by staff and moment; with two lines at one moment, line k is the
     # k-th part (top down) that starts a syllable there in the open score
     groups = {}

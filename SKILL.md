@@ -1997,6 +1997,19 @@ What the user settled on, on the two-soloist TTBB:
   names at all (the ballad TTBB's did not), each sung part goes to the staff
   holding most of its notes, and the staff is labelled with the parts'
   names.
+- **A unison split by voice belongs to each part by length, not pitch alone.**
+  Where the two parts on a staff start the same pitch together but hold it for
+  different lengths (one part's eighth inside the other's dotted quarter, a
+  melisma's first note under the other part's held note), the closed score prints
+  two noteheads at one spot, one per voice. Matched on moment and pitch only, each
+  notehead went to both parts: on a TTBB with piano a Tenor 1 video lit Tenor 2's
+  dotted half for its whole length and kept Tenor 1's melisma syllable lit 1.2 s
+  into Tenor 1's rest, and the same happened in three other bars (both staves).
+  The script now gives each part the notehead as long as its own note, wherever
+  both lengths are printed there, and reports the count (`check, unisons split by
+  voice`). Generally: whenever whose-is-what comes from matching another file, a
+  key two printed things can share (moment and pitch) is ambiguous; match on
+  every property that tells them apart, and count what the narrowing changed.
 - **Words laid out as the singers' copy prints them** (7.7). Give the display
   copy built with the print's layout; the script sets its above-the-staff words
   above, and a part whose words are printed on the other staff reads them
@@ -2293,6 +2306,15 @@ frames keep seeking quick. With several mp3s, each renders in its own process,
 one per CPU core, and only the first video's sync is measured (they share one
 timing). The seven videos of the two-soloist TTBB took 35 minutes the first
 way and 9 minutes this way, on 2 cores.
+
+**To see what is on screen at a time, take the frame that starts at or before it.**
+`ffmpeg -ss T -i video.mp4 -frames:v 1` gives the first frame *at or after* T. With
+one frame per change, that is the next change, up to a second later: checking a
+lyric video at 97.3 s showed the frame from 98.05 s, a syllable already out, and
+looked like a syllable that never lit. List the frame times
+(`ffprobe -select_streams v -show_entries frame=pts_time -of csv=p=0`), take the
+last one at or before T, and seek to exactly that time; when checking a passage,
+grab every frame that starts in it and label each with its start time.
 
 **Render in Claude's own workspace and copy the mp4s back** (11–13 MB each for
 4:48 at 1920×1080). A desktop bridge that kills background jobs and stops each
