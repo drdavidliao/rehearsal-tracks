@@ -56,6 +56,19 @@ class ScoreSpec:
         """Length of a full bar, in quarters."""
         return F(self.beats * 4, self.beat_type)
 
+    @property
+    def beam_beat(self):
+        """The span a beam group may not cross, in quarters.
+
+        In compound meter (6/8, 9/8, 12/8) eighths beam in threes, by the dotted
+        quarter; beamed by the quarter, the third eighth of a beat hangs off the
+        group as a flag and the beat the singer counts is invisible.  Every
+        other meter keeps the quarter, as before.
+        """
+        if self.beat_type == 8 and self.beats % 3 == 0:
+            return F(3, 2)
+        return F(1)
+
     def ticks(self, quarters):
         return int(quarters * self.divisions)
 
@@ -259,7 +272,7 @@ def open_part(pid, line, clef, spec, first=False, marks=None, header=None):
     for m in range(1, spec.nbars + 1):
         evs = line[m]
         s = _measure_open(m, spec, clef, first, header)
-        bm = beams(evs)
+        bm = beams(evs, spec.beam_beat)
         for i, (pos, e) in enumerate(positions(evs)):
             s += marks.at(m, pos)
             s += note_xml(e, spec, beam=bm[i], fermata=(m in spec.fermata_bars))
@@ -281,7 +294,7 @@ def divided_part(pid, bars, clef, spec, first=False, marks=None, header=None):
         v1, v2, split = bars[m]
         s = _measure_open(m, spec, clef, first, header)
         two = bool(v2)
-        bm = beams(v1)
+        bm = beams(v1, spec.beam_beat)
         pos = F(0)
         for i, e in enumerate(v1):
             s += marks.at(m, pos)
@@ -296,7 +309,7 @@ def divided_part(pid, bars, clef, spec, first=False, marks=None, header=None):
             s += f'<backup><duration>{spec.ticks(pos)}</duration></backup>'
             if split:
                 s += f'<forward><duration>{spec.ticks(split)}</duration></forward>'
-            bm2 = beams(v2)
+            bm2 = beams(v2, spec.beam_beat)
             for i, e in enumerate(v2):
                 s += note_xml(e, spec, voice=2, beam=bm2[i], stem='down',
                               lyr_place='below', lyr_num=2)
@@ -367,14 +380,14 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
         v1pos = positions(v1)
         two_lines = bool(two_map and two_map.get(m))
         place1, place2, also1 = {}, {}, {}
+        def side(v):                          # 'above' / 'below' / None, from a str or (str, n)
+            return v[0] if isinstance(v, tuple) else v
         if lyric_place is not None:
             def unprinted(e):
                 if hide_unprinted:
                     e['lyric'] = dict(e['lyric'], hidden=True, extend=False)
                 else:
                     e['lyric'] = None
-            def side(v):                      # 'above' / 'below' / None, from a str or (str, n)
-                return v[0] if isinstance(v, tuple) else v
             for i, (pos, e) in enumerate(v1pos):
                 pu = lyric_place('upper', m, pos)
                 pl = lyric_place('lower', m, pos)
@@ -401,7 +414,7 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
                 if e['lyric']:
                     e['lyric'] = None
         s = _measure_open(m, spec, clef, first, header)
-        bm = beams(v1)
+        bm = beams(v1, spec.beam_beat)
         starts = {q for q, _ in v1pos}
         floating = [(q, dyn_xml(v)) for (b, q), v in marks.dyn.items() if b == m]
         if m in marks.mel:
@@ -424,7 +437,7 @@ def collapsed_part(pid, bars, clef, spec, first=False, marks=None, header=None, 
             v2_line_open, v2_line_done = False, True     # voice 2 gone: its line ended
         if v2:
             s += f'<backup><duration>{spec.ticks(spec.bar_beats)}</duration></backup>'
-            bm2 = beams_at(v2)
+            bm2 = beams_at(v2, spec.beam_beat)
             cur = F(0)
             for i, (pos, e) in enumerate(v2):
                 if pos > cur:
