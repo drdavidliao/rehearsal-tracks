@@ -1442,6 +1442,17 @@ that line painted onto the rendered page separately — it converts credits into
 the page *head* only and drops a bottom-positioned one under all three
 `footer` settings.
 
+**Page numbers: every print has them.** They are indispensable (the user's rule):
+a director stops a rehearsal with "top of page 4". Verovio draws none in this
+setup, so `Print.render` paints them into each page's SVG, on by default, as
+octavos print them: none on the title page, then the top outside corner (odd
+pages at the right margin, even at the left), baseline 7.5 mm below the paper
+edge. Turn them off (`page_numbers=False`) only for a page nobody sings from.
+Check the first system's ink clears the number (on a TTBB octavo at 11 mm top
+margin the ink starts 10–11 mm down, the bar number on even pages included).
+Not at the bottom: the lowest system can run to within 9 mm of the edge, and
+page 1's copyright line is there.
+
 **When a reader silently omits something, probe rather than tune.** Three
 rounds of adjusting attributes taught nothing. One throwaway file carrying six
 differently-encoded credits, each labelled with the encoding that produced it,

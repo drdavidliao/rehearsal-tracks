@@ -312,6 +312,31 @@ class Print:
         el.text = text
         return etree.tostring(root, encoding='unicode')
 
+    def draw_page_number(self, svg, n, mm=7.5, size=36):
+        """Paint page number `n` in the top outside corner, as octavos print them:
+        odd pages at the right margin, even pages at the left. Verovio has no page
+        numbers of its own in this setup (`header` auto puts the credits on page 1
+        only), so the number is drawn into the page SVG like the footer. The
+        baseline sits `mm` below the paper's top edge, inside the top margin; check
+        that the first system's ink clears it (on the TTBB octavo layouts the ink
+        starts 10-11 mm down)."""
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
+        g.set('class', 'pageNumber')
+        el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
+        if n % 2:
+            el.set('x', f'{(self.page_w - self.margins["right"]) * 10:.1f}')
+            el.set('text-anchor', 'end')
+        else:
+            el.set('x', f'{self.margins["left"] * 10:.1f}')
+            el.set('text-anchor', 'start')
+        el.set('y', f'{mm * 10:.1f}')
+        el.set('font-family', 'Times,serif')
+        el.set('font-size', f'{size}px')
+        el.text = str(n)
+        return etree.tostring(root, encoding='unicode')
+
     def enlarge_title(self, svg, leading=1.2):
         """Set the title at `title_scale` times the credit size, bold.
 
@@ -350,8 +375,11 @@ class Print:
             g.set('transform', f'translate(0, {shift:.0f})')
         return etree.tostring(root, encoding='unicode')
 
-    def render(self, xml, pdf_out, png_pages=(), quiet=False, footer=None):
-        """Write a print-ready PDF, and optionally PNGs of named pages."""
+    def render(self, xml, pdf_out, png_pages=(), quiet=False, footer=None, page_numbers=True):
+        """Write a print-ready PDF, and optionally PNGs of named pages. Every page but the
+        first (the title page) is numbered in the top outside corner: page numbers are
+        indispensable on anything a chorus rehearses from (the user's rule), so they are on
+        unless a caller turns them off for something that is not a score to sing from."""
         import cairosvg
         install_smufl_font()
         register_with_coretext(SMUFL_TTF)
@@ -361,6 +389,8 @@ class Print:
         if footer:
             svgs[0] = self.draw_footer(svgs[0], footer)
         svgs[0] = self.enlarge_title(svgs[0])
+        if page_numbers:
+            svgs = [s if i == 0 else self.draw_page_number(s, i + 1) for i, s in enumerate(svgs)]
         svgs = [draw_emoji(s) for s in svgs]
         per = [len(re.findall(r'class="system"', s)) for s in svgs]
         if not quiet:
