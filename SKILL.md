@@ -1376,6 +1376,12 @@ f = TTFont('Leipzig.woff2'); f.flavor = None; f.save('Leipzig.ttf')
 
 then `mkdir -p ~/.fonts && cp Leipzig.ttf ~/.fonts/ && fc-cache -f`. The same
 trick works for Bravura, Leland, Gootville and Petaluma, which ship the same way.
+On a Mac that is not enough: Homebrew's cairo finds fonts through CoreText, not
+fontconfig, and the boxes stay. `chorale.printing.register_with_coretext` registers
+the file for the rendering process only (`score_video.py` installs it into
+`~/Library/Fonts` instead). An emoji in a text direction prints as a box on any
+system, since cairo cannot put a colour font into a PDF; `chorale.printing.draw_emoji`
+replaces one that opens a text with a picture of it.
 Check for the problem by scanning the SVG for characters above U+007F: anything
 in the private-use range is a font you need installed.
 

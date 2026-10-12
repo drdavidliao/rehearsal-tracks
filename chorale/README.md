@@ -55,7 +55,15 @@ And cairosvg ignores `@font-face`, so every SMuFL glyph Verovio draws as text �
 chord-symbol accidentals above all — becomes a tofu rectangle in the PDF no
 matter what `smuflTextFont` says. `printing.install_smufl_font()` unpacks
 Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
-which is what cairosvg actually consults.
+which is what cairosvg actually consults on Linux. Homebrew's cairo on a Mac
+looks fonts up through CoreText instead and never sees `~/.fonts`, so the note
+in a metronome mark still printed as a box; `Print.render` now registers the
+file with CoreText for its own process (`register_with_coretext`), installing
+nothing. Two more things cairo cannot draw are fixed on the page: an emoji
+opening a text (a 🤔 left for the director) becomes a picture of it
+(`draw_emoji`), and the title, which Verovio sets at the credit lines' size
+whatever `font-size` says, is enlarged to `credit_xml`'s `title_size`, with the
+credit lines and page 1's systems moved down to clear it (`enlarge_title`).
 
 **The two readers want opposite credit encodings, and a probe is the only
 way to learn that.** A file with six differently-encoded credits, each

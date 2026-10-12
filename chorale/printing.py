@@ -11,13 +11,28 @@ cairosvg does not honour `@font-face`, so every SMuFL glyph Verovio draws as tex
 — chord-symbol accidentals above all — comes out as a tofu rectangle in the PDF
 no matter what `smuflTextFont` is set to.  `install_smufl_font()` unpacks
 Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
-which is what cairosvg actually consults.
+which is what cairosvg actually consults on Linux.  Homebrew's cairo on a Mac
+finds fonts through CoreText instead, so there `render()` also registers the
+file with CoreText for its own process; nothing is installed system-wide.
+
+Two more things cairo cannot draw are fixed on the rendered page:
+
+* An emoji (a 🤔 left in a direction for the director) prints as a box: Times
+  has none, and cairo cannot put a colour emoji font into a PDF.  It is drawn
+  as a picture instead (`draw_emoji`).
+* Verovio ignores a credit's `font-size`, so the title comes out the size of
+  the credit lines beside it.  `render()` enlarges it to the `title_size` given
+  to `credit_xml`, moves the credit lines under it and the music down to match.
 """
 import base64
 import io
 import os
 import re
 import subprocess
+import sys
+
+SVG = '{http://www.w3.org/2000/svg}'
+SVG_NS = {'s': SVG[1:-1]}
 
 PAGE_LETTER = (215.9, 279.4)
 PAGE_A4 = (210.0, 297.0)
@@ -48,6 +63,8 @@ class Print:
         self.spacing_staff = spacing_staff
         self.spacing_system = spacing_system
         self.justify_vertically = justify_vertically
+        self.title = None                   # set by credit_xml; render() enlarges it
+        self.title_scale = 1.0
 
     def tenths(self, mm):
         return round(mm / self.staff_mm * 40)
@@ -240,6 +257,8 @@ class Print:
         right = page_w - self.tenths(self.margins['right'])
         top = page_h - self.tenths(self.margins['top'])
         out = []
+        self.title = title
+        self.title_scale = title_size / size
         if title:
             out.append(credit(title, kind='title', justify='center',
                               valign='top', x=page_w // 2, y=top,
@@ -290,14 +309,56 @@ class Print:
         el.text = text
         return etree.tostring(root, encoding='unicode')
 
+    def enlarge_title(self, svg, leading=1.2):
+        """Set the title at `title_scale` times the credit size, bold.
+
+        Verovio draws every credit at one size, whatever `font-size` says, and
+        sets the credit lines on the title's own baseline at the right margin, so
+        a bigger title would run into them.  They move down by the title's new
+        height, and the systems on the page move down by the same amount.
+        Positions in the page SVG are in 1/100 mm.
+        """
+        if not self.title or self.title_scale <= 1:
+            return svg
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        head = root.xpath('//s:g[@class="pgHead"]', namespaces=SVG_NS)
+        if not head:
+            return svg
+        shift = None
+        for t in head[0].iter(SVG + 'text'):
+            leaves = [el for el in t.iter(SVG + 'tspan') if el.text and el.text.strip()]
+            if any(el.text.strip() == self.title for el in leaves):
+                for el in leaves:
+                    fs = float(el.get('font-size', '0px').rstrip('px') or 0)
+                    if fs:
+                        el.set('font-size', f'{fs * self.title_scale:.0f}px')
+                        el.set('font-weight', 'bold')
+                        shift = fs * self.title_scale * leading
+        if shift is None:
+            return svg
+        for t in head[0].iter(SVG + 'text'):
+            if any(el.text and el.text.strip() == self.title for el in t.iter(SVG + 'tspan')):
+                continue
+            for el in t.iter(SVG + 'tspan'):
+                if el.get('y') is not None:
+                    el.set('y', f'{float(el.get("y")) + shift:.1f}')
+        for g in root.xpath('//s:g[@class="system"]', namespaces=SVG_NS):
+            g.set('transform', f'translate(0, {shift:.0f})')
+        return etree.tostring(root, encoding='unicode')
+
     def render(self, xml, pdf_out, png_pages=(), quiet=False, footer=None):
         """Write a print-ready PDF, and optionally PNGs of named pages."""
         import cairosvg
+        install_smufl_font()
+        register_with_coretext(SMUFL_TTF)
         tk = self.toolkit(xml)
         n = tk.getPageCount()
         svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
         if footer:
             svgs[0] = self.draw_footer(svgs[0], footer)
+        svgs[0] = self.enlarge_title(svgs[0])
+        svgs = [draw_emoji(s) for s in svgs]
         per = [len(re.findall(r'class="system"', s)) for s in svgs]
         if not quiet:
             print(f'{n} pages, systems/page {per}')
@@ -330,6 +391,109 @@ def png_page(svg, out, width=1500):
     bg.alpha_composite(im)
     bg.convert('RGB').save(out)
     return out
+
+
+SMUFL_TTF = os.path.expanduser('~/.fonts/Leipzig.ttf')
+_registered = set()
+
+
+def register_with_coretext(path):
+    """Make a font file visible to cairo on a Mac, for this process only.
+
+    Homebrew's cairo looks fonts up through CoreText, not fontconfig, so the
+    Leipzig `install_smufl_font()` puts in ~/.fonts never reaches it and the
+    note in a metronome mark prints as a box.  Registering the file with
+    CoreText at process scope fixes that without installing anything.  A no-op
+    off macOS, or if the file is missing.
+    """
+    if sys.platform != 'darwin' or path in _registered or not os.path.exists(path):
+        return
+    import ctypes
+    import ctypes.util
+    cf = ctypes.CDLL(ctypes.util.find_library('CoreFoundation'))
+    ct = ctypes.CDLL(ctypes.util.find_library('CoreText'))
+    cf.CFURLCreateFromFileSystemRepresentation.restype = ctypes.c_void_p
+    cf.CFURLCreateFromFileSystemRepresentation.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_bool]
+    ct.CTFontManagerRegisterFontsForURL.restype = ctypes.c_bool
+    ct.CTFontManagerRegisterFontsForURL.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p]
+    b = path.encode()
+    url = cf.CFURLCreateFromFileSystemRepresentation(None, b, len(b), False)
+    if not ct.CTFontManagerRegisterFontsForURL(url, 1, None):        # 1: process scope
+        raise RuntimeError(f'CoreText would not register {path}')
+    _registered.add(path)
+
+
+EMOJI = re.compile('[\U0001F000-\U0001FAFF]')     # not U+2600 up: that holds ♩ ♪ ♭ ♯
+EMOJI_FONTS = ('/System/Library/Fonts/Apple Color Emoji.ttc',
+               '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf',
+               '/usr/share/fonts/noto/NotoColorEmoji.ttf')
+_emoji_uri = {}
+
+
+def emoji_png(ch):
+    """A data: URI of `ch` drawn by the system's colour emoji font, or None."""
+    if ch in _emoji_uri:
+        return _emoji_uri[ch]
+    from PIL import Image, ImageDraw, ImageFont
+    uri = None
+    for path in EMOJI_FONTS:
+        if not os.path.exists(path):
+            continue
+        for px in (160, 109):                  # sbix takes any size; Noto's bitmaps only 109
+            try:
+                f = ImageFont.truetype(path, px)
+            except OSError:
+                continue
+            im = Image.new('RGBA', (px + 40, px + 40), (0, 0, 0, 0))
+            ImageDraw.Draw(im).text((0, 0), ch, font=f, embedded_color=True)
+            if im.getbbox():
+                b = io.BytesIO()
+                im.crop(im.getbbox()).save(b, 'PNG')
+                uri = 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
+                break
+        if uri:
+            break
+    _emoji_uri[ch] = uri
+    return uri
+
+
+def draw_emoji(svg):
+    """Replace an emoji that opens a text with a picture of it.
+
+    Only a leading emoji is handled: it is drawn at the text's start and the
+    text moves right by one em.  One further along the line would need the
+    width of the words before it; it is left as text, and reported.
+    """
+    if not EMOJI.search(svg):
+        return svg
+    from lxml import etree
+    root = etree.fromstring(svg.encode())
+    for t in root.iter(SVG + 'text'):
+        pos = t if t.get('x') is not None else next(
+            (el for el in t.iter(SVG + 'tspan') if el.get('x') is not None), None)
+        leaves = [el for el in t.iter(SVG + 'tspan') if el.text and el.text.strip()]
+        if not leaves or pos is None:
+            continue
+        first = leaves[0]
+        m = EMOJI.match(first.text.lstrip())
+        uri = m and emoji_png(m.group(0))
+        if not uri:
+            for el in leaves:
+                if EMOJI.search(el.text):
+                    print(f'note: emoji left as text (prints as a box): {el.text.strip()[:40]!r}')
+            continue
+        fs = float((first.get('font-size') or '400px').rstrip('px'))
+        x, y = float(pos.get('x')), float(pos.get('y'))
+        img = etree.Element(SVG + 'image')
+        img.set('href', uri)
+        img.set('{http://www.w3.org/1999/xlink}href', uri)
+        for k, v in (('x', x), ('y', y - 0.82 * fs), ('width', fs), ('height', fs)):
+            img.set(k, f'{v:.1f}')
+        t.addprevious(img)
+        first.text = first.text.replace(m.group(0), '', 1)
+        pos.set('x', f'{x + 1.1 * fs:.1f}')
+    return etree.tostring(root, encoding='unicode')
 
 
 def install_smufl_font(force=False):
