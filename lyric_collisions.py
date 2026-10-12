@@ -26,6 +26,41 @@ NARROW = set("ijltfr.,'’ ")
 def width(t, fs):
     return sum(fs * (0.30 if c in NARROW else 0.56) for c in t)
 
+def load(tk, path):
+    """Load the file so words marked placement="above" are drawn above the staff.
+
+    Verovio reads no placement from a MusicXML lyric and prints every word below,
+    so on a closed score whose higher part's words sit above the staff the two
+    parts' words land on one row and every pair reads as a collision.  It does
+    honour @place on an MEI verse, and a note's MusicXML id survives into MEI:
+    give the notes ids, load, mark those verses above, load the MEI.
+    """
+    xml = open(path, encoding='utf-8').read()
+    if 'placement="above"' not in xml or '<lyric' not in xml:
+        tk.loadData(xml)
+        return
+    head = xml[:xml.index('<score-partwise')]
+    root = etree.fromstring(xml[len(head):].encode())
+    above, k = set(), 0
+    for n in root.iter('note'):
+        if not n.get('id'):
+            k += 1
+            n.set('id', f'n{k:05d}')
+        for ly in n.findall('lyric'):
+            if ly.get('placement') == 'above':
+                above.add((n.get('id'), ly.get('number') or '1'))
+    tk.loadData(head + etree.tostring(root, encoding='unicode'))
+    if not above:
+        return
+    M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+    mei = etree.fromstring(tk.getMEI().encode())
+    for el in mei.iter(M + 'note', M + 'chord'):
+        ids = [el.get(X)] + ([n.get(X) for n in el.iter(M + 'note')] if el.tag == M + 'chord' else [])
+        for v in el.findall(M + 'verse'):
+            if any((i, v.get('n') or '1') in above for i in ids):
+                v.set('place', 'above')
+    tk.loadData(etree.tostring(mei, encoding='unicode'))
+
 def check(path, staff_mm=7.0, page=(2159, 2794), marg=(140, 110, 130, 120)):
     """page and margins in 1/10 mm: (w, h) and (left, right, top, bottom)."""
     tk = verovio.toolkit()
@@ -34,7 +69,7 @@ def check(path, staff_mm=7.0, page=(2159, 2794), marg=(140, 110, 130, 120)):
                    "pageMarginTop": marg[2], "pageMarginBottom": marg[3],
                    "unit": staff_mm / 4 * 10 / 2, "adjustPageHeight": False,
                    "breaks": "encoded", "svgViewBox": True})
-    tk.loadFile(path)
+    load(tk, path)
     bad = []
     for pg in range(1, tk.getPageCount() + 1):
         root = etree.fromstring(tk.renderToSVG(pg).encode())

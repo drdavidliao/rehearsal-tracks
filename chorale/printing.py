@@ -229,7 +229,10 @@ class Print:
         import verovio
         tk = verovio.toolkit()
         tk.setOptions(self.options())
-        tk.loadData(self.close_extenders(self.expand_credit_blocks(xml)))
+        xml, above = lyric_ids_above(self.close_extenders(self.expand_credit_blocks(xml)))
+        tk.loadData(xml)
+        if above:
+            tk.loadData(verses_above(tk.getMEI(), above))
         return tk
 
     def credit_xml(self, title, lines, title_size=22, size=10,
@@ -391,6 +394,73 @@ def png_page(svg, out, width=1500):
     bg.alpha_composite(im)
     bg.convert('RGB').save(out)
     return out
+
+
+def lyric_ids_above(xml):
+    """Give every note an id, and list the (note id, lyric number) set `placement="above"`.
+
+    Verovio reads no placement from a MusicXML lyric and prints every word below
+    the staff.  It does honour `@place` on an MEI verse, and a note's MusicXML id
+    survives the trip into MEI as its xml:id, so the words can be put back where
+    the file says (`verses_above`).  On a shared staff the director's rule puts
+    the higher part's words above the staff wherever the two parts sing different
+    words; without this the PDF shows them all below.
+    """
+    if 'placement="above"' not in xml or '<lyric' not in xml:
+        return xml, set()
+    from lxml import etree
+    head = xml[:xml.index('<score-partwise')]
+    root = etree.fromstring(xml[len(head):].encode())
+    above, k = set(), 0
+    for n in root.iter('note'):
+        if not n.get('id'):
+            k += 1
+            n.set('id', f'n{k:05d}')
+        for ly in n.findall('lyric'):
+            if ly.get('placement') == 'above':
+                above.add((n.get('id'), ly.get('number') or '1'))
+    return head + etree.tostring(root, encoding='unicode'), above
+
+
+def verses_above(mei, above):
+    """Set @place="above" on the MEI verses `lyric_ids_above` listed.  A chord's
+    verses hang from the <chord>, not its notes: any member's placement counts."""
+    from lxml import etree
+    M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+    root = etree.fromstring(mei.encode())
+    for el in root.iter(M + 'note', M + 'chord'):
+        ids = [el.get(X)] + ([n.get(X) for n in el.iter(M + 'note')] if el.tag == M + 'chord' else [])
+        for v in el.findall(M + 'verse'):
+            if any((i, v.get('n') or '1') in above for i in ids):
+                v.set('place', 'above')
+    # Verovio stacks a dynamic nearer the staff than words on the same side, so a
+    # dynamic above a staff with words above it there would sit between the notes
+    # and the words.  The words belong next to the notes: lift the dynamic over
+    # them, where words above the staff start within two beat units of it.  13 vu
+    # clears one row at lyricSize 4.2.
+    unit = int(next((e.get('meter.unit') or e.get('unit') for e in root.iter(M + 'scoreDef', M + 'meterSig')
+                     if e.get('meter.unit') or e.get('unit')), 4))
+    DUR = {'1': 4, '2': 2, '4': 1, '8': 0.5, '16': 0.25, '32': 0.125}
+    for meas in root.iter(M + 'measure'):
+        starts = {}                                 # staff n -> tstamps of words above it
+        for st in meas.iter(M + 'staff'):
+            for layer in st.iter(M + 'layer'):
+                q = 0.0
+                for el in layer.iter(M + 'note', M + 'chord', M + 'rest', M + 'space', M + 'mRest'):
+                    if el.tag == M + 'note' and el.getparent().tag == M + 'chord':
+                        continue
+                    if el.get('grace'):
+                        continue
+                    if el.find(M + "verse[@place='above']") is not None:
+                        starts.setdefault(st.get('n'), []).append(1 + q * unit / 4)
+                    d = DUR.get(el.get('dur', ''), 0)
+                    dots = int(el.get('dots', 0))
+                    q += d * (2 - 0.5 ** dots)
+        for d in meas.iter(M + 'dynam'):
+            ts = float(d.get('tstamp', 1))
+            if d.get('place') == 'above' and any(abs(t - ts) <= 2 for t in starts.get(d.get('staff'), [])):
+                d.set('vo', '13')
+    return etree.tostring(root, encoding='unicode')
 
 
 SMUFL_TTF = os.path.expanduser('~/.fonts/Leipzig.ttf')
