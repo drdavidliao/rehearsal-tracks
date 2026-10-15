@@ -23,7 +23,7 @@ in OUT_DIR), and everything the run prints, every check included, also goes to
 comparison with the print PDF that SKILL.md Step 10 asks for:
 
   a Balanced mp3          -> every sung part lights up in its own colour
-  "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
+  "(Part) predominant-left", "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
                           -> only that part lights up; every other part, piano too, is grey,
                              and that part's staff is never hidden, so its rests stay on screen
 
@@ -1508,8 +1508,8 @@ def check_frames(mp4, planned_ms):
 def featured_of(mp3, names, part_map):
     b = os.path.basename(mp3)
     # "(Tenor 2) predominant", or a division of a section: "(Tenor 2) a predominant" (rehearsal_mix.py)
-    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant|part-left)', b) \
-        or re.search(r' - (Solo[^-]*?) (?:predominant|part-left)', b)
+    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant-left|predominant|part-left)', b) \
+        or re.search(r' - (Solo[^-]*?) (?:predominant-left|predominant|part-left)', b)
     if not m:
         return None
     sec = m.group(1).strip()
@@ -1900,7 +1900,7 @@ def timing_source(mp3):
     down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
     anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
     only when the Balanced track sits beside this one, is the same length and lines up with it."""
-    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant|part-left)\.mp3$', os.path.basename(mp3))
+    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant-left|predominant|part-left)\.mp3$', os.path.basename(mp3))
     if not m:
         return mp3, ''
     ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')

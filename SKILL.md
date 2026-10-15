@@ -1,6 +1,6 @@
 ---
 name: "choral-pdf-to-singable-musicxml"
-description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant, part-left and balanced mp3s from Sibelius audio stems), follow-along or memorization videos and sheets (any score animated over audio, including a commercial recording), or MusicXML/MIDI from sheet music."
+description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant-left and balanced mp3s from Sibelius audio stems), follow-along or memorization videos and sheets (any score animated over audio, including a commercial recording), or MusicXML/MIDI from sheet music."
 ---
 
 # Choral PDF → singable MusicXML
@@ -71,8 +71,7 @@ by bar. Without it, write:
 Make rehearsal tracks from the audio files in the Shenandoah folder.
 ```
 
-That is Step 9: check every stem, then per part one predominant mp3 and one
-part-left mp3, plus Balanced, Balanced panned and Balanced 3D tracks, named for
+That is Step 9: check every stem, then per part one predominant-left mp3, plus Balanced, Balanced panned and Balanced 3D tracks, named for
 Chorus Connection. Claude first shows the section each part's files will be
 filed under, for you to click and change: Chorus Connection shows a file whose
 section it does not recognise to everyone.
@@ -1587,11 +1586,12 @@ guessing twice about the same thing.
 
 ## Step 9 — Stems and rehearsal tracks
 
-A set of **rehearsal tracks** is five kinds of mp3, and "make rehearsal
-tracks" means all five (so do older requests for "part-predominant tracks" or
-"practice tracks"): per part, one predominant track (the part loud, the other
-voices faint, the piano at its equal-loudness level, 9.4) and one part-left track (the part hard
-left, the other voices hard right, the piano centred); and three Balanced
+A set of **rehearsal tracks** is four kinds of mp3, and "make rehearsal
+tracks" means all four (so do requests for "part-predominant tracks",
+"part-left tracks" or "practice tracks"): per part, one predominant-left track
+(the part loud and only in the left channel; the other voices faint and the
+piano at its equal-loudness level, both left as exported, not steered; summed to
+mono it is the predominant balance, 9.4); and three Balanced
 tracks with every part at the same level: plain (no panning), panned (the
 voices spread across the stereo field) and 3D (the voices placed around the
 listener, for headphones). Sibelius does not make these.
@@ -1933,9 +1933,10 @@ python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wa
 
 List the voices **lowest first**: the order sets the panned and 3D layouts. It
 prints every stem's level while sounding and suggests a `--trim` for a stem
-several dB off the others; apply it and rerun. It writes 2 × parts + 3 mp3s and
+several dB off the others; apply it and rerun. It writes one mp3 per part + 3 and
 prints each one's peak and the gain applied. For the unaccompanied TTBB (four voices, no
-accompaniment) that was eleven tracks. What it does, and why:
+accompaniment) that is seven tracks (it was eleven while each part had a predominant
+and a part-left track). What it does, and why:
 
 **The piano's level is set first, and every track uses it.** It comes out as loud,
 against the choir, as it would if every stem, voices and piano alike, had been
@@ -1951,20 +1952,51 @@ piano is heard against. The script prints each stem's loudness and the gain. A
 off; use either only when the user asks. Each accompaniment stem, if there are
 several, is set the same way on its own.
 
-For each featured part: the featured voice +3 dB, every other voice −21 dB, the
-piano at its level, summed without normalising, then encoded. These are the defaults;
+**The predominant balance.** For each featured part: the featured voice +3 dB, every other
+voice −21 dB, the piano at its level. These are the defaults;
 use others only when the user asks. The other voices were at −18 dB until
 the 2008 Sibelius TTBB, where the user moved them to −21 dB. That lowers the other
 singers only: the featured part stays exactly as far above the piano as before,
 so if a part is lost under the piano, the fix is the piano level or the
 featured level, not the other voices.
 
+**Make one predominant-left track per part, never a separate predominant track and
+part-left track.** Only the featured voice is steered: it is folded to mono and goes
+to the left channel only, at twice its predominant gain (+6.02 dB, so +9.02 dB in
+the left), and the mono sum (L+R)/2 gives it back at exactly +3 dB. Every other voice
+(−21 dB) and the piano (or whatever the accompaniment stem holds, at its level) are
+not steered or folded: each stem goes in as exported, stereo if it is stereo, in
+both channels, and so sums to mono at its predominant gain too. Phones and Bluetooth
+speakers held in the hand play mono, and they get the predominant track's balance.
+With earbuds or a balance knob a singer hears their own part over the piano (left),
+or the piano and everyone else without it (right), and can wean themselves off their
+guide part. The user's correction the same day: the other voices and the piano stay
+centred; the first version put the other voices hard right.
+
+That is the user's ruling of 2026-10-15, taken from a set of tracks a human singer
+made this way. Until then each part had a predominant track and a part-left track
+(featured voice hard left and the others hard right, all at 0 dB), and that made twice
+as many files for singers to sift through in Chorus Connection. Make the old kinds
+only when the user asks for them.
+
 ```
-ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i "Piano.aiff" \
-  -filter_complex "[0:a]volume=-21dB[a0];[1:a]volume=3dB[a1];[2:a]volume=-21dB[a2];\
-[3:a]volume=-21dB[a3];[4:a]volume=0dB[a4];[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0" \
-  -c:a libmp3lame -b:a 192k -joint_stereo 1 "Title - (Tenor 2) predominant.mp3"
+# featured voice -> left only at twice its predominant gain; everything else as exported
+[1:a]pan=stereo|c0=1.4125*c0+1.4125*c1|c1=0*c0[a1]           # featured: 2 x +3 dB, mono-folded
+[0:a]volume=-21dB[a0]                                        # each other voice, unpanned
+[4:a]volume=0dB[a4]                                          # piano at its level
+[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0
 ```
+
+(Folding to mono averages the channels, (c0+c1)/2; the doubling makes the
+coefficient the predominant gain itself: 10^(3/20) = 1.4125.) Check the result: the
+mono sum (L+R)/2 should equal the predominant mix of the same stems, and the left
+channel minus the right should correlate with the featured stem (the other voices and
+the piano cancel, apart from any stereo width of their own). On synthetic stems, through the mp3,
+the mono sum had the featured voice 24.0 dB over the others, as in the predominant
+mix, the right channel held no trace of it, and L−R correlated 0.996 with the featured
+stem for every part (the synthetic stems were deliberately wider on the left). The featured voice alone in one channel at
++9 dB is often the loudest sample in the set, so expect the shared peak trim below to
+come from these tracks more often than from the Balanced track.
 
 **Always make a Balanced track as well:** every voice at 0 dB as exported and the
 piano at its level, nothing featured. It is part of every set, not an extra.
@@ -2023,32 +2055,11 @@ under the low voices); a Bass −7.5 dB, and −6.5 dB in the same piece's
 ensemble-voice set. The script builds one mix at a time, so seven 4.8-minute stems fit in about
 2 GB of memory.
 
-**Always make a part-left track for every part as well.** The featured voice
-goes hard left, every other voice hard right, and the piano (or whatever the
-accompaniment stem holds) stays centred at its level. The voices at 0 dB: the panning
-does the separating. A singer can take out one earbud, or turn the balance, to
-hear their own part with the piano, or the piano and everyone else to sing
-against. Fold each voice stem to mono and send it to one side:
-
-```
-# featured voice -> left only; every other voice -> right only; piano untouched
-[1:a]pan=stereo|c0=0.5*c0+0.5*c1|c1=0*c0[a1]      # featured
-[0:a]pan=stereo|c0=0*c0|c1=0.5*c0+0.5*c1[a0]      # each of the others
-[4:a]volume=0dB[a4]                               # piano
-[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0
-```
-
-Averaging the two channels leaves a centred voice at the level it already had
-in each channel, so it does not get louder by moving to one side. Check the
-result: the left channel minus the right should correlate with the featured
-stem minus the others (the centred piano cancels). On the scanned SATB octavo it came out 0.998
-for all four parts.
-
 `normalize=0` matters. By default amix scales every input down to share the
 headroom and re-scales when a stem ends early, so a track's level would depend
 on how many stems went into it and would jump where one ran out. Measure every
 mix's peak before encoding (`astats`, as above; `volumedetect` cannot read past
-0.0), part-left tracks included. Only if one goes over 0 dBFS, trim all of them
+0.0), predominant-left tracks included. Only if one goes over 0 dBFS, trim all of them
 by the same amount, so the tracks keep their loudness relative to one another.
 The Balanced track is usually the one that goes over, because nothing in it is
 turned down: on the 2008 Sibelius TTBB it reached +2.06 dBFS (686 clipped samples),
@@ -2057,12 +2068,11 @@ after encoding.
 Do not otherwise even out the tracks' loudness.
 
 **Filenames for Chorus Connection:** put the section in parentheses —
-`Shenandoah - (Tenor 2) predominant.mp3`. A Solo track gets no parentheses;
+`Shenandoah - (Tenor 2) predominant-left.mp3`. A Solo track gets no parentheses;
 Chorus Connection has no Solo section to file it under. Nor do the Balanced
 tracks, which belong to no section: `Shenandoah - Balanced.mp3`,
 `Shenandoah - Balanced panned.mp3`, `Shenandoah - Balanced 3D, use
-headphones.mp3`. Part-left tracks follow the same pattern:
-`Shenandoah - (Tenor 2) part-left.mp3`, `Shenandoah - Solo part-left.mp3`.
+headphones.mp3`. A soloist's track is `Shenandoah - Solo predominant-left.mp3`.
 
 **Only a real section goes in the parentheses.** Chorus Connection shows a track
 whose parenthesised name is not one of the chorus's sections to *everyone*: on
@@ -2070,7 +2080,7 @@ a TTBB with piano whose score split Tenor 2 and Bass into a and b parts,
 `(Tenor 2a)` and `(Bass b)` went to the whole chorus, and the user renamed the
 files on Chorus Connection by hand. A division of a section keeps the section in
 the parentheses and puts the suffix after them: `Shenandoah - (Tenor 2) a
-predominant.mp3`, `Shenandoah - (Bass) b part-left.mp3`. `rehearsal_mix.py` does
+predominant-left.mp3`, `Shenandoah - (Bass) b predominant-left.mp3`. `rehearsal_mix.py` does
 that by default for a part name ending in a lone lower-case letter, takes
 `--section "Voice=Section|suffix"` for anything else (`"Bari=Baritone|"`,
 `"Bass a=Bass 1|"`), and prints the mapping; `score_video.py` reads both forms.
@@ -2158,7 +2168,7 @@ Each splice goes 0.3 s before its barline, inside a rest every voice shares, wit
 crossfades. The tool prints both stems' levels at each splice.
 
 **Mix.** Mix with `rehearsal_mix.py` as in 9.4, then say plainly in the handback that
-each stem holds the others too. A part-left or predominant track has the other voices
+each stem holds the others too. A predominant-left track has the other voices
 bleeding through, at whatever level the publisher left them.
 
 **Balance by what is heard.** The user heard the tenors as soft. Measure before
@@ -2209,16 +2219,16 @@ follow-along videos" means one combined video and one per part:
 
 ```
 python3 score_video.py "Shenandoah (Cantai learning version).musicxml" \
-  "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 1) predominant.mp3" \
-  "Shenandoah - (Tenor 2) predominant.mp3" "Shenandoah - (Baritone) predominant.mp3" \
-  "Shenandoah - (Bass) predominant.mp3" --display "Shenandoah.musicxml"
+  "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 1) predominant-left.mp3" \
+  "Shenandoah - (Tenor 2) predominant-left.mp3" "Shenandoah - (Baritone) predominant-left.mp3" \
+  "Shenandoah - (Bass) predominant-left.mp3" --display "Shenandoah.musicxml"
 ```
 
 The first file is the one the audio was rendered from: the timing comes from it.
 Each mp3 gives an mp4 of the same name beside it. The Balanced mp3 gives the
-combined video, every sung part in its own colour; a `(Part) predominant` (or
-`part-left`, or `Solo …`) mp3 gives that part's video, only that part lit and
-everyone else, piano included, in grey. Use the predominant tracks for the part
+combined video, every sung part in its own colour; a `(Part) predominant-left` (or,
+from an older set, `predominant` or `part-left`, or `Solo …`) mp3 gives that part's video, only that part lit and
+everyone else, piano included, in grey. Use the predominant-left tracks for the part
 videos unless asked otherwise. Always test on short clips first
 (`--clip 104,20`, `--stills 50,114`) and show them before rendering whole
 songs; a whole song is several minutes per video.
@@ -2418,8 +2428,8 @@ down: on the barbershop-voiced TTBB the Tenor 1, Tenor 2 and Baritone mixes
 anchored 0.06-0.1 s late, and their tempo, fitted from that anchor on onsets
 that are mostly the featured voice's consonants, drifted from 50 ms behind to
 50 ms ahead. Every mp3 of a set made by `rehearsal_mix.py` is sample-aligned, so
-when `TITLE - Balanced.mp3` sits beside a `TITLE - (V) predominant.mp3` or
-`part-left.mp3` (a soloist's too, `TITLE - Solo predominant.mp3`, whose own fit
+when `TITLE - Balanced.mp3` sits beside a `TITLE - (V) predominant-left.mp3` (or an
+older set's `predominant.mp3` or `part-left.mp3`; a soloist's too, `TITLE - Solo predominant.mp3`, whose own fit
 put a -1.1 s hold on a ballad's last fermata), is the same length and its level envelope lines up with it
 (0 ms of lag within +-0.3 s), the script times the mix by the Balanced track and
 says so in the report; the audio check on the mp4 is still against the mix's own
@@ -5300,8 +5310,9 @@ the level it would have had if every stem were normalized to equal loudness befo
 
 Writes, for every voice V (the Chorus Connection section in parentheses, see Sections below;
 a voice named Solo... gets none):
-    TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment at its level
-    TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment centred
+    TITLE - (V) predominant-left.mp3    V +3 dB hard left; other voices -21 dB and accompaniment
+                                        at its level, both as exported (unpanned); summed to mono
+                                        it is exactly the predominant mix (Predominant-left, below)
 and once:
     TITLE - Balanced.mp3                every voice at 0 dB as exported, accompaniment at its level
     TITLE - Balanced panned.mp3         voices spread across the stereo field, lowest on the left
@@ -5340,6 +5351,16 @@ not changed. First used on a TTBB whose piano stem was 17 LU under the low voice
 under the tenors: +14.89 dB, approved by ear; matching the average voice instead would have
 given +13.25 dB. A --trim on an accompaniment stem replaces this; --accomp-as-exported leaves
 every accompaniment stem at 0 dB.
+
+Predominant-left: one track per part does what a predominant track and a part-left track did.
+Phones and Bluetooth speakers play mono, so the mono sum must be the predominant balance: V +3 dB,
+the others -21 dB, the accompaniment at its level. Earbuds or a balance knob still separate the
+part: V is folded to mono and put in the left channel only, at twice its predominant gain
+(+6.02 dB), so the mono sum (L+R)/2 gives it back at exactly that gain. The other voices and the
+accompaniment are not steered: each stem stays as exported, stereo if it is stereo, at its
+predominant gain, so the right channel is everything but V. The user's ruling after a
+set of tracks from a human singer made this way (2026-10-15): it halves the files a singer sifts
+through in Chorus Connection. The separate predominant and part-left tracks are no longer made.
 
 Stem levels: every stem's median level while sounding is printed. A stem several dB off
 the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
@@ -5532,12 +5553,12 @@ def main():
     accsum = sum((st[n] for n in acc), np.zeros((N, 2), np.float32))
     mono_ = {n: mono(st[n]) for n in names + acc}
 
-    def predominant(v):
-        return accsum + sum(st[n] * np.float32(db(a.featured if n == v else a.others)) for n in names)
-
-    def part_left(v):
-        R = sum((mono_[n] for n in names if n != v), np.zeros(N, np.float32))
-        return accsum + np.stack([mono_[v], R], 1)
+    def predominant_left(v):
+        # V alone in the left at twice its predominant gain, so (L+R)/2 is the predominant mix
+        # exactly; the other voices and the accompaniment as exported, not steered
+        out = accsum + sum((st[n] * np.float32(db(a.others)) for n in names if n != v), np.zeros((N, 2), np.float32))
+        out[:, 0] += mono_[v] * np.float32(2 * db(a.featured))
+        return out
 
     def balanced():
         return accsum + sum(st[n] for n in names)
@@ -5569,8 +5590,7 @@ def main():
 
     builders = {}
     for v in names:
-        builders[f'{a.title} - {label(v, sections)} predominant'] = (lambda v=v: predominant(v))
-        builders[f'{a.title} - {label(v, sections)} part-left'] = (lambda v=v: part_left(v))
+        builders[f'{a.title} - {label(v, sections)} predominant-left'] = (lambda v=v: predominant_left(v))
     builders[f'{a.title} - Balanced'] = balanced
     builders[f'{a.title} - Balanced panned'] = panned
     three = f'{a.title} - Balanced 3D, use headphones'
@@ -5634,7 +5654,7 @@ in OUT_DIR), and everything the run prints, every check included, also goes to
 comparison with the print PDF that SKILL.md Step 10 asks for:
 
   a Balanced mp3          -> every sung part lights up in its own colour
-  "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
+  "(Part) predominant-left", "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
                           -> only that part lights up; every other part, piano too, is grey,
                              and that part's staff is never hidden, so its rests stay on screen
 
@@ -7119,8 +7139,8 @@ def check_frames(mp4, planned_ms):
 def featured_of(mp3, names, part_map):
     b = os.path.basename(mp3)
     # "(Tenor 2) predominant", or a division of a section: "(Tenor 2) a predominant" (rehearsal_mix.py)
-    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant|part-left)', b) \
-        or re.search(r' - (Solo[^-]*?) (?:predominant|part-left)', b)
+    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant-left|predominant|part-left)', b) \
+        or re.search(r' - (Solo[^-]*?) (?:predominant-left|predominant|part-left)', b)
     if not m:
         return None
     sec = m.group(1).strip()
@@ -7511,7 +7531,7 @@ def timing_source(mp3):
     down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
     anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
     only when the Balanced track sits beside this one, is the same length and lines up with it."""
-    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant|part-left)\.mp3$', os.path.basename(mp3))
+    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant-left|predominant|part-left)\.mp3$', os.path.basename(mp3))
     if not m:
         return mp3, ''
     ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')
@@ -9536,7 +9556,8 @@ session; its ffmpeg checks and mix command were re-run on synthetic stems
 before being written here. The Balanced track, the above-full-scale peak
 measurement, the −21 dB default and the entrance-pattern note come from mixing
 the set for the 2008 Sibelius TTBB. The part-left
-tracks come from the set for the scanned SATB octavo; `stem_vs_score.py` was
+tracks came from the set for the scanned SATB octavo, and the predominant-left
+tracks that replaced both kinds from a set made by a human singer (2026-10-15); `stem_vs_score.py` was
 tested on its stems. The stop-for-good dropouts come from exports of the
 two-soloist TTBB and the solo-and-TTBB piece.
 
