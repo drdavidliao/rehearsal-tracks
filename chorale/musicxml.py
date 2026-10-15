@@ -3,8 +3,8 @@
 Child order inside <note> is not advisory: Sibelius rejects a file that gets it
 wrong, usually without saying which note.  The order these emitters keep is
 
-    chord, pitch|rest, duration, tie, voice, type, dot, accidental, stem,
-    staff, beam, notations, lyric
+    chord, pitch|rest, duration, tie, voice, type, dot, accidental,
+    time-modification, stem, notehead, staff, beam, notations, lyric
 
 with <tie> right after <duration> and its twin <tied> inside <notations>, and
 inside <direction>, <direction-type> before <offset>.
@@ -70,7 +70,11 @@ class ScoreSpec:
         return F(1)
 
     def ticks(self, quarters):
-        return int(quarters * self.divisions)
+        t = quarters * self.divisions
+        if t != int(t):
+            raise ValueError(f'{quarters} quarters is not a whole number of divisions '
+                             f'({self.divisions} per quarter): triplets need a multiple of 3')
+        return int(t)
 
     def attributes(self, clef, staves=None):
         s = (f'<attributes><divisions>{self.divisions}</divisions>'
@@ -126,10 +130,16 @@ WEDGE_STOP = '<direction><direction-type><wedge type="stop" number="1"/></direct
 def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
              lyr_place=None, lyr_num=1, fermata=False, tie_attrs=None, lyr_also=None):
     """One event — a rest, a note, or a chord — as one or more <note> elements.
-    `lyr_also` = (placement, number): the same syllable printed a second time, on another line."""
+    `lyr_also` = (placement, number): the same syllable printed a second time, on another line.
+
+    The score-text extras are honoured: a per-pitch tie (scoretext.link_ties sets
+    `tie_stop` on the pitch), an x-notehead (`x`), a triplet member (`triplet`, with
+    `tup` from scoretext.mark_tuplets drawing the bracket) and a hidden rest."""
     s = ''
     for pi, p in enumerate(e['pitches'] or [None]):
-        s += '<note>'
+        tie_on = p is not None and bool(e['tie'] or p.get('tie'))
+        tie_off = p is not None and bool(p.get('tie_stop', e.get('tie_stop')))
+        s += '<note print-object="no">' if p is None and e.get('hidden') else '<note>'
         if pi > 0:
             s += '<chord/>'
         if p is None:
@@ -137,27 +147,31 @@ def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
         else:
             s += pitch_xml(p)
         s += f'<duration>{spec.ticks(e["dur"])}</duration>'
-        if p is not None:
-            if e.get('tie_stop'):
-                s += '<tie type="stop"/>'
-            if e['tie']:
-                s += '<tie type="start"/>'
+        if tie_off:
+            s += '<tie type="stop"/>'
+        if tie_on:
+            s += '<tie type="start"/>'
         s += f'<voice>{voice}</voice>'
         if e['dur'] != spec.bar_beats or p is not None:
             s += f"<type>{TYPE[e['base']]}</type>" + '<dot/>' * e['dots']
         if p is not None and (p['step'], p['alter']) in spec.accidentals:
             s += '<accidental>' + {1: 'sharp', -1: 'flat', 0: 'natural'}[p['alter']] + '</accidental>'
+        if e.get('triplet'):
+            s += ('<time-modification><actual-notes>3</actual-notes>'
+                  '<normal-notes>2</normal-notes></time-modification>')
         if p is not None and stem:
             s += f'<stem>{stem}</stem>'
+        if p is not None and e.get('x'):
+            s += '<notehead>x</notehead>'
         if staff:
             s += f'<staff>{staff}</staff>'
         if pi == 0:
             s += beam
         nots = ''
         if p is not None:
-            if e.get('tie_stop'):
+            if tie_off:
                 nots += '<tied type="stop"/>'
-            if e['tie']:
+            if tie_on:
                 # On a shared staff the tie goes on the side away from the stem.
                 # Say so explicitly: Verovio picks the side by voice NUMBER, so a
                 # voice-2 note whose stems were flipped up (crossed_bars) still
@@ -172,6 +186,8 @@ def note_xml(e, spec, voice=1, beam='', stem=None, staff=None,
                 nots += '<slur type="stop" number="1"/>'
             if pi == 0 and e['slur_start']:
                 nots += '<slur type="start" number="1"/>'
+        if pi == 0 and e.get('tup'):
+            nots += f'<tuplet type="{e["tup"]}" bracket="yes"/>'
         if fermata and pi == 0:
             nots += '<fermata/>'
         if nots:

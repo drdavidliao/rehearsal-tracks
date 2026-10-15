@@ -290,14 +290,118 @@ to the same bars when the user reports a problem three rounds later, and a
 named crop library (`pf_b47rh.png`, `z05_b25.png`) is the difference between
 re-answering a question and re-deriving it.
 
-**Hand transcription from a scan: extend the text format first.** On a scanned
-unison TTBB with piano (a film song, 65 bars) the voice line and piano were typed from crops
-in the one-token-per-note format above, and the transcription itself went well.
-But `chorale.scoretext` has no triplet and no x-notehead: a 16th triplet
-ornament and a spoken passage printed in x-noteheads forced a separate
-piece-specific builder. Add a triplet mark (`s3`), an x-notehead prefix (`x`), a
-per-pitch tie (`A2~,D3`) and a hidden rest to the format before the next scan,
-rather than writing another builder.
+**Hand transcription from a scan: the text format has what a scan needs.** On a
+scanned unison TTBB with piano (a film song, 65 bars), a 16th-triplet ornament and
+a spoken passage in x-noteheads forced a separate builder for that piece, because
+`chorale.scoretext` had no way to write them. On a scanned SSA with piano, the
+next piece's builder had its own parser. The parser now takes everything those
+two pieces needed, and `musicxml.note_xml` writes it out:
+
+- `x` before the pitches: an x-notehead (`xE4e=hey`).
+- `3` after the duration: a triplet member (`C5q3`).
+  `scoretext.mark_tuplets` places the brackets. `ScoreSpec.divisions` must then
+  be a multiple of 3, and `ticks()` raises if it is not.
+- `~` on one pitch of a chord: a tie on that pitch only (`Ab4~,C5q`).
+  `scoretext.link_ties` sets `tie_stop` per pitch.
+- `H`: a hidden rest. `M`: a whole-bar rest, written with no duration.
+- `{flags}`: words for the piece script to draw (`G4q{marc}`).
+- ` | `: two voices in one bar. Parse with `parse_score(path, voices=True)`.
+- `@NAME = tokens`: a macro. `&T` or `&24`: this bar is the same as that
+  block's bar, or as bar 24 of this block.
+
+Write the piece in this format rather than writing another builder. Section 1.2
+proofreads a transcription in this format against the scan.
+
+### 1.2 Proofread a hand transcription against the scan
+
+A hand transcription from a scan is not done until it has been compared with the
+scan by `scanproof/`. The comparison covers every staff of every bar, from the
+pixels. Reading it over by eye does not replace this. On an SSA-and-piano octavo
+from a phone scan, the transcription had been checked by hand bar by bar, and
+errors still reached the user: a phantom head inside two tied chords, and wrong
+spoken notes. `scanproof` then found four more errors that the hand check had
+passed:
+
+- a piano chord with E♭4 F4 for F4 G4, in two bars;
+- a B♭3 added under two beamed eighth chords, in two bars;
+- a voice note a step low.
+
+Three things about where the errors were are worth knowing before you start:
+
+- **They were systematic.** One kind was touching chord heads, two notes a third
+  or a second apart, read as an extra head between them. The eye makes the same
+  mistake that a naive detector makes. The other kind was a bar typed by analogy
+  with a parallel bar that the engraver had changed. A `&` reference then copied
+  the error into every bar that pointed at it. When one of these turns up, check
+  every other chord and every other parallel bar of the same kind.
+- **The transcriber's sense of which notes were doubtful did not predict where
+  the errors were.** Check everything, not just the bars you are unsure of.
+- **Ask the user with pictures, not note names.** Show the scan crop above and
+  the transcription's rendering of the same bars below
+  (`python3 -m scanproof question`). "B♭4 or C5 in bar 51?" makes the user
+  find the bar. The pair of images shows the error at a glance.
+
+**Run it.** It works from the piece's folder, outside this repo:
+
+1. Write `proof.json`; its format is in `scanproof/project.py`. It gives:
+   - the page images (`pdftoppm -r 300 -png`),
+   - the transcription (`score`, the score text, or `musicxml`),
+   - every system's staves from top to bottom, with each staff's clef, whether
+     it has x-noteheads, and the blocks it is transcribed in,
+   - the key,
+   - `grand_staff` for a piano's two staves.
+2. `python3 -m scanproof bars proof.json` drafts the bar table from the
+   detected barlines. It also draws every page in `out/overlay/`, with staff
+   lines in red, barlines in blue, system ends it had to guess in orange, and
+   bar numbers.
+   - Check every page.
+   - Correct the draft and save it as `bars.json`.
+   - Copy the printed bar number at each system start into `first_bar`, so a
+     missed or invented barline raises at once instead of shifting every later
+     bar.
+
+   On the SSA, detection missed five barlines (pale ones, and system ends at a
+   curled edge) and invented one (a column of stems). This table is the one
+   step a person checks, because every finding after it depends on it.
+3. `python3 -m scanproof check proof.json` reads and compares everything:
+   pitch set, notehead kind, note value from beams and flags, accidentals
+   against the key and the bar so far, and dots. It prints the counts and how
+   often the note values read agreed with the transcription. Expect a few
+   hundred findings on a 77-bar piece, nearly all of them the detector's.
+4. `python3 -m scanproof review proof.json` writes review sheets. Each one
+   shows the scan with every head the reader found circled and named, the
+   beams it counted, the transcription, and the findings. **Look at every
+   finding.** Do not sample them or skip a type. Each of the four errors above
+   showed up as a "pitch set differs" finding, among about 200 findings that
+   were all the detector's.
+5. Where a sheet leaves any doubt, run
+   `python3 -m scanproof zoom proof.json BAR STAFF [X0 X1]`. It enlarges the
+   spot with every line and space named in the margin and a guide across the
+   page. Decide a step from the zoom, not from the sheet: on a curved phone
+   scan the eye misplaces a head by a step as easily as the detector does.
+6. Fix the real errors, rebuild, and run `check` again. Their findings should
+   be gone, and nothing new should appear.
+
+**In the handback, list two groups separately:**
+
+- **Real errors.** For each, give the bar, the staff, what it was and what it is
+  now.
+- **Detector errors.** Group them by cause and say that, for each one, the scan
+  agrees with the transcription. On the SSA the causes were:
+  - misses: heads in tight clusters, faint stems, pale heads on ledger lines;
+  - false hits: beams, flags, tuplet numbers, stains, an accidental assigned
+    to the wrong head of a chord;
+  - wrong note values: a stem traced the wrong way through stacked ledger
+    lines, a beam that leaves a stem on one side only, a missed chord head
+    letting the stem window reach a beam.
+
+Also name three more things:
+
+- anything printed that the transcription cannot express (the SSA had a
+  tremolo on a piano chord, which the value reader saw as three extra beams);
+- print anomalies kept as they are (a dotted half that would overfill its bar);
+- what was not checked: rests, ties, slurs, dynamics, articulations, and the
+  words, which are compared separately against a lyric sheet.
 
 ## Step 2 — If it's vector: read the glyph stream
 
