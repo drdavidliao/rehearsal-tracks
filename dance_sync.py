@@ -1,6 +1,7 @@
+#!/usr/bin/env python3
 """Sync a choreography video, filmed to a different recording, to a follow-along score video.
 
-    python3 -m voiceshift.dancesync DANCE.mp4 SCORE_VIDEO.mp4 MIX.mp3 --accomp ACCOMP.mp3 \
+    python3 dance_sync.py DANCE.mp4 SCORE_VIDEO.mp4 MIX.mp3 --accomp ACCOMP.mp3 \
         --bar1 1.03 --beat 0.5 --stack "OUT stacked.mp4" --overlay "OUT over dance.mp4" [--white-opacity 0.75]
 
 1. The dance recording's tempo: beat tracker, straight-line fit of its beats.
