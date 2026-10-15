@@ -5,7 +5,7 @@ tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
 down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
-any of the scripts in this repository yourself — Claude does that. The six
+any of the scripts in this repository yourself — Claude does that. The eight
 sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
@@ -15,6 +15,8 @@ Typing `README` to Claude prints this same list back to you.
 - [🔧 &nbsp;Add kludges for Cantai](#add-kludges-for-cantai)
 - [🎧 &nbsp;Make rehearsal tracks](#make-rehearsal-tracks)
 - [🎬 &nbsp;Make follow-along videos](#make-follow-along-videos)
+- [🔁 &nbsp;Revoice recorded tracks](#revoice-recorded-tracks)
+- [💃 &nbsp;Sync a dance video](#sync-a-dance-video)
 - [📋 &nbsp;Plan note-learning rehearsals](#plan-note-learning-rehearsals)
 
 ---
@@ -206,6 +208,40 @@ Dots before each line show who sings it; one bold word per line, with an emoji,
 gives the eye somewhere to land. The first time round, Claude drafts the sheet's
 plan, names the sections from the music (not the words) and picks the bold words
 before rendering; the plan stays in the song's folder.
+
+<a id="revoice-recorded-tracks"></a>
+
+### 🔁 &nbsp;Revoice recorded tracks
+
+When the only good audio is a publisher's practice set for other voices (SSA tracks
+for a TTB chorus, say), separate the vocals from each part-predominant track
+(Ultimate Vocal Remover), put them in the song's folder with the accompaniment track
+and the revoiced MusicXML, and write something like:
+
+```
+Make TTB tracks from the SSA practice tracks in the Shenandoah folder: everything down an octave, formants down a minor third. Soprano 1 is Tenor 1, Soprano 2 is Tenor 2, Alto is Baritone and Bass.
+```
+
+The voices are shifted in pitch with the vocal "formants" placed separately, every
+part's move measured rather than assumed, the parts spliced by bars where a part
+borrows another's line, and the set mixed and balanced by what is heard (brightness,
+loudness as the ear weighs it, and how much the piano covers each part). The videos
+follow as usual.
+
+<a id="sync-a-dance-video"></a>
+
+### 💃 &nbsp;Sync a dance video
+
+With the follow-along videos made, put a choreography video in the folder and write
+something like:
+
+```
+Sync the dance video in the Shenandoah folder to the Balanced follow-along video.
+```
+
+The dance is retimed to the tracks (it is usually filmed to a different recording),
+and you get it stacked above the score, and the score laid over it with the white
+see-through.
 
 <a id="plan-note-learning-rehearsals"></a>
 

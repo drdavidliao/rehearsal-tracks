@@ -95,6 +95,27 @@ syllable lighting up as it is sung. The first time, Claude drafts how the
 words fall into sections and rows, names the sections from the music, and picks
 a bold key word and an emoji for each row, before rendering.
 
+**Revoice recorded tracks.** With a publisher's practice set for other voices
+separated into vocal stems (Ultimate Vocal Remover) in the song's folder, beside the
+accompaniment track and the revoiced MusicXML, write something like:
+
+```
+Make TTB tracks from the SSA practice tracks in the Shenandoah folder: everything down an octave, formants down a minor third. Soprano 1 is Tenor 1, Soprano 2 is Tenor 2, Alto is Baritone and Bass.
+```
+
+That is Step 9.5: shifted, measured, spliced by bars, mixed and balanced by ear-weighted
+measures; then the videos as usual.
+
+**Sync a dance video.** With the follow-along videos made and a choreography video in the
+folder, write something like:
+
+```
+Sync the dance video in the Shenandoah folder to the Balanced follow-along video.
+```
+
+That is Step 10.3: the dance retimed to the tracks, stacked above the score, and the
+score laid over it with its white see-through.
+
 **Plan note-learning rehearsals.** Put the MusicXML and the score PDF in the
 song's folder, connect or attach it, and write something like:
 
@@ -137,14 +158,15 @@ from tracks. Never mix the
 Cantai file with the rest — deliver the faithful file always, and the Cantai file
 in addition when asked for learning tracks.
 
-**This file is self-contained.** The eleven scripts it refers to are printed in
+**This file is self-contained.** The twelve scripts it refers to are printed in
 full under *Scripts* near the end. Write them out to disk verbatim before you
 start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
 `cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `stem_audit.py`,
-`verify.py`, `rehearsal_mix.py`, `score_video.py`, `lyric_sheet.py`. Three larger pieces live in the
+`verify.py`, `rehearsal_mix.py`, `score_video.py`, `lyric_sheet.py`, `dance_sync.py`. Five larger pieces live in the
 repository beside this file instead of being printed here: the `chorale` package
-(Steps 7–8), `dorico_reader.py` (a Dorico PDF read into MusicXML, 2.7) and the
-`lesson` package (Step 11).
+(Steps 7–8), `dorico_reader.py` (a Dorico PDF read into MusicXML, 2.7), the
+`scanproof` package (proofreading a transcription against its scan, 1.2), the
+`voiceshift` package (recorded tracks revoiced in audio, and the bar grid of a recording, 9.5) and the `lesson` package (Step 11).
 
 **Nothing is delivered until `verify.py` has run on it** (Step 5), and its table
 goes into the handback as printed. The rules in this file are prose, and prose
@@ -2072,6 +2094,110 @@ audio in the file on the user's computer — for a panned or 3D track, each
 voice's left/right balance — and resend from a new source path if it is the old
 one.
 
+### 9.5 Tracks from a recording, revoiced in audio (`voiceshift/`)
+
+When the only good audio is a publisher's practice set for other voices, revoice the
+recording itself. The case this section is written from was an SSA set with piano (a
+holiday swing number) turned into TTB. The piece had long spoken passages in x-noteheads,
+which Cantai cannot speak, so the recording was the only source. The tools are in
+`voiceshift/`; build the shifter once with `sh voiceshift/build.sh`.
+
+**The parts and the score.** Make the revoiced MusicXML first (Step 7). Here every sung
+line went down an octave: Soprano 1 became Tenor 1, Soprano 2 Tenor 2, and the Alto became
+both Baritone and Bass, except in two four-bar passages where the Baritone took Soprano 2's
+line. Tenors were written in treble-8vb, Baritone and Bass in bass clef. `verify.py`
+check 16 should pass ("same pitch classes at every onset").
+
+**The stems are mixtures.** The user supplied Ultimate Vocal Remover separations of the
+part-predominant tracks. Each one holds every voice, with one part on top. Know three
+things about them:
+
+- **Duplicate files.** Two of the four supplied files were byte-identical: the Baritone
+  and Bass tracks were the same Alto track. Check checksums first, and process each
+  distinct stem once.
+- **No single "others" level.** In that set's Soprano 1 track the other voices sat about
+  20 dB down. In its Soprano 2 and Alto tracks Soprano 1 sat only 5–10 dB down. So a
+  stem cannot be un-mixed with one ratio.
+- **The publisher's muted mixes don't help.** "Balanced Voices" minus "Soprano 1 Muted"
+  did not null at any gain: the residual stayed 4.7 dB under Balanced. The muted mixes
+  are mixed differently, as the user suspected.
+
+**Shift.** `python3 -m voiceshift.shift IN OUT --pitch -12 --formant -3 --calibrate`.
+
+- **Formant target.** The −3 (a minor third) is the user's figure from listening in
+  Logic. It is where the spectral envelope ends up relative to the original, and it
+  sits in the range of men's formants against women's. Never describe it as "formants
+  up a minor third". Relative to a plain octave shift that is what happens, but it reads
+  backwards; the user pointed this out on the task list.
+- **Engine.** Signalsmith Stretch, formant base 150 Hz. Rubber Band was measured first
+  on synthetic vowels (`python3 -m voiceshift.measure vowels`, which checks itself
+  against vowels built with known factors):
+  - Its R3 engine's formant scale reached only 0.6–0.82 of the target on an octave
+    shift.
+  - Some settings dropped back to moving the formants with the pitch.
+  - Its command line has no formant scale at all.
+  - Correcting its output with a per-frame envelope filter needed gains of 25–40 dB.
+    Whitening the source first was worse.
+- **Signalsmith on synthetic vowels.** C4 to F5 landed at 0.81–0.90 against 0.841.
+- **Calibrate on the real stems.** A setting of −3.0 measured −2.71 st there, and −3.3
+  measured −3.02. `--calibrate` measures and re-runs once.
+- **Record the measurements.** Every run prints the measured pitch (−12.0 st), envelope
+  and time offset (1.5 ms). Those numbers go in the handback, not the settings.
+
+**Bars in the recording.** `python3 -m voiceshift.bargrid SCORE ACCOMP --part Piano`.
+The recording ran at exactly 120 (the print says ca. 120–126).
+
+- **Don't match the piano's notes.** It locked 0.65 s early. A steady part matches
+  itself a beat away, and the score landscape had equal peaks every beat.
+- **Use the rests.** The accompaniment's rests of 1.2 s or more against the gaps in its
+  onsets are unambiguous: bar 1 came out at 1.03 s, and every rest checked within 6 ms.
+- **Measure the swing too.** The offbeats sat at 0.61 of the beat.
+
+**Parts by bars.** `python3 -m voiceshift.splice OUT --base low.wav --take "24-27=t2.wav" ...`.
+Each splice goes 0.3 s before its barline, inside a rest every voice shares, with 50 ms
+crossfades. The tool prints both stems' levels at each splice.
+
+**Mix.** Mix with `rehearsal_mix.py` as in 9.4, then say plainly in the handback that
+each stem holds the others too. A part-left or predominant track has the other voices
+bleeding through, at whatever level the publisher left them.
+
+**Balance by what is heard.** The user heard the tenors as soft. Measure before
+changing anything:
+
+- **The shift?** `measure compare` gives brightness (2–4 kHz against 0.3–1 kHz) before
+  and after. It was within 1 dB on every stem, so the processing had not dulled them.
+- **The doubled low line?** `linelevels` measures each line inside each stem at its own
+  harmonics. In the Balanced sum the duplicated Alto-derived stem put the low line 4 dB
+  *under* Tenor 1, so it was not drowning the tenors.
+- **The cause was inherited timbre.** The soprano recordings were 3.5–4 dB darker than
+  the alto's. Top lines duller than the low ones read as soft. `presence --like low.wav`
+  added +3.75–4.25 dB at 3 kHz (Q 0.9, zero-phase). Zwicker loudness
+  (`measure loudness`, ISO 532-1) then put the tenors level with the low parts (0.0 and
+  +0.3 phon) with no level trim.
+- **The piano.** An octave down puts the voices in the piano's register. `audibility`
+  (masking-adjusted, critical bands) showed every part needed +1.25–1.5 dB to be as
+  audible over the piano as its SSA original. Since that was the same for every part,
+  the accompaniment went down 1.5 dB instead: `--trim "Accompaniment=+1.95"` against the
+  rule's +3.45.
+- **Keep the first set.** Move it to a `v1` subfolder before remixing, and copy the
+  videos' picture streams unchanged (`-c:v copy`) with the new audio.
+
+**Videos.** `score_video.py` with:
+
+- **`--swing`** at the measured fraction. Without it, every offbeat light comes about
+  55 ms before its note.
+- **`--anchor 1=M:SS.ss`** from the bar grid.
+- **The recording's tempo** as the MusicXML's playback tempo (`<sound tempo>`). Left at
+  the printed 123, the fit drifted 2.3 s.
+
+Then shift the anchor until the report says the lights lead by 25–30 ms.
+
+**Estimating.** Asked for a duration estimate up front, Claude said 3½–5½ hours. The job
+took about one, and nearly all of the overrun allowance was spent on one unknown, the
+choice of formant engine. The repository's mixing and video tools ran in minutes.
+Estimate the known steps from their real run times, and put the margin only on the
+genuinely new part.
+
 ## Step 10 — Follow-along score videos
 
 A **follow-along video** is the score on screen with each note, and its syllable,
@@ -2612,6 +2738,45 @@ not a render of it):
 - Dense orchestration hides the onsets: the onset check was flat there, and only
   pitch told the fit apart from a shifted one.
 - Use gender-neutral part labels: "TTBB", or T1/T2/B1/B2, never "Men".
+- **Swing and tempo for `score_video.py` on a commercial recording:** give `--swing` (where
+  offbeat eighths fall, as a fraction of the beat; `voiceshift.bargrid` measures it), set the
+  MusicXML's playback tempo to what the recording plays, and anchor bar 1 by hand (9.5).
+
+### 10.3 A choreography video synced to the tracks
+
+`python3 dance_sync.py DANCE.mp4 "TITLE - Balanced.mp4" "TITLE - Balanced.mp3"
+--accomp ACCOMP --bar1 B1 --beat BEAT --stack OUT1 --overlay OUT2`.
+
+`--bar1` and `--beat` come from `python3 -m voiceshift.bargrid` (9.5).
+
+The dance video was a choreography demo filmed to a different recording, at 120.9 bpm
+against our 120.
+
+**Mapping time.**
+- **Pitch alignment didn't work.** Chroma DTW against our recording jumped by seconds.
+- **A straight map.** Dance time = c + r·(ours − bar 1), with r searched around the
+  ratio of the two beat periods. A range set by guess missed the right ratio and fitted
+  the edge of the search.
+- **Corrected by the dance recording's beats.** Each beat is paired with our nearest
+  grid beat, the residual is smoothed over ±8 beats, and the map runs piecewise-linear
+  through knots every 8 s. That took the opening from 110 ms off to within ±11 ms of
+  our grid everywhere, at speeds of 0.986–1.004.
+
+**Rendering.**
+- **One `setpts` expression, no cuts.** Cutting into segments, retiming and joining
+  drifted to 130 ms by the end, because each cut rounds to a frame.
+- **Checked on the output file.** Dance frames are found in the output where the map
+  puts them, to within one frame of seek rounding.
+
+**Layouts.**
+- **`--stack`:** dance above the score video, 1920×2160.
+- **`--overlay`:** the score over the dance at 16:9, with the score's white and
+  near-white (for compression noise) at `--white-opacity`, 0.75 as the user asked, and
+  its ink opaque. The score stays fully legible. Dancers in a white studio show as faint
+  figures, so offer a lower opacity if the user wants them stronger.
+- **New mixes:** the picture does not depend on the audio. Re-mux with `-c:v copy`.
+- **Checks:** `dance_sync.py` checks the overlay on the lower part of the frame, below the systems.
+  It read one frame later than the stacked render, at all four points.
 
 ## Step 11 — Note-learning lesson plans
 
@@ -2766,7 +2931,7 @@ main director says, so the plan always covers every letter.
 
 ## Scripts
 
-All eleven are complete and standalone. Write them out as-is; nothing else is
+All twelve are complete and standalone. Write them out as-is; nothing else is
 needed. `check_pdf_type.py` and `find_performer_instructions.py` need only
 `pdfplumber`; `musicxml_qc.py` and `cantai_mode.py` need only the standard
 library; `lyric_collisions.py` needs `verovio` and `lxml`; `stem_vs_score.py`
@@ -2778,7 +2943,8 @@ libmp3lame, and `slab` for the 3D track; `score_video.py` needs `verovio`,
 `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli` and `ffmpeg` with
 libx264, and imports `stem_vs_score.py`, `verify.py` and `lyric_sheet.py`, so keep all
 three beside it; `lyric_sheet.py` needs `pycairo`, `pillow`, `numpy`, `lxml`, the Noto
-Color Emoji font and one of Carlito, Lato or Liberation Sans, and imports `score_video.py`.
+Color Emoji font and one of Carlito, Lato or Liberation Sans, and imports `score_video.py`; `dance_sync.py` needs `numpy`, `librosa` and `ffmpeg` with
+libx264.
 
 
 ### check_pdf_type.py
@@ -7139,6 +7305,7 @@ def closed_display(droot, src_names, src_notes, sung):
                                          and k in hit for k in hit)] or hit
         staff_parts[j] = sorted(hit)
     at, rests, syls = set(), set(), set()
+    at_dur = {}
     syl_text = {}
     count = {}
     for i, ns_ in enumerate(src_notes):
@@ -7149,6 +7316,7 @@ def closed_display(droot, src_names, src_notes, sung):
                 rests.add((i, n['mi'], n['rel'], n['dur']))
             else:
                 at.add((i, n['mi'], n['rel'], n['midi']))
+                at_dur[(i, n['mi'], n['rel'], n['midi'])] = n['dur']
                 count[i] = count.get(i, 0) + 1
                 if n['lyric']:
                     syls.add((i, n['mi'], n['rel']))
@@ -7173,14 +7341,17 @@ def closed_display(droot, src_names, src_notes, sung):
                         el = etree.SubElement(spp, tag)
                     el.text = val
                 dnames[j] = ' '.join(src_names[i] for i in sp)
-    owners, fall = {}, 0
+    owners, fall, split = {}, 0, 0
     for j, ns_ in enumerate(dnotes):
         sp = [i for i in staff_parts[j] if i in sung]
         if not sp:
             continue
         voices = {}
+        lens = {}                     # (bar, moment, pitch) -> lengths of the noteheads printed there
         for n in ns_:
             voices.setdefault(n['mi'], set()).add(n['voice'])
+            if not n['rest'] and not n['grace']:
+                lens.setdefault((n['mi'], n['rel'], n['midi']), set()).add(n['dur'])
         for n in ns_:
             if n['grace']:
                 continue
@@ -7188,6 +7359,19 @@ def closed_display(droot, src_names, src_notes, sung):
                 c = {i for i in sp if (i, n['mi'], n['rel'], n['dur']) in rests}
             else:
                 c = {i for i in sp if (i, n['mi'], n['rel'], n['midi']) in at}
+                # a unison the print splits by voice because the parts hold it for different
+                # lengths (one part's eighth inside the other's dotted quarter): two noteheads at
+                # one moment and pitch, and pitch alone gave each to both parts, so a part lit the
+                # other's note for the other's length and kept its syllable lit to that end too.
+                # Each part takes the notehead as long as its own note. Only where the part's own
+                # length is printed there: a closed score that ties a note differently from the
+                # open score keeps the match on pitch.
+                key = (n['mi'], n['rel'], n['midi'])
+                if len(c) > 1 and len(lens.get(key, ())) > 1:
+                    own = {i for i in c if at_dur[(i,) + key] == n['dur']}
+                    if own and all(at_dur[(i,) + key] in lens[key] for i in c - own):
+                        split += len(c - own)
+                        c = own
             if not c:
                 fall += 1
                 vs = sorted(voices[n['mi']], key=lambda v: int(v) if v.isdigit() else 0)
@@ -7196,6 +7380,10 @@ def closed_display(droot, src_names, src_notes, sung):
                 else:
                     c = {sp[0] if vs.index(n['voice']) == 0 else sp[-1]}
             owners[n['id']] = c
+    print('check, unisons split by voice: ' + (
+        f'{split} notehead-part pair(s) where a part holds the pitch for another length; each part '
+        'lights only the notehead as long as its own note' if split else
+        'none (no two noteheads at one moment and pitch with different lengths)'))
     # syllables: grouped by staff and moment; with two lines at one moment, line k is the
     # k-th part (top down) that starts a syllable there in the open score
     groups = {}
@@ -7470,6 +7658,9 @@ def main():
                          'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in, '
                          'or, away from a fermata, starts a new stretch at that bar')
     ap.add_argument('--crf', type=int, default=20)
+    ap.add_argument('--swing', type=float, default=0.0,
+                    help='swung eighths: where an offbeat eighth sounds, as a fraction of the beat '
+                         '(0.667 = triplet swing; measure it on the recording; 0 = straight)')
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
                     '(normal slurs, ties and words) to show instead of the file the audio came from')
@@ -7557,7 +7748,13 @@ def main():
         a0, a1 = src_starts[mi], src_starts[mi] + blen[mi]
         utempos.append((float(us), bpm_at(float(a0))))
         utempos += [(float(us) + b - float(a0), t) for b, t in tempos if float(a0) < b < float(a1)]
-    usec = lambda uq: beats_to_sec(float(uq), utempos)
+    def usec(uq):
+        # --swing: a point exactly halfway through a quarter (an offbeat eighth, the end of an
+        # on-beat eighth) sounds at that fraction of the beat instead; nothing else moves, so
+        # written triplets keep their places
+        if a.swing and uq - (uq // 1) == Fr(1, 2):
+            return beats_to_sec(float(uq) + a.swing - 0.5, utempos)
+        return beats_to_sec(float(uq), utempos)
 
     def times_of(mi, q0, q1):
         """Score seconds (s0, s1) of written quarters q0..q1 in bar mi, each time the bar is played."""
@@ -9060,6 +9257,174 @@ def main():
         out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.plan)),
                                     S.plan['title'] + ' - lyric sheet.pdf')
         pdf(S, out)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### dance_sync.py
+
+```python
+#!/usr/bin/env python3
+"""Sync a choreography video, filmed to a different recording, to a follow-along score video.
+
+    python3 dance_sync.py DANCE.mp4 SCORE_VIDEO.mp4 MIX.mp3 --accomp ACCOMP.mp3 \
+        --bar1 1.03 --beat 0.5 --stack "OUT stacked.mp4" --overlay "OUT over dance.mp4" [--white-opacity 0.75]
+
+1. The dance recording's tempo: beat tracker, straight-line fit of its beats.
+2. A straight map, dance time = c + r * (our time - bar1): r near (dance beat / our beat), c and r
+   fitted by the dance audio's onset strength at our accompaniment's onset times.  The search range
+   for r is set from the beat periods: a range set by guess once missed it and fitted the edge.
+3. Corrected by the beats: each dance beat is paired with our nearest grid beat; the residual is
+   smoothed (median over +-8 beats) and sampled every 8 s; a piecewise-linear map through those
+   knots.  On a ChoreoTrax demo at 120.9 bpm against a 120 bpm practice track, the straight map left
+   the opening 110 ms off; the piecewise one put every 20 s within +-11 ms of the grid, at speeds of
+   0.986-1.004.
+4. Rendered with ONE setpts expression (output time as a piecewise function of the frame's own time),
+   then resampled to 29.97 fps.  Cutting into segments, retiming each and joining them drifted to
+   130 ms by the end: each cut rounds to a frame.
+5. Checked on the rendered file: for dance frames at 20/40/60/80% of the piece, the output frame that
+   matches best (pixel difference) against where the map puts it.  Expect one frame of seek rounding.
+
+Layouts: --stack puts the dance on top and the score video below (1920x2160).  --overlay puts the
+score over the dance at 1920x1080 with the score's white (and near-white, for compression noise)
+at --white-opacity and its ink opaque: opacity 1 for channels below 200, ramping to --white-opacity
+above 235.  At 0.75 the score stays fully legible; dancers in a white studio show as faint figures.
+The audio is MIX.mp3; re-mux a new mix later with -c:v copy, the picture does not depend on it.
+"""
+import argparse
+import subprocess
+
+import numpy as np
+
+
+def load(path, sr=22050):
+    """Any audio or video file's sound, mono, via ffmpeg (soundfile cannot open an mp4)."""
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-vn', '-ac', '1', '-ar', str(sr), '-f', 'f32le', '-'],
+                       capture_output=True, check=True)
+    return np.frombuffer(r.stdout, np.float32).astype(np.float64)
+
+
+def beats(y, sr=22050, bpm=120):
+    import librosa
+    env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=256)
+    _, b = librosa.beat.beat_track(onset_envelope=env, sr=sr, hop_length=256, start_bpm=bpm, tightness=800, units='time')
+    return b
+
+
+def fit_map(dance, accomp, bar1, beat, sr=22050):
+    import librosa
+    db = beats(dance, sr, 60 / beat)
+    A = np.vstack([np.arange(len(db)), np.ones(len(db))]).T
+    dperiod = float(np.linalg.lstsq(A, db, rcond=None)[0][0])
+    r0 = dperiod / beat
+    print(f'dance recording: beat {dperiod:.5f} s ({60 / dperiod:.2f} bpm); ours {beat:.5f} s; ratio about {r0:.4f}')
+    hop = 128
+    ed = librosa.onset.onset_strength(y=dance, sr=sr, hop_length=hop)
+    td = np.arange(len(ed)) * hop / sr
+    on = librosa.onset.onset_detect(y=accomp, sr=sr, units='time', hop_length=hop)
+    on = on[on > bar1]
+    best = None
+    for r in np.arange(r0 - 0.004, r0 + 0.0041, 0.0002):
+        for c in np.arange(-2.0, 6.0, 0.004):
+            s = np.interp(c + (on - bar1) * r, td, ed).mean()
+            if best is None or s > best[0]:
+                best = (s, r, c)
+    _, r, c = best
+    print(f'straight map: dance = {c:.3f} + {r:.4f} * (ours - {bar1})')
+    # piecewise correction from the beats
+    t = bar1 + (db - c) / r
+    k = np.round((t - bar1) / beat)
+    g = bar1 + beat * k
+    keep = np.r_[True, np.diff(k) > 0]
+    g, b = g[keep], db[keep]
+    res = b - (c + r * (g - bar1))
+    sm = np.array([np.median(res[max(0, i - 8):i + 9]) for i in range(len(res))])
+    T = np.arange(0.0, len(accomp) / sr + 8.0, 8.0)
+    D = c + r * (T - bar1) + np.interp(T, g, sm)
+    after = b - np.interp(g, T, D)
+    for s in range(0, int(T[-1]), 20):
+        sel = (g >= s) & (g < s + 20)
+        if sel.any():
+            print(f'   {s:3d}-{s + 20:3d} s: dance beats {1000 * np.median(after[sel]):+.0f} ms from our grid')
+    sp = np.diff(D) / np.diff(T)
+    print(f'speeds {sp.min():.4f}-{sp.max():.4f}')
+    return T, D
+
+
+def setpts_expr(T, D):
+    terms = []
+    for i in range(len(T) - 1):
+        s = (T[i + 1] - T[i]) / (D[i + 1] - D[i])
+        lo = '-1e9' if i == 0 else f'{D[i]:.5f}'
+        hi = '1e9' if i == len(T) - 2 else f'{D[i + 1]:.5f}'
+        terms.append(f'gte(T\\,{lo})*lt(T\\,{hi})*({T[i]:.5f}+(T-{D[i]:.5f})*{s:.7f})')
+    return '+'.join(terms)
+
+
+def duration(path):
+    return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path],
+                                capture_output=True, text=True).stdout)
+
+
+def render(dance, score, mix, expr, out, mode, opacity):
+    dur = duration(mix)
+    fit = f'fps=30000/1001,scale=1920:1080,tpad=stop_mode=clone:stop_duration=5,trim=duration={dur},setsar=1'
+    top = f"[0:v]setpts='({expr})/TB',{fit}[d]"
+    bot = f'[1:v]{fit}[s]'
+    if mode == 'stack':
+        fc = f'{top};{bot};[d][s]vstack=inputs=2[v]'
+    else:
+        lo = int(round(255 * opacity))
+        mn = 'min(min(r(X,Y),g(X,Y)),b(X,Y))'
+        alpha = f"if(lt({mn},200),255,if(gt({mn},235),{lo},255-{255 - lo}*({mn}-200)/35))"
+        fc = f"{top};{bot[:-3]},format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[s];[d][s]overlay=format=auto[v]"
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', dance, '-i', score, '-i', mix, '-filter_complex', fc,
+                    '-map', '[v]', '-map', '2:a', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
+                    '-pix_fmt', 'yuv420p', '-g', '60', '-c:a', 'aac', '-b:a', '192k', '-shortest', out], check=True)
+
+
+def check(dance, out, T, D, mode):
+    """Find source dance frames in the output.  In the stacked video, the top half; in the overlay,
+    the bottom 40% of the frame (below the systems on these screens), where the score adds only an
+    even wash of white that does not move the best match."""
+    W, H = 320, 180
+    def frames(path, t0, n, region):
+        crops = {'full': '', 'top': 'crop=1920:1080:0:0,', 'low': 'crop=1920:432:0:648,'}
+        vf = crops[region] + f'scale={W}:{H},format=gray'
+        r = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{max(t0, 0):.3f}', '-i', path, '-frames:v', str(n),
+                            '-vf', vf, '-f', 'rawvideo', '-'], capture_output=True)
+        f = np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W).astype(float)
+        return (f - f.mean(axis=(1, 2), keepdims=True)) / (f.std(axis=(1, 2), keepdims=True) + 1e-6)
+    fps = 30000 / 1001
+    span = duration(dance)
+    for frac in (0.2, 0.4, 0.6, 0.8):
+        d = frac * span
+        src = frames(dance, d, 1, 'full' if mode == 'stack' else 'low')[0]
+        t = float(np.interp(d, D, T))
+        got = frames(out, t - 0.3, 19, 'top' if mode == 'stack' else 'low')
+        e = [np.abs(o - src).mean() for o in got]
+        j = int(np.argmin(e))
+        print(f'   dance {d:6.1f} s: expected at {t:7.3f} s, found {1000 * ((t - 0.3) + j / fps - t):+.0f} ms '
+              f'away (one frame is 33 ms)')
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('dance'); ap.add_argument('score_video'); ap.add_argument('mix')
+    ap.add_argument('--accomp', required=True, help='our accompaniment track (its onsets fit the map)')
+    ap.add_argument('--bar1', type=float, required=True); ap.add_argument('--beat', type=float, required=True)
+    ap.add_argument('--stack'); ap.add_argument('--overlay')
+    ap.add_argument('--white-opacity', type=float, default=0.75)
+    a = ap.parse_args()
+    T, D = fit_map(load(a.dance), load(a.accomp), a.bar1, a.beat)
+    expr = setpts_expr(T, D)
+    for mode, out in (('stack', a.stack), ('overlay', a.overlay)):
+        if out:
+            render(a.dance, a.score_video, a.mix, expr, out, mode, a.white_opacity)
+            print(f'wrote {out}')
+            check(a.dance, out, T, D, mode)
 
 
 if __name__ == '__main__':
