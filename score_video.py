@@ -2047,6 +2047,9 @@ def main():
                          'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in, '
                          'or, away from a fermata, starts a new stretch at that bar')
     ap.add_argument('--crf', type=int, default=20)
+    ap.add_argument('--swing', type=float, default=0.0,
+                    help='swung eighths: where an offbeat eighth sounds, as a fraction of the beat '
+                         '(0.667 = triplet swing; measure it on the recording; 0 = straight)')
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
                     '(normal slurs, ties and words) to show instead of the file the audio came from')
@@ -2134,7 +2137,13 @@ def main():
         a0, a1 = src_starts[mi], src_starts[mi] + blen[mi]
         utempos.append((float(us), bpm_at(float(a0))))
         utempos += [(float(us) + b - float(a0), t) for b, t in tempos if float(a0) < b < float(a1)]
-    usec = lambda uq: beats_to_sec(float(uq), utempos)
+    def usec(uq):
+        # --swing: a point exactly halfway through a quarter (an offbeat eighth, the end of an
+        # on-beat eighth) sounds at that fraction of the beat instead; nothing else moves, so
+        # written triplets keep their places
+        if a.swing and uq - (uq // 1) == Fr(1, 2):
+            return beats_to_sec(float(uq) + a.swing - 0.5, utempos)
+        return beats_to_sec(float(uq), utempos)
 
     def times_of(mi, q0, q1):
         """Score seconds (s0, s1) of written quarters q0..q1 in bar mi, each time the bar is played."""
