@@ -159,19 +159,20 @@ will be filed under, and you click to accept or type your chorus's own name.
 This matters: Chorus Connection files a track under the section named in
 parentheses, and shows a track whose section it does not recognise to
 *everyone*. A part that divides a section keeps the section in the parentheses
-and puts the division after it: `Shenandoah - (Tenor 2) a predominant.mp3`,
+and puts the division after it: `Shenandoah - (Tenor 2) a predominant-left.mp3`,
 never `(Tenor 2a)`.
 
-Then Claude writes five kinds of mp3 beside the originals, named for Chorus
+Then Claude writes four kinds of mp3 beside the originals, named for Chorus
 Connection:
 
-- one **predominant** track per part, with that part loud, the other voices
+- one **predominant-left** track per part, with that part loud, the other voices
   faint and the piano as loud against the choir as if every stem had been
-  normalized to the same loudness first, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
-- one **part-left** track per part, with that part hard left, the other voices
-  hard right and the piano in the middle, e.g. `Shenandoah - (Tenor 2)
-  part-left.mp3`. Take out one earbud, or turn the balance knob, to hear just
-  your part and the piano, or just the piano and everyone else;
+  normalized to the same loudness first, e.g. `Shenandoah - (Tenor 2)
+  predominant-left.mp3`. The part is only in the left channel; the other voices
+  and the piano are in the middle. A phone or a Bluetooth speaker plays the two
+  channels together and you hear the part loud over everyone else; with earbuds,
+  take one out, or turn the balance knob, to hear your part over the piano, or the
+  piano and everyone else without your part;
 - one `Shenandoah - Balanced.mp3`, with every part at the same level;
 - one `Shenandoah - Balanced panned.mp3`, the same with the voices spread
   across the stereo field, lowest on the left;
@@ -192,7 +193,7 @@ Make follow-along videos for the Shenandoah folder.
 If the MusicXML there is the Cantai learning version, put the print version in
 the folder too, ideally the closed score the singers hold, and say which is
 which, so the videos show the music as printed. You get one video per part and one for everyone, named like the mp3s
-(`Shenandoah - (Tenor 2) predominant.mp4`, `Shenandoah - Balanced.mp4`). The
+(`Shenandoah - (Tenor 2) predominant-left.mp4`, `Shenandoah - Balanced.mp4`). The
 score is the closed score the singers hold, two parts to a staff. Each note and
 its word lights up in the part's colour while it sounds. Each rest lights up
 too, with a bar that fills beat by beat, so nobody has to count. In a part's
@@ -293,7 +294,7 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 | `cantai_mode.py` | Post-processes a finished file so Cantai sings every note. Not for printing. | stdlib |
 | `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
 | `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
-| `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant and part-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
+| `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
 | `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
 | `lyric_sheet.py` | The lyric sheet made with the follow-along videos: every part's words on one printable page, and a video of that page per mp3 with each syllable lit in the colours of the parts singing it. Drafts the plan (sections, rows, bold words) and prints the melody bar by bar for naming sections. | `pycairo`, `pillow`, `numpy`, `lxml`, Noto Color Emoji; `score_video.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
@@ -323,7 +324,7 @@ python3 lyric_collisions.py score-laid-out.musicxml 7.0
 python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
 python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav" "Piano=Piano.wav"
 python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
-python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant.mp3" --display Shenandoah.musicxml
+python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant-left.mp3" --display Shenandoah.musicxml
 python3 lyric_sheet.py structure Shenandoah.musicxml
 python3 lyric_sheet.py pdf "Shenandoah - lyric sheet plan.json"
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4

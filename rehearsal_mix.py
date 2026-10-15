@@ -12,8 +12,9 @@ the level it would have had if every stem were normalized to equal loudness befo
 
 Writes, for every voice V (the Chorus Connection section in parentheses, see Sections below;
 a voice named Solo... gets none):
-    TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment at its level
-    TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment centred
+    TITLE - (V) predominant-left.mp3    V +3 dB hard left; other voices -21 dB and accompaniment
+                                        at its level, both as exported (unpanned); summed to mono
+                                        it is exactly the predominant mix (Predominant-left, below)
 and once:
     TITLE - Balanced.mp3                every voice at 0 dB as exported, accompaniment at its level
     TITLE - Balanced panned.mp3         voices spread across the stereo field, lowest on the left
@@ -52,6 +53,16 @@ not changed. First used on a TTBB whose piano stem was 17 LU under the low voice
 under the tenors: +14.89 dB, approved by ear; matching the average voice instead would have
 given +13.25 dB. A --trim on an accompaniment stem replaces this; --accomp-as-exported leaves
 every accompaniment stem at 0 dB.
+
+Predominant-left: one track per part does what a predominant track and a part-left track did.
+Phones and Bluetooth speakers play mono, so the mono sum must be the predominant balance: V +3 dB,
+the others -21 dB, the accompaniment at its level. Earbuds or a balance knob still separate the
+part: V is folded to mono and put in the left channel only, at twice its predominant gain
+(+6.02 dB), so the mono sum (L+R)/2 gives it back at exactly that gain. The other voices and the
+accompaniment are not steered: each stem stays as exported, stereo if it is stereo, at its
+predominant gain, so the right channel is everything but V. The user's ruling after a
+set of tracks from a human singer made this way (2026-10-15): it halves the files a singer sifts
+through in Chorus Connection. The separate predominant and part-left tracks are no longer made.
 
 Stem levels: every stem's median level while sounding is printed. A stem several dB off
 the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
@@ -244,12 +255,12 @@ def main():
     accsum = sum((st[n] for n in acc), np.zeros((N, 2), np.float32))
     mono_ = {n: mono(st[n]) for n in names + acc}
 
-    def predominant(v):
-        return accsum + sum(st[n] * np.float32(db(a.featured if n == v else a.others)) for n in names)
-
-    def part_left(v):
-        R = sum((mono_[n] for n in names if n != v), np.zeros(N, np.float32))
-        return accsum + np.stack([mono_[v], R], 1)
+    def predominant_left(v):
+        # V alone in the left at twice its predominant gain, so (L+R)/2 is the predominant mix
+        # exactly; the other voices and the accompaniment as exported, not steered
+        out = accsum + sum((st[n] * np.float32(db(a.others)) for n in names if n != v), np.zeros((N, 2), np.float32))
+        out[:, 0] += mono_[v] * np.float32(2 * db(a.featured))
+        return out
 
     def balanced():
         return accsum + sum(st[n] for n in names)
@@ -281,8 +292,7 @@ def main():
 
     builders = {}
     for v in names:
-        builders[f'{a.title} - {label(v, sections)} predominant'] = (lambda v=v: predominant(v))
-        builders[f'{a.title} - {label(v, sections)} part-left'] = (lambda v=v: part_left(v))
+        builders[f'{a.title} - {label(v, sections)} predominant-left'] = (lambda v=v: predominant_left(v))
     builders[f'{a.title} - Balanced'] = balanced
     builders[f'{a.title} - Balanced panned'] = panned
     three = f'{a.title} - Balanced 3D, use headphones'
