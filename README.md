@@ -164,7 +164,8 @@ Then Claude writes five kinds of mp3 beside the originals, named for Chorus
 Connection:
 
 - one **predominant** track per part, with that part loud, the other voices
-  faint and the piano as written, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
+  faint and the piano as loud against the choir as if every stem had been
+  normalized to the same loudness first, e.g. `Shenandoah - (Tenor 2) predominant.mp3`;
 - one **part-left** track per part, with that part hard left, the other voices
   hard right and the piano in the middle, e.g. `Shenandoah - (Tenor 2)
   part-left.mp3`. Take out one earbud, or turn the balance knob, to hear just

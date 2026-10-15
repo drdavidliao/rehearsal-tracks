@@ -1464,7 +1464,7 @@ guessing twice about the same thing.
 A set of **rehearsal tracks** is five kinds of mp3, and "make rehearsal
 tracks" means all five (so do older requests for "part-predominant tracks" or
 "practice tracks"): per part, one predominant track (the part loud, the other
-voices faint, the piano as written) and one part-left track (the part hard
+voices faint, the piano at its equal-loudness level, 9.4) and one part-left track (the part hard
 left, the other voices hard right, the piano centred); and three Balanced
 tracks with every part at the same level: plain (no panning), panned (the
 voices spread across the stereo field) and 3D (the voices placed around the
@@ -1811,8 +1811,22 @@ several dB off the others; apply it and rerun. It writes 2 × parts + 3 mp3s and
 prints each one's peak and the gain applied. For the unaccompanied TTBB (four voices, no
 accompaniment) that was eleven tracks. What it does, and why:
 
+**The piano's level is set first, and every track uses it.** It comes out as loud,
+against the choir, as it would if every stem, voices and piano alike, had been
+normalized to the same integrated loudness (EBU R128) before mixing. Normalized, the
+voices summed land some LU above any one stem; the script puts the piano that far
+below the voices as they are (after any `--trim`), and leaves the voices alone. That
+is the user's rule since a TTBB with piano whose piano stem came out 17 LU under the
+low voices and 10 under the tenors: the tracks were too quiet in the piano, the rule
+gave +14.89 dB, and the user approved it by ear. Matching the piano to the average
+single voice instead would have given +13.25 dB; the choir as a whole is what the
+piano is heard against. The script prints each stem's loudness and the gain. A
+`--trim` on the accompaniment replaces the rule, and `--accomp-as-exported` turns it
+off; use either only when the user asks. Each accompaniment stem, if there are
+several, is set the same way on its own.
+
 For each featured part: the featured voice +3 dB, every other voice −21 dB, the
-piano at 0 dB, summed without normalising, then encoded. These are the defaults;
+piano at its level, summed without normalising, then encoded. These are the defaults;
 use others only when the user asks. The other voices were at −18 dB until
 the 2008 Sibelius TTBB, where the user moved them to −21 dB. That lowers the other
 singers only: the featured part stays exactly as far above the piano as before,
@@ -1826,8 +1840,8 @@ ffmpeg -i "Tenor 1.aiff" -i "Tenor 2.aiff" -i "Baritone.aiff" -i "Bass.aiff" -i 
   -c:a libmp3lame -b:a 192k -joint_stereo 1 "Title - (Tenor 2) predominant.mp3"
 ```
 
-**Always make a Balanced track as well:** every voice and the piano at 0 dB,
-nothing featured, as exported. It is part of every set, not an extra.
+**Always make a Balanced track as well:** every voice at 0 dB as exported and the
+piano at its level, nothing featured. It is part of every set, not an extra.
 
 **Always make a panned Balanced track and a 3D Balanced track as well.** Cantai
 single voices come out nearly centred with a little reverb, so the plain
@@ -1885,7 +1899,7 @@ ensemble-voice set. The script builds one mix at a time, so seven 4.8-minute ste
 
 **Always make a part-left track for every part as well.** The featured voice
 goes hard left, every other voice hard right, and the piano (or whatever the
-accompaniment stem holds) stays centred as exported. All at 0 dB: the panning
+accompaniment stem holds) stays centred at its level. The voices at 0 dB: the panning
 does the separating. A singer can take out one earbud, or turn the balance, to
 hear their own part with the piano, or the piano and everyone else to sing
 against. Fold each voice stem to mono and send it to one side:
@@ -5007,18 +5021,19 @@ if __name__ == '__main__':
 
     python3 rehearsal_mix.py TITLE OUT_DIR "Bass=bass.wav" "Baritone=bari.wav" "Tenor 2=t2.wav" "Tenor 1=t1.wav"
                              [--accomp "Piano=piano.wav"] [--trim "Bass=-9"] [--place "Solo=0"]
-                             [--only 3d] [--featured 3] [--others -21]
+                             [--only 3d] [--featured 3] [--others -21] [--accomp-as-exported]
 
 List the voices from the LOWEST to the HIGHEST: the order sets the stereo and 3D
-layouts. An accompaniment stem (--accomp, repeatable) is never featured and stays
-at 0 dB.
+layouts. An accompaniment stem (--accomp, repeatable) is never featured, and is set to
+the level it would have had if every stem were normalized to equal loudness before mixing
+(Accompaniment level, below); every track uses that level.
 
 Writes, for every voice V (the Chorus Connection section in parentheses, see Sections below;
 a voice named Solo... gets none):
-    TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment 0 dB
-    TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment as exported
+    TITLE - (V) predominant.mp3         V +3 dB, other voices -21 dB, accompaniment at its level
+    TITLE - (V) part-left.mp3           V hard left, other voices hard right, accompaniment centred
 and once:
-    TITLE - Balanced.mp3                everything at 0 dB, as exported (no panning)
+    TITLE - Balanced.mp3                every voice at 0 dB as exported, accompaniment at its level
     TITLE - Balanced panned.mp3         voices spread across the stereo field, lowest on the left
     TITLE - Balanced 3D, use headphones.mp3
                                         voices placed around the listener with a dummy-head HRTF
@@ -5046,6 +5061,15 @@ a lone lower-case letter; everything else is used as it is. Override per voice w
 --section "Voice=Section|suffix" ("Tenor 2a=Tenor 2|a", "Bari=Baritone|", or "Descant=|" for
 no parentheses at all). The mapping is printed; confirm it with the user before handing over
 the tracks, since each chorus names its sections its own way.
+
+Accompaniment level: the accompaniment comes out as loud, against the choir, as it would if
+every stem (voices and accompaniment alike) had been normalized to the same integrated loudness
+(EBU R128) before mixing. Normalized, the voices summed come out some LU above any one stem;
+the accompaniment is put that far below the voices as they are (after --trim). The voices are
+not changed. First used on a TTBB whose piano stem was 17 LU under the low voices and 10 LU
+under the tenors: +14.89 dB, approved by ear; matching the average voice instead would have
+given +13.25 dB. A --trim on an accompaniment stem replaces this; --accomp-as-exported leaves
+every accompaniment stem at 0 dB.
 
 Stem levels: every stem's median level while sounding is printed. A stem several dB off
 the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
@@ -5075,6 +5099,14 @@ def sounding_level(x):
     r = 20 * np.log10(np.sqrt((m[:n * w].reshape(n, w) ** 2).mean(1)) + 1e-12)
     s = r[r > -45]
     return float(np.median(s)) if len(s) else float('-inf'), len(s) / 10
+
+
+def loudness(x):
+    """Integrated loudness (EBU R128) in LUFS, from ffmpeg's loudnorm."""
+    e = subprocess.run(['ffmpeg', '-hide_banner', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                        '-af', 'loudnorm=print_format=json', '-f', 'null', '-'],
+                       input=np.ascontiguousarray(x, np.float32).tobytes(), capture_output=True).stderr.decode()
+    return float(re.search(r'"input_i"\s*:\s*"([^"]+)"', e).group(1))
 
 
 def pad(x, n):
@@ -5168,6 +5200,8 @@ def main():
     ap.add_argument('--only', choices=['all', '3d'], default='all', help='write every track, or only the 3D one')
     ap.add_argument('--featured', type=float, default=3.0)
     ap.add_argument('--others', type=float, default=-21.0)
+    ap.add_argument('--accomp-as-exported', action='store_true',
+                    help='leave the accompaniment at 0 dB instead of its equal-loudness level')
     a = ap.parse_args()
     os.makedirs(a.out, exist_ok=True)
     trims = {k: float(v) for k, v in (t.split('=', 1) for t in a.trim)}
@@ -5186,7 +5220,22 @@ def main():
     st = {n: (pad(x, N) * db(trims.get(n, 0.0))).astype(np.float32) for n, x in st.items()}
     names = [n for n, _ in V]; acc = [n for n, _ in A]
 
-    print('stem levels while sounding (after --trim):')
+    # Accompaniment level: as far below the choir as it would sit had every stem been normalized
+    # to the same integrated loudness before mixing (every voice at 0 LUFS here); the voices stay.
+    levelled = [n for n in acc if n not in trims and not a.accomp_as_exported]
+    if levelled:
+        L = {n: loudness(st[n]) for n in names + levelled}
+        choir = loudness(sum(st[n] for n in names))
+        normed = loudness(sum(st[n] * np.float32(db(-L[n])) for n in names))
+        print(f'integrated loudness: ' + ', '.join(f'{n} {L[n]:.2f}' for n in names) + f' LUFS; choir {choir:.2f}, '
+              f'normalized choir {normed:+.2f} LU over each stem')
+        for n in levelled:
+            g = choir - normed - L[n]
+            st[n] = (st[n] * np.float32(db(g))).astype(np.float32)
+            print(f'   {n} {L[n]:.2f} LUFS -> {g:+.2f} dB (as if every stem were normalized; --accomp-as-exported to skip)')
+        print()
+
+    print('stem levels while sounding (after --trim and the accompaniment level):')
     lv = {n: sounding_level(st[n]) for n in names + acc}
     ref = np.median([lv[n][0] for n in names])
     for n in names + acc:
