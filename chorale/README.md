@@ -21,7 +21,7 @@ than in a rehearsal.
 | module | what it does |
 | --- | --- |
 | `events` | the event model, pitch helpers, `finalize()` |
-| `scoretext` | the compact `[block]` / `bar: tokens` notation and its parser |
+| `scoretext` | the compact `[block]` / `bar: tokens` notation and its parser: x-noteheads, triplets, per-pitch ties, hidden and whole-bar rests, `{flags}`, two voices per bar, `@macros`, `&` references |
 | `beaming` | beam groups, including for a voice with gaps in it |
 | `collapse` | two lines onto one staff; which bars need two lyric lines |
 | `musicxml` | `ScoreSpec`, `StaffMarks`, `Header`, note and direction fragments, three part shapes, the score wrapper |

@@ -250,6 +250,7 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 |---|---|---|
 | `SKILL.md` | The whole method, start to finish. The ten scripts below are printed inside it in full, so it is self-contained. | — |
 | `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
+| `scanproof/` | Proofreads a hand transcription (score text or MusicXML) against the scan it was typed from, every staff of every bar from the pixels: pitches, notehead kind, note values from beams and flags, accidentals, dots. Writes review sheets, labelled zooms, and question images that put the scan above the transcription's rendering. See `scanproof/README.md`. | `numpy`, `scipy`, `pillow`; `verovio`, `cairosvg` for questions |
 | `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
 | `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
 | `musicxml_qc.py` | Pre-synthesis QC: bar lengths, lyrics, octave jumps, clef flips. | stdlib |
@@ -267,7 +268,7 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 ## Setup
 
 ```
-pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf pycairo
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy scipy fonttools brotli slab reportlab pypdf pycairo
 ```
 
 Plus `poppler-utils` for `pdftoppm` / `pdftotext`, and the Noto Color Emoji font
@@ -292,6 +293,7 @@ python3 lyric_sheet.py pdf "Shenandoah - lyric sheet plan.json"
 python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
 python3 -m lesson Shenandoah.musicxml --pdf "Shenandoah - Full score.pdf" --pages 1-13 --rhythm slow
 python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
+python3 -m scanproof check proof.json
 ```
 
 ## Song titles stay out
