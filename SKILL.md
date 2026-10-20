@@ -861,6 +861,27 @@ What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
   say so (check 10 then reports it); where nothing else decides, keep what the
   score prints (check 14 then reports it). Either way it is a handback item.
 
+What an unaccompanied five-part score (S, A1, A2, T, B, 154 bars) added, all now in the reader:
+
+- **Pass `nstaves` and `staff_names`.** `Reader(..., nstaves=5, staff_names=['S', 'A1', 'A2', 'T', 'B'])`;
+  the build log labelled staves S A T B and crashed on a fifth.
+- **A tie keeps its note's alteration across the barline.** An F♮ tied into the next bar is
+  printed there with no accidental and is still F♮; the key signature made it F♯. Check 17
+  compares staff positions only, so it passed; list every chromatic note per part and read
+  it against the page.
+- **An arc between two heads on the same line is a slur when the second carries an
+  accidental that changes the pitch** (E to E♭, G to G♯). Read as ties, check 8 fails them.
+- **A hairpin across a system break** is drawn on the next system without its tip, as two
+  thin (0.6 pt) slanted strokes that the beam reader took for beams. The reader now pairs
+  them into one wedge and ends the hairpin there; before, it stopped where it started
+  (Verovio: "hairpin is ignored").
+- **A rehearsal letter on a double barline mid-system sits wholly left of it**, over the
+  previous bar's end; five of eighteen letters came out a bar early. A letter now goes
+  to the bar whose start is nearest the box's centre.
+- **Close-set staves push each part's words nearer the staff below**, so check 10 needs
+  `--lanes` with both lanes per part (`0b=Soprano,1a=Soprano,1b=Alto 1,2a=Alto 1,...`);
+  the default lanes reported 61 disagreements, all of them lanes.
+
 ## Step 3 — Exploding a condensed score into one part per voice
 
 For singing synthesis you need one monophonic part per voice, because a synth
@@ -2804,8 +2825,11 @@ python3 -m lesson "Shenandoah.musicxml" --pdf "Shenandoah - Full score.pdf" --rh
 
 It writes `<title> - lesson plan.pdf` (a checklist to print: US Letter, landscape,
 two columns) and, with `--pdf`, `<pdf name> (lesson marks).pdf`: the score with
-the steps stamped on it. The MusicXML is what the plan is worked out from, SATB
-with one voice per staff (any piano ignored). The PDF must be the vector
+the steps stamped on it. The MusicXML is what the plan is worked out from, one voice per staff (any piano
+ignored): SATB, or any other sung parts, taken from the score's part names (Soprano, Alto 1,
+Alto 2, Tenor, Bass). A numbered part keeps its name in the checklist ("Alto 1+Alto 2 in
+unison"), since A1 is already a step label; a second part of the same voice is drawn in
+reddish purple. The PDF must be the vector
 engraving it was read from, since the marks are placed from that PDF's own staff
 and bar positions (`dorico_reader.py`, 2.7); `--pages` picks the full-score pages
 when parts follow. The director prepares the whole piece and stops wherever the
@@ -2887,6 +2911,9 @@ main director says, so the plan always covers every letter.
   arrangers this was built for write homorhythm as a matter of course: never
   remark on parts sharing rhythm and words, in a letter's opener or before a part.
   A letter taught in full gets no remarks about resembling earlier material.
+- **Texture notes name each group once:** "S+Alto 1+Alto 2+T same rhythm and words; Alto 1+Alto 2 in unison",
+  not every pair (ten pairs with five parts). Parts in unison count as sharing rhythm and
+  words too, and a group inside a stronger one is not repeated.
 - **Printable, and dense:** landscape, two columns, 7.5–8.5 pt. A part's step stays
   in one piece but a letter may break across columns; keeping whole letters
   together left half-empty columns.
@@ -2935,9 +2962,12 @@ main director says, so the plan always covers every letter.
 - Unisons shorter than most of a letter are shaded on the score but not yet taught
   together in the plan (a letter whose first four bars are S+A+T in unison still
   teaches them one at a time).
-- SATB only, one voice per staff; the marks need a PDF `dorico_reader.py` can read.
-- Captions can still collide where systems are tight (badges over the staff
-  above in a crowded last system), and counts crowd in a narrow bar of 16ths.
+- One voice per staff; the marks need a PDF `dorico_reader.py` can read.
+- Captions can still collide where systems are tight, and counts crowd in a narrow bar
+  of 16ths. With five staves the gap between systems is small: an "everyone" badge, a
+  "why" tag and a split label are kept below the words of the system above, and an
+  "everyone" badge with no room there joins the letter's row (after the part badges, or
+  before the boxed letter at the page edge). Look at every page.
 
 ## Scripts
 

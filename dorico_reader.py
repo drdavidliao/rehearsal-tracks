@@ -83,6 +83,7 @@ class PageModel:
             if r['fill'] and 1.0 < r['height'] < 2.6 and r['width'] > 2:
                 self.beams.append(dict(x0=r['x0'], x1=r['x1'], yl0=r['top'], yl1=r['bottom'], yr0=r['top'], yr1=r['bottom']))
         self.arcs, self.wedges = [], []
+        hlines = []      # thin slanted strokes: the two lines of a hairpin drawn without its tip (one crossing a system break)
         for cv in page.curves:
             sig = ''.join(o[0] for o in cv['path'])
             if sig == 'mllllh' and cv['fill']:
@@ -92,7 +93,10 @@ class PageModel:
                 L = sorted(p[1] for p in pts if abs(p[0] - xl) < 0.3)
                 R = sorted(p[1] for p in pts if abs(p[0] - xr) < 0.3)
                 if len(L) >= 2 and len(R) >= 2:
-                    self.beams.append(dict(x0=xl, x1=xr, yl0=L[0], yl1=L[-1], yr0=R[0], yr1=R[-1]))
+                    if L[-1] - L[0] < 1.0 and R[-1] - R[0] < 1.0 and xr - xl > 10:
+                        hlines.append(dict(x0=xl, x1=xr, yl=(L[0] + L[-1]) / 2, yr=(R[0] + R[-1]) / 2))
+                    else:
+                        self.beams.append(dict(x0=xl, x1=xr, yl0=L[0], yl1=L[-1], yr0=R[0], yr1=R[-1]))
             elif sig == 'mclclh' and cv['fill']:
                 p = cv['path']
                 a, c1, c2, b = p[0][1], p[1][1], p[1][2], p[1][3]
@@ -107,6 +111,20 @@ class PageModel:
                 other = [p for p in pts if abs(p[0] - tip[0]) > 1]
                 kind = 'crescendo' if tip[0] < min(p[0] for p in other) else 'diminuendo'
                 self.wedges.append(dict(x0=cv['x0'], x1=cv['x1'], y=(cv['top'] + cv['bottom']) / 2, kind=kind))
+        # pair them: same ends, one rising and one falling; the wider end says which way it goes
+        used = set()
+        for i, a in enumerate(hlines):
+            for j, b in enumerate(hlines):
+                if j <= i or i in used or j in used: continue
+                if abs(a['x0'] - b['x0']) > 0.5 or abs(a['x1'] - b['x1']) > 0.5: continue
+                gl, gr = abs(a['yl'] - b['yl']), abs(a['yr'] - b['yr'])
+                if max(gl, gr) > 8 or (a['yr'] - a['yl']) * (b['yr'] - b['yl']) >= 0: continue
+                used |= {i, j}
+                self.wedges.append(dict(x0=a['x0'], x1=a['x1'], y=(a['yl'] + a['yr'] + b['yl'] + b['yr']) / 4,
+                                        kind='crescendo' if gr > gl else 'diminuendo', open_left=True))
+        for i, a in enumerate(hlines):
+            if i not in used: self.beams.append(dict(x0=a['x0'], x1=a['x1'], yl0=a['yl'] - 0.3, yl1=a['yl'] + 0.3,
+                                                      yr0=a['yr'] - 0.3, yr1=a['yr'] + 0.3))
         self.barlines = [self.find_barlines(sy) for sy in self.systems]
 
     def restaff_gap_heads(self):
@@ -225,7 +243,13 @@ class Reader:
         self.nstaves = nstaves
         self.bars = []           # one dict per bar
         self.problems = []
+        self.notes = []
         self.lyric_font, self.lyric_size = lyric_font, lyric_size
+        # staff labels for the build log: S A T B by default; a score with other voices (S A1 A2 T B) passes its own
+        self.staff_names = staff_names or ['S', 'A', 'T', 'B']
+
+    def label(self, k):
+        return self.staff_names[k] if k < len(self.staff_names) else f'staff {k}'
 
     # -------------------------------------------------------------- pass 1: bars and items
     def read(self):
@@ -502,6 +526,7 @@ class Reader:
         SH = self.system_heads()
         self.sh = SH
         pending = []     # arcs running off a system: (page, sys, k, arc, start head/item)
+        ties = []        # (start head, item, stop head, item)
         for pi, pm in enumerate(self.pms):
             for arc in pm.arcs:
                 s = pm.nearest_staff((arc['yl'] + arc['yr']) / 2)
@@ -531,6 +556,9 @@ class Reader:
                     for ha, ia in A:
                         for hb, ib in B:
                             if hb.pos != ha.pos or hb.x0 <= ha.x1 or ia is ib: continue
+                            # E4 to an E-flat printed on the same line is a slur: a tie never changes the pitch
+                            pa, pb = ia.get('pitch', {}).get(id(ha)), ib.get('pitch', {}).get(id(hb))
+                            if pa and pb and pb['acc'] and pb['alter'] != pa['alter']: continue
                             between = [h for h, it, b in hs if h.pos == ha.pos and ha.x0 < h.x0 < hb.x0 and it is not ia and it is not ib]
                             if between: continue
                             # a tie joins a note to the next one in its voice: no chord of that voice in between
@@ -543,6 +571,7 @@ class Reader:
                     _, ha, ia, hb, ib = best
                     ia.setdefault('tie_start', set()).add(id(ha)); ib.setdefault('tie_stop', set()).add(id(hb))
                     ia.setdefault('tie_obj', {})[id(ha)] = arc['over']
+                    ties.append((ha, ia, hb, ib))
                     continue
                 if outgoing and A:
                     ha, ia = min(A, key=lambda p: abs(arc['xl'] - p[0].x1) + 0.3 * abs(p[0].y - arc['yl']))
@@ -596,6 +625,7 @@ class Reader:
                 hb, ib = tie
                 ia.setdefault('tie_start', set()).add(id(ha)); ib.setdefault('tie_stop', set()).add(id(hb))
                 ia.setdefault('tie_obj', {})[id(ha)] = o['arc']['over']
+                ties.append((ha, ia, hb, ib))
             else:
                 ia['slur_start'] = ia.get('slur_start', 0) + 1
                 cb = self.chord_near(hsn, p['arc']['xr'], p['arc']['yr'], sp, left=False, over=p['arc']['over'])
@@ -606,6 +636,14 @@ class Reader:
         for p in ins:
             if not p.get('used'):
                 self.problems.append(f"page {p['pi']+1} system {p['si']+1} staff {p['k']}: incoming arc with no start")
+        # a tied note keeps its pitch across the barline: an F natural tied into the next bar is still F natural
+        # there, whatever the key signature says, and the engraving prints no accidental on it
+        for ha, ia, hb, ib in sorted(ties, key=lambda t: (t[1]['bar'], t[1]['x'])):
+            pa, pb = ia['pitch'][id(ha)], ib['pitch'][id(hb)]
+            if not pb['acc'] and pb['alter'] != pa['alter']:
+                self.notes.append(f"bar {ib['bar']} {self.label(ib['k'])}: {pb['step']}{pb['oct']} tied from bar {ia['bar']} "
+                                  f"keeps that note's alteration ({pa['alter']:+d}, not {pb['alter']:+d})")
+                pb['alter'] = pa['alter']
         return self
 
     def next_sys(self, pi, si):
@@ -782,12 +820,25 @@ class Reader:
                     pass
             for w in pm.wedges:
                 s = pm.nearest_staff(w['y']); si, k = s['sys'], s['k']
+                if w.get('open_left') and w['x0'] < s['x0'] + 30:
+                    continue          # the rest of a hairpin from the previous system: its stop is set from there
                 b0, on0 = self.locate(pi, si, k, w['x0'])
-                b1, on1 = self.locate(pi, si, k, w['x1'])
                 # the stop: the item at or just past the wedge's end
                 place = 'above' if w['y'] < s['top'] else 'below'
                 self.dirs[(b0['num'], k)].append(dict(on=on0, kind='wedge', val=w['kind'], place=place))
-                end_on = self.end_onset(pi, si, k, w['x1'])
+                end = (pi, si, w['x1'])
+                if w['x1'] > s['x1'] - 1.5 * s['sp']:
+                    # it runs off the system: it goes on at the start of the next one, on the same staff
+                    npi, nsi = self.next_sys(pi, si)
+                    if npi < len(self.pms):
+                        npm = self.pms[npi]
+                        cont = [w2 for w2 in npm.wedges if w2.get('open_left') and npm.nearest_staff(w2['y']) is npm.systems[nsi][k]
+                                and w2['x0'] < npm.systems[nsi][k]['x0'] + 30 and w2['kind'] == w['kind']]
+                        if cont:
+                            end = (npi, nsi, cont[0]['x1'])
+                        else:
+                            self.problems.append(f"bar {b0['num']} staff {k}: hairpin runs off the system with no continuation")
+                end_on = self.end_onset(end[0], end[1], k, end[2])
                 self.dirs[(end_on[0]['num'], k)].append(dict(on=end_on[1], kind='wedge', val='stop', place=place))
             # text: rehearsal marks (bold letters), tempo, other words
             words = pm.page.extract_words(extra_attrs=['fontname', 'size'], x_tolerance=1.5)
@@ -798,7 +849,10 @@ class Reader:
                 si, k = s['sys'], s['k']
                 if s['top'] - wd['bottom'] > 14 * s['sp'] and not (si == 0 and k == 0): continue
                 if 'Bold' in fn and re.fullmatch(r'[A-Z]', wd['text']) and wd['bottom'] < s['top'] and k == 0:
-                    bar, _ = self.locate(pi, si, 0, wd['x0'] + 6)
+                    # the box sits on the barline that starts its bar, often wholly left of it (on a double barline
+                    # mid-system): the bar whose start is nearest the box's centre
+                    cx = (wd['x0'] + wd['x1']) / 2
+                    bar = min((b for b in self.bars if b['page'] == pi and b['sys'] == si), key=lambda b: abs(b['xa'] - cx))
                     bar['rehearsal'] = wd['text']
                 elif 'Bold' in fn:
                     bar, on = self.locate(pi, si, k, wd['x0'])
@@ -1095,7 +1149,7 @@ class Reader:
             if syllabic is not None: t['syllabic'] = syllabic
             if extend is not None: t['extend'] = extend
             t['fixed'] = True
-        self.notes.append(f"FIX bar {bar} {['S','A','T','B'][k]} beat {1 + on}: {why}")
+        self.notes.append(f"FIX bar {bar} {self.label(k)} beat {1 + on}: {why}")
 
     def melisma_lines(self, vocal_staves):
         """a syllable held over moving (not tied) notes that carry no syllable gets an extender, even where
@@ -1111,7 +1165,7 @@ class Reader:
                     held.append(nx)
                 if held and any(len(nx.get('tie_stop', ())) < len(nx['heads']) for nx in held):
                     t['extend'] = True; t['added_line'] = True
-                    self.notes.append(f"LINE bar {it['bar']} {['S','A','T','B'][k]}: {t['t']!r} held over {len(held)} moving note(s); "
+                    self.notes.append(f"LINE bar {it['bar']} {self.label(k)}: {t['t']!r} held over {len(held)} moving note(s); "
                                       f"the page prints {'a hyphen' if t['syllabic'] in ('begin','middle') else 'nothing'}, the file an extender")
         return self
 
@@ -1137,7 +1191,7 @@ class Reader:
             for k, it, t in occ:
                 if t.get('extend'): continue
                 t['extend'] = True; t['added_line'] = True
-                self.notes.append(f"LINE bar {it['bar']} {['S','A','T','B'][k]}: {word!r} tied through, printed with no line; "
+                self.notes.append(f"LINE bar {it['bar']} {self.label(k)}: {word!r} tied through, printed with no line; "
                                   f"{lined} of the {len(occ)} same words on the same figure have one")
         return self
 

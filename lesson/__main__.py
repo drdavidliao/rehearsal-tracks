@@ -1,4 +1,4 @@
-"""Note-learning lesson plan for an SATB piece (SKILL.md Step 11).
+"""Note-learning lesson plan for a choral piece, SATB or any one-staff voices (SKILL.md Step 11).
 
     python3 -m lesson score.musicxml [--pdf "Full score.pdf" --pages 1-13] [--rhythm drill|slow] [--out DIR]
 
@@ -23,7 +23,8 @@ def facts(path, S):
     root = ET.parse(path).getroot()
     title = (root.findtext('work/work-title') or root.findtext('movement-title') or os.path.splitext(os.path.basename(path))[0]).strip()
     parts = [sp.findtext('part-name') for sp in root.iter('score-part')]
-    voices = ''.join(p[0] for p in parts if p in analyze.PARTS)
+    ab = [analyze.abbr(p) for p in parts if p in analyze.PARTS]
+    voices = ''.join(ab) if all(len(a) == 1 for a in ab) else ' '.join(ab)   # SATB, or S Alto 1 Alto 2 T B
     extra = [p for p in parts if p not in analyze.PARTS]
     tempo = next((s.get('tempo') for s in root.iter('sound') if s.get('tempo')), None)
     times = sorted(S.times.items())
@@ -31,7 +32,11 @@ def facts(path, S):
     keys = sorted(S.keys.items())
     ks = '; '.join(f"{KEYS.get(f, f)} major" + (f" from m{n}" if n > 1 else '') for n, f in keys)
     bits = [voices + (' + ' + ', '.join(e.lower() for e in extra) if extra else ''), f'{S.nbars} bars', ts]
-    if tempo: bits.append(f'quarter = {float(tempo):g}')
+    met = root.find('.//metronome')
+    if met is not None and met.findtext('per-minute'):
+        # as printed: the beat unit the metronome mark names
+        bits.append(f"{'dotted ' if met.find('beat-unit-dot') is not None else ''}{met.findtext('beat-unit')} = {met.findtext('per-minute')}")
+    elif tempo: bits.append(f'quarter = {float(tempo):g}')
     if ks: bits.append(ks)
     return title, ' · '.join(bits)
 
