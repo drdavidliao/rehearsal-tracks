@@ -43,11 +43,15 @@ class Stamper:
         self.used = {}       # (page, sys, staff, bar) -> x already taken
         self.hide = {}       # page -> [(x0, x1, y0, y1)] where badges sit: counts under them are left out
 
-    def geom(self, bar, k):
+    def geom(self, bar, k, on=0):
         b = self.r.bars[bar - 1]
         pm = self.r.pms[b['page']]
         s = pm.systems[b['sys']][k]
         items = [it for it in b['staves'][k]['items']]
+        if on:
+            # a phrase that starts inside the bar: just before its first note
+            at = [it['x'] for it in items if it.get('on') == on]
+            if at: return b, pm, s, min(at) - 3
         x_first = min([it['x'] for it in items], default=b['xa'] + 6)
         # at the start of a system the bar begins with clef and key: start by the first note instead
         x = max(b['xa'] + 3, x_first - 10) if b['first_in_system'] else b['xa'] + 3
@@ -63,18 +67,19 @@ class Stamper:
         lines = [l['bottom'] for l in pm.hlines if prev['bot'] < l['top'] < mid and l['x1'] > x0 and l['x0'] < x1]   # extenders
         return max(words + lines + [prev['bot']])
 
-    def badge(self, bar, k, label, cap, color, lift=4.4, dx=0):
-        """queue a badge; badges on the same staff and bar are laid out together"""
+    def badge(self, bar, k, label, cap, color, lift=4.4, dx=0, on=0):
+        """queue a badge; badges on the same staff, bar and onset are laid out together"""
         self.queue = getattr(self, 'queue', {})
-        self.queue.setdefault((bar, k, lift, dx), []).append((label, cap, color))
+        self.queue.setdefault((bar, k, lift, dx, on), []).append((label, cap, color))
 
     def layout(self):
         self.row_end = {}    # (bar, staff) -> right end of the badges and caption laid out there
         self.row_start = {}  # (bar, staff) -> their left end
-        for (bar, k, lift, dx), bs in sorted(self.queue.items(), key=lambda kv: kv[0][2]):
-            b, pm, s, x = self.geom(bar, k)
+        pending = []         # why tags, laid out once all the badges are
+        for (bar, k, lift, dx, on), bs in sorted(self.queue.items(), key=lambda kv: kv[0][2]):
+            b, pm, s, x = self.geom(bar, k, on)
             x += dx
-            if k == 0 and lift < 6 and bar in self.letter_bars:
+            if k == 0 and lift < 6 and bar in self.letter_bars and not on:
                 x += 15          # clear the boxed rehearsal letter
             r = 6.3
             sp = s['sp']
@@ -110,7 +115,39 @@ class Stamper:
             n = len(bs)
             span = n * 2 * r + (n - 1) * 1.5
             # the circles stay at the bar; they only step past a dynamic sitting right under them
-            for g in ([] if before else dyn):
+            if on:
+                # a badge on a pickup note stays on the note: above a dynamic printed there, not past it
+                over = [g for g in dyn if x - 1 <= g.x1 and g.x0 <= x + span + 1]
+                if over:
+                    up = min(g.y for g in over) - 7 - r
+                    words = [c['bottom'] for c in pm.text if s['top'] - 14 * sp < c['bottom'] < up + r
+                             and x - 10 < c['x0'] < x + span + 10] if k > 0 else []
+                    fl = self.floor(pm, b['sys'], x - 4, x + span + 4) if k == 0 else None
+                    if words or (fl is not None and up - r < fl + 1):
+                        # no room above it (the words of the staff above): just left of the dynamic, caption left
+                        x = min(g.x0 for g in over) - span - 2
+                        before = True
+                    else:
+                        cy = up
+                        dyn = [g for g in pm.glyphs if g.staff is s and g.code in dex.DYN and g.y < s['top'] and abs(g.y - 4 - cy) < r + 6]
+            if on and not before:
+                # nor on a beam or stem over the note: above it where the words of the staff above leave room, else
+                # just after it
+                ink = [(bm['x0'], bm['x1'], min(bm['yl0'], bm['yr0']), max(bm['yl1'], bm['yr1'])) for bm in pm.beams]
+                ink += [(t['x'] - 0.3, t['x'] + 0.3, t['top'], t['bot']) for t in pm.stems]
+                hit = lambda: [i for i in ink if s['top'] - 6 * sp < i[2] < s['top'] + sp and x - 1 <= i[1]
+                               and i[0] <= x + span + 1 and i[2] < cy + r + 1 and i[3] > cy - r - 1]
+                for _ in range(6):
+                    ins = hit()
+                    if not ins: break
+                    up = min(i[2] for i in ins) - 1.5 - r
+                    words = [c['bottom'] for c in pm.text if s['top'] - 14 * sp < c['bottom'] < s['top'] - 2
+                             and x - 10 < c['x0'] < x + span + 10] if k > 0 else []
+                    if not words or up - r > max(words) + 0.5:
+                        cy = up
+                    else:
+                        x = max(i[1] for i in ins) + 1.5
+            for g in ([] if before or on else dyn):
                 if x - 1 <= g.x1 and g.x0 <= x + span + 1:
                     x = g.x1 + 2
             caps = [c for _, c, _ in bs if c]
@@ -149,18 +186,29 @@ class Stamper:
             self.row_start[(bar, k)] = min(self.row_start.get((bar, k), x_lo), x_lo)
             why = getattr(self, 'whys', {}).get((bar, k))
             if why and lift < 6:
-                ww = text_w(why, 'Sans-Oblique', 5.8) + 8
                 xa_ = (x + span + capw + 10) if (cap and side == 'right') else x + span + 3
-                if xa_ + ww > pw - 8 and x - 4 - ww >= 30:
-                    xa_, cyw = x - 4 - ww, cy                  # no room to the right: to the left of the badge
-                elif xa_ + ww > pw - 8:
-                    xa_, cyw = min(x, pw - 8 - ww), cy - 2 * r - 3          # a row above, kept on the page
-                    fl = self.floor(pm, b['sys'], xa_, xa_ + ww) if k == 0 else None
-                    if fl is not None and cyw - 4.2 < fl + 1:
-                        cyw = min(fl + 5.2, cy - r - 4.4)       # not onto the words of the system above
-                else:
-                    cyw = cy
-                self.marks[b['page']].append(('why', xa_, cyw, why, pm.H))
+                pending.append((b, pm, k, x, xa_, cy, r) + why)
+        # the why tags go last, around every badge: within the block's bars where they end on the system, short of
+        # the next badge on their row, in short form where the long one does not fit
+        for b, pm, k, x, xa_, cy, r, why, why_short, to in pending:
+            pw = float(pm.page.width)
+            e = self.r.bars[to - 1]
+            end = e['xb'] - 4 if (e['page'], e['sys']) == (b['page'], b['sys']) else pw - 8
+            for x0, x1, y0, y1 in self.hide.get(b['page'], []):
+                if x0 > xa_ and y0 < cy + 4.2 and y1 > cy - 4.2: end = min(end, x0 - 2)
+            if xa_ + text_w(why, 'Sans-Oblique', 5.8) + 8 > end:
+                why = why_short
+            ww = text_w(why, 'Sans-Oblique', 5.8) + 8
+            if xa_ + ww > end and x - 4 - ww >= 30 and xa_ + ww > pw - 8:
+                xa_, cyw = x - 4 - ww, cy                  # no room to the right: to the left of the badge
+            elif xa_ + ww > end:
+                xa_, cyw = min(x, pw - 8 - ww), cy - 2 * r - 3          # a row above, kept on the page
+                fl = self.floor(pm, b['sys'], xa_, xa_ + ww) if k == 0 else None
+                if fl is not None and cyw - 4.2 < fl + 1:
+                    cyw = min(fl + 5.2, cy - r - 4.4)       # not onto the words of the system above
+            else:
+                cyw = cy
+            self.marks[b['page']].append(('why', xa_, cyw, why, pm.H))
 
     def split_line(self, bar, label, parts=None, pu=None):
         """the dashed line where a letter's second half starts: through all the sung staves, or, for parts whose
@@ -496,7 +544,7 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
             if blk['kind'] == 'block' and blk.get('why') and blk['items']:
                 # on the highest staff the block touches, where there is most room above
                 k0 = min(PART_K[p] for jt in blk['items'] for p in jt['parts'])
-                st.whys[(blk['items'][0]['bar'], k0)] = 'why: ' + blk['why']
+                st.whys[(blk['items'][0]['bar'], k0)] = ('why: ' + blk['why'], 'why: ' + blk['why_short'], blk['to'])
     for it in steps:
         cap = it.get('near_cap') or planmod.caption(it)
         if it['kind'] == 'rhythm' and len(it['parts']) == len(analyze.PARTS):
@@ -506,8 +554,12 @@ def annotate(pdf, pages, plan, steps, dst, mode='drill', score=None, nstaves=6, 
         if it['kind'] == 'all':
             st.badge(it['bar'], 0, it['label'], cap, COL['all'], lift=9.6, dx=24)
             continue
+        if it['kind'] == 'say':
+            st.badge(it['bar'], PART_K[it['parts'][0]], it['label'], cap, COL[it['parts'][0]], on=it['on'])
+            continue
         for p in it['parts']:
-            st.badge(it['bar'], PART_K[p], it['label'], cap, COL[p] if len(it['parts']) < len(analyze.PARTS) else COL['all'])
+            bar, on = it.get('at', {}).get(p, (it['bar'], 0))
+            st.badge(bar, PART_K[p], it['label'], cap, COL[p] if len(it['parts']) < len(analyze.PARTS) else COL['all'], on=on)
         if it.get('split'):
             pass
         # rhythm spots inside a part's steps: a small marker at that bar

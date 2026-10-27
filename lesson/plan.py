@@ -55,6 +55,14 @@ def runs(ns):
     return [tuple(r) for r in out]
 
 
+LENGTH = {F(4): 'semibreve', F(3): 'dotted minim', F(2): 'minim', F(3, 2): 'dotted crotchet', F(1): 'crotchet',
+          F(3, 4): 'dotted quaver', F(1, 2): 'quaver', F(1, 4): 'semiquaver'}
+
+
+def length(d):
+    return LENGTH.get(d, f'{d} beats')
+
+
 def beat_str(on, meter=(1, False)):
     """beat 3½ (the & of 3) in a simple meter; in a compound one, beats are dotted quarters counted
     '1 & a': 2a is the a of 2"""
@@ -89,17 +97,21 @@ class Planner:
         if a <= 1: return None
         best = None
         for p in parts or PARTS:
-            evs = self.S.bars[p].get(a - 1, [])
-            # trailing notes after the bar's last rest, if they lead straight into bar a
-            tail = []
-            for e in reversed(evs):
-                if e['midi'] is None: break
-                tail.append(e)
-            if not tail or len(tail) == len(evs): continue
-            first = tail[-1]
-            if first['on'] >= self.S.pickup_from(a - 1) and first['lyric']:
-                if best is None or first['on'] < best: best = first['on']
+            # notes that start the phrase late in bar a-1: after a rest, or straight after a word ending a phrase
+            tail = self.S.phrase_tail(p, a - 1)
+            if tail and (best is None or tail[0]['on'] < best): best = tail[0]['on']
         return (a - 1, best) if best is not None else None
+
+    def start(self, p, a):
+        """where part p's phrase at letter a begins: (bar, onset). A pickup in the bar before, or the first new note
+        after one held over from the letter before; otherwise the letter's downbeat"""
+        tail = self.S.phrase_tail(p, a - 1) if a > 1 else []
+        if tail: return (a - 1, tail[0]['on'])
+        lo = self.S.lo.get((p, a))
+        if lo is not None:
+            nxt = [e['on'] for e in self.S.bars[p].get(a, []) if e['on'] >= lo and e['midi'] is not None]
+            return (a, nxt[0] if nxt else lo)
+        return (a, F(0))
 
     def cue(self, a, parts=None):
         """(printed bar to start from, pickup beat or None, where that is in Logic: 'bar' or 'bar beat');
@@ -271,12 +283,13 @@ class Planner:
         per = {p: runs(sorted(v)) for p, v in spots.items()}
         return joint, per
 
-    def teach(self, a, b, items, parts=None, micro=False):
+    def teach(self, a, b, items, parts=None, micro=False, known=()):
+        """parts in `known` already know these notes and get only new words: listen once, sing once"""
         groups, rel = self.groups(a, b)
         if parts is not None:
             groups = [g for g in ([p for p in g if p in parts] for g in groups) if g]
         gs = self.order(groups)
-        joint, per = self.rhythm_plan(a, b, [p for g in gs for p in g])
+        joint, per = self.rhythm_plan(a, b, [p for g in gs for p in g if p not in known])
         for bars, ps in joint:
             items.append(dict(kind='rhythm', bar=bars[0], bar_end=bars[-1], parts=ps, text=f"Rhythm work {mrange(bars[0], bars[-1])}, slowly: "
                               + ('everyone' if every(ps) else '+'.join(ps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0]),
@@ -292,7 +305,8 @@ class Planner:
                         r = rel.get((p, q)) or rel.get((q, p))
                         if r in ('duet', 'unison', 'octave') and partner is None: partner = (q, r)
                         elif r == 'rhythm' and partner is None: partner = (q, r)
-            easy = not micro and (d <= self.easy or (partner is not None and d <= self.hard))
+            words_only = all(p in known for p in g)
+            easy = words_only or (not micro and (d <= self.easy or (partner is not None and d <= self.hard)))
             spots = []
             for p in g:
                 for sp in per.get(p, []):
@@ -301,6 +315,8 @@ class Planner:
             if len(g) > 1:
                 rs = {rel.get((p, q)) or rel.get((q, p)) for p, q in itertools.combinations(g, 2)}
                 note = 'in octaves' if 'octave' in rs else 'in unison'
+            elif words_only:
+                note = 'new words only'
             elif partner:
                 note = {'duet': f'same rhythm and words as {partner[0]}', 'rhythm': f'same rhythm as {partner[0]}',
                         'unison': f'same notes as {partner[0]}', 'octave': f"{partner[0]}'s line in octaves"}[partner[1]]
@@ -319,25 +335,31 @@ class Planner:
                 say = f"{Cap(who(g))}, we'll take it down tempo first, then up to speed."
             elif spots and not say:
                 say = f"{Cap(who(g))}, listen first; then we'll slow down {bars_said(*spots[0])}."
-            items.append(dict(kind='part', who=name, note=note, sub=sub, say=say, bar=a, parts=list(g)))
+            it = dict(kind='part', who=name, note=note, sub=sub, say=say, bar=a, parts=list(g))
+            if not micro: it['at'] = {p: self.start(p, a) for p in g}
+            items.append(it)
             taught.append(g)
         return gs
 
-    def why(self, r0, r1, a, src, srcname, parts):
+    def why(self, r0, r1, a, src, srcname, parts, short=False):
         """what changed in bars r0..r1 against the same bars of the earlier letter, per part:
-        'm46 ≠ m25 (C): altos, tenors new notes'"""
+        'm46 differs from m25 (in C): altos and tenors new notes'; short, for the score where room is tight:
+        'm46 vs m25 (C): A+T new notes'"""
         off = src[0] - a
         kinds = {}
         for p in parts:
             ks = set()
             for n in range(r0, r1 + 1):
                 m = n + off
-                if self.S.rhythm(p, n) != self.S.rhythm(p, m): ks.add('rhythm')
-                if [x[2] for x in self.S.line(p, n)] != [x[2] + src[1] for x in self.S.line(p, m)]: ks.add('notes')
-                if self.S.words(p, n) != self.S.words(p, m): ks.add('words')
+                if self.S.rhythm(p, n) != self.S.rhythm(p, m, like=n): ks.add('rhythm')
+                if [x[2] for x in self.S.line(p, n)] != [x[2] + src[1] for x in self.S.line(p, m, like=n)]: ks.add('notes')
+                if self.S.words(p, n) != self.S.words(p, m, like=n): ks.add('words')
             ks = sorted(ks, key=['notes', 'rhythm', 'words'].index)
             k = ('new ' + (', '.join(ks[:-1]) + ' and ' + ks[-1] if len(ks) > 1 else ks[0])) if ks else 'changed'
             kinds.setdefault(k, []).append(p)
+        if short:
+            return (f"{mrange(r0, r1)} vs {mrange(r0 + off, r1 + off)} ({srcname[0]}): "
+                    + '; '.join(f"{'+'.join(ABBR[p] for p in ps) if not every(ps) else 'all'} {k}" for k, ps in kinds.items()))
         where = f"{mrange(r0, r1)} differs from {mrange(r0 + off, r1 + off)} (in {srcname[0]})"
         return where + ': ' + '; '.join(f"{who(ps)} {k}" for k, ps in kinds.items())
 
@@ -364,6 +386,27 @@ class Planner:
         said = {'unison': 'in unison', 'octave': 'in octaves', 'duet': 'same rhythm and words', 'rhythm': 'same rhythm'}
         bits = ['+'.join(ABBR[p] for p in g) + ' ' + said[r] for r, g in groups]
         return ('; '.join(bits) + '.') if bits else f'All {NUM.get(len(act), len(act))} parts move independently.'
+
+    def announce(self, p, n, m, diffs, srcname):
+        """a step that only tells part p what is different in bar n from bar m: a note held for another length"""
+        def note(ties, rest, art=True):
+            a = 'a ' if art else ''
+            t = a + ' tied to a '.join(length(d) for d in ties)
+            return t + (f", then {a}{length(rest)} rest" if rest else '')
+        def brief(ties, rest):
+            return '+'.join(length(d) for d in ties) + (' + rest' if rest else '')
+        bits, sbits, said = [], [], []
+        for on, word, (tn, rn), (tm, rm), _ in diffs:
+            w = f"'{word.strip(',.;:!?')}'" if word else 'the note'
+            longer = sum(tn) > sum(tm)
+            bits.append(f"{w} is {note(tn, rn)} (m{m}: {note(tm, rm)})")
+            sbits.append(f"{brief(tn, rn)} (m{m}: {brief(tm, rm)})")
+            said.append(f"{w} is held {'longer' if longer else 'shorter'}: {note(tn, rn)}; in bar {m} it was {note(tm, rm)}")
+        text = f"m{n}: " + '; '.join(bits)
+        on0 = diffs[0][0]
+        return dict(kind='say', bar=n, on=on0, parts=[p], who=p, text=text, cap='say: ' + '; '.join(sbits),
+                    short=f"{PL[p]} m{n}: {'; '.join(bits)}",
+                    say=f"{Cap(PL[p])}, in bar {n} " + '; '.join(said) + '.')
 
     def plan(self):
         out = []
@@ -396,6 +439,25 @@ class Planner:
             if src:
                 for l2, a2, b2 in self.secs:
                     if a2 <= src[0] <= b2: srcname = (l2, a2)
+            # a bar that differs from the earlier letter only in how long a note is held before a rest is not
+            # drilled but announced to the part at that bar, the phrase's last note included. Announcements go
+            # before the drilled bars, each part's together: the singers have only their own part to look at
+            tell = []
+            if srcname:
+                off = src[0] - a
+                for p in PARTS:
+                    # every sung bar, also one that matches some other earlier bar: the singers remember the parallel one
+                    for n in sungbars[p]:
+                        if not 1 <= n + off < a: continue
+                        d = self.S.release_only(p, n, n + off, src[1])
+                        if d is None: continue
+                        if n in new[p]: new[p].remove(n)
+                        tell.append(self.announce(p, n, n + off, d, srcname))
+                # a part's announcements go together, the second carrying on from the first
+                for t0, t1 in zip(tell, tell[1:]):
+                    if t1['who'] == t0['who']:
+                        t1['say'] = 'And' + t1['say'][len(Cap(PL[t1['who']])) + 1:]
+                allnew = sorted({n for v in new.values() for n in v})
             if not allnew and srcname:
                 sec['kind'] = 'repeat'
                 t, dn, dw = analyze.compare(self.S, a, src[0], b - a + 1)
@@ -404,7 +466,9 @@ class Planner:
                        -2: ', a whole step lower'}.get(src[1], f', {src[1]:+d} semitones')
                 note = f"Same notes as {srcname[0]} (m{srcname[1]}){key}"
                 if wordsdiff: note += f"; different words in {mrange(wordsdiff[0], wordsdiff[-1])}"
+                if tell: note += '; ' + '; '.join(t['short'] for t in tell)
                 sec['notes'].append(note + '.')
+                sec['items'] += tell
                 keysay = {1: ', just a half step higher', 2: ', just a whole step higher', -1: ', just a half step lower', -2: ', just a whole step lower'}.get(src[1], '')
                 sec['say'] = (f"Letter {l} is the same as letter {srcname[0]}{keysay}"
                               + (", with different words" if wordsdiff else '')
@@ -413,19 +477,50 @@ class Planner:
                 continue
             if srcname and len(allnew) <= max(1, nsung // 3) and len(allnew) < nsung / 2:
                 sec['kind'] = 'near'
-                sec['notes'].append(f"Like {srcname[0]} (m{srcname[1]}) except {mrange(allnew[0], allnew[-1])}.")
+                # bars sung to other words than the earlier letter's (punctuation aside) are drilled with the bars
+                # whose notes differ, though they do not count towards how much of the letter is new
+                off = src[0] - a
+                # a vocalise spelt two ways ('a' and 'aa', 'oo' and 'o') is the same sound
+                def bare(ws):
+                    out = []
+                    for w in ws:
+                        w = w.strip('.,;:!?"\'‘’“”').lower()
+                        if w and set(w) <= set('aeiouhmn'): w = re.sub(r'(.)\1+', r'\1', w)
+                        out.append(w)
+                    return tuple(out)
+                # (only on the parallel bar's own notes: a bar sung as some other earlier bar, words and all, is known)
+                reworded = {p: [n for n in sungbars[p] if 1 <= n + off < a and n not in new[p]
+                                and self.S.line(p, n) == analyze.shifted(self.S.line(p, n + off, like=n), src[1])
+                                and bare(self.S.words(p, n)) != bare(self.S.words(p, n + off, like=n))] for p in PARTS}
+                rw = sorted({n for v in reworded.values() for n in v})
+                wnote = f"; other words in {mrange(rw[0], rw[-1])} ({who([p for p in PARTS if reworded[p]])})" if rw else ''
+                for p in PARTS: new[p] = sorted(set(new[p]) | set(reworded[p]))
+                notes_new = allnew
+                allnew = sorted({n for v in new.values() for n in v})
+                sec['notes'].append(f"Like {srcname[0]} (m{srcname[1]}) except {mrange(notes_new[0], notes_new[-1])}" + wnote
+                                    + ''.join(f"; {t['short']}" for t in tell) + '.')
                 chg = [p for p in PARTS if new[p]]
-                sec['say'] = (f"Letter {l} is almost the same as letter {srcname[0]}. Only {bars_said(allnew[0], allnew[-1])} "
-                              f"{'is' if allnew[0] == allnew[-1] else 'are'} different"
+                rs = runs(allnew)
+                said = [bars_said(r0, r1) for r0, r1 in rs]
+                sec['say'] = (f"Letter {l} is almost the same as letter {srcname[0]}. Only "
+                              + (said[0] if len(said) == 1 else ', '.join(said[:-1]) + ' and ' + said[-1])
+                              + f" {'is' if len(rs) == 1 and rs[0][0] == rs[0][1] else 'are'} different"
                               + ('' if every(chg) else f", and only for the {who(chg)}")
                               + f". We'll learn just that, then sing {l} together from the top.")
+                blocks = []
                 for r0, r1 in runs(allnew):
                     s0 = max(a, r0 - 1)            # a bar of run-up, inside the letter
                     changed = [p for p in PARTS if any(r0 <= n <= r1 for n in new[p])]
+                    # parts whose bars here differ only in their words
+                    known = [p for p in changed if all(n in reworded[p] for n in new[p] if r0 <= n <= r1)]
                     blk = dict(kind='block', bar=s0, text=f"{mrange(s0, r1)}: the bars that differ", cue=self.cue(s0), items=[])
                     blk['why'] = self.why(r0, r1, a, src, srcname, changed)
-                    self.teach(s0, r1, blk['items'], parts=changed, micro=True)
-                    sec['items'].append(blk)
+                    blk['why_short'] = self.why(r0, r1, a, src, srcname, changed, short=True)
+                    blk['to'] = r1
+                    self.teach(s0, r1, blk['items'], parts=changed, micro=True, known=known)
+                    blocks.append(blk)
+                # the announcements first, each part's together, so the director turns to each part once
+                sec['items'] += tell + blocks
                 sec['items'].append(dict(kind='all', bar=a, text=f"Everyone from the top of {l}: play 1x, sing", cue=sec['cue']))
                 continue
             sec['kind'] = 'new'
@@ -488,7 +583,7 @@ class Planner:
                                 sub.append((f"Rhythm work {mrange(s0, s1)}, slowly", self.cue(s0, g)))
                         sub.append((f"{mrange(*h)}: play 2x, sing", None))
                     sec['items'].append(dict(kind='part', who='+'.join(g), note='in unison' if len(g) > 1 else '', sub=sub, bar=a, parts=list(g),
-                                             split=s_, split_pu=pu))
+                                             split=s_, split_pu=pu, at={p: self.start(p, a) for p in g}))
             else:
                 self.teach(a, b, sec['items'])
             if getattr(self, 'slow_all', False):
@@ -551,6 +646,8 @@ def notation(it, cues=False):
     if it['kind'] == 'all':
         t = 'all S↓+S' if it.get('slow') else 'all S'
         return [(t, None)] if cues else t
+    if it['kind'] == 'say':
+        return [(it['cap'], None)] if cues else it['cap']
     if it['kind'] == 'rhythm':
         t = 'Rh m' + (f"{it['bar']}" if it['bar'] == it['bar_end'] else f"{it['bar']}–{it['bar_end']}") + ', spoken together'
         return [(t, None)] if cues else t

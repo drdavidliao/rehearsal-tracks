@@ -123,6 +123,9 @@ def section_flow(sec):
                     if jt.get('say'): fl.append(say(jt['say'], SAY3))
                 else:
                     fl.append(item(L2, E(jt['text']), jt.get('cue')))
+        elif it['kind'] == 'say':
+            fl.append(item(L1, f'{lab(it)}<b>{E(it["who"])}</b>&nbsp;&nbsp;<b>tell them</b> {E(it["text"])}'))
+            if it.get('say'): fl.append(say(it['say'], SAY2))
         elif it['kind'] == 'rhythm':
             who_ = 'Everyone' if len(it['parts']) == len(analyze.PARTS) else '+'.join(it['parts'])
             fl.append(item(L1, f'{lab(it)}<b>{E(who_)}</b>&nbsp;&nbsp;{short(it)}', it.get('cue')))

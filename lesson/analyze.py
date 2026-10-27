@@ -80,22 +80,63 @@ class Score:
                         evs.append(dict(on=t, dur=d, midi=midi(p) if p is not None else None,
                                         tie_stop='stop' in ties, tie_start='start' in ties,
                                         lyric=(ly.findtext('text') if ly is not None else None),
+                                        syl=(ly.findtext('syllabic') if ly is not None else None),
                                         x=e.find('notehead') is not None))
                         t += d
                 bars[n] = evs
             self.bars[nm] = bars
         self.nbars = max(self.bars[PARTS[0]])
-        # notes at the end of a letter's last bar that lead into the next letter (after the bar's last rest, on beat 3
-        # or later, with words) belong to the next letter: they are left out when a letter is compared with another
-        for p, bars in self.bars.items():
-            for n, evs in bars.items():
-                if n + 1 not in self.letters: continue
-                tail = []
-                for e in reversed(evs):
-                    if e['midi'] is None: break
-                    tail.append(e)
-                if tail and len(tail) < len(evs) and tail[-1]['on'] >= self.pickup_from(n) and tail[-1]['lyric']:
-                    for e in tail: e['lead_in'] = True
+        # A letter runs from phrase to phrase, which is not always barline to barline. Notes at the end of a letter's
+        # last bar that start the next letter's phrase (phrase_tail) belong to the next letter, and that bar is compared
+        # only up to where they start (cut). Notes held over into a letter's first bar from the phrase before, up to a
+        # rest, belong to the letter before (lo, per part). Both are left out when a letter is compared with another.
+        self.cut = {}            # letter's last bar -> onset where the next letter's phrase starts
+        self.lo = {}             # (part, letter's first bar) -> onset where the part's held-over note ends
+        for n in sorted(self.letters):
+            ons = []
+            for p in self.bars:
+                tail = self.phrase_tail(p, n - 1)
+                for e in tail: e['lead_in'] = True
+                if tail: ons.append(tail[0]['on'])
+                spill, end = [], None
+                for e in self.bars[p].get(n, []):
+                    if e['midi'] is None:
+                        end = e['on']; break
+                    if e['tie_stop'] or (spill and not e['lyric']): spill.append(e)    # tied over, or its melisma
+                    else: break
+                if spill and end is not None:
+                    for e in spill: e['lead_out'] = True
+                    self.lo[(p, n)] = end
+            if ons: self.cut[n - 1] = min(ons)
+
+    def phrase_tail(self, p, n):
+        """the notes at the end of bar n that start a new phrase leading into bar n+1, or []: from beat 3 on (the
+        second half of a compound bar), with words, after a rest, or straight after a word that ends a phrase
+        ('long.' then 'ding' with no rest between)"""
+        evs = self.bars[p].get(n, [])
+        tail = []
+        for e in reversed(evs):
+            if e['midi'] is None: break
+            tail.append(e)
+        tail.reverse()
+        if tail and len(tail) < len(evs) and tail[0]['on'] >= self.pickup_from(n) and tail[0]['lyric']:
+            return tail
+        # no rest: the first note from beat 3 on that begins a word, when the syllable sung before it ends a phrase
+        for i, e in enumerate(evs):
+            if e['midi'] is None or e['on'] < self.pickup_from(n) or not e['lyric'] or e['tie_stop']: continue
+            if (e.get('syl') or 'single') not in ('single', 'begin'): continue
+            prev = self.last_syllable(p, n, e['on'])
+            if prev and prev.rstrip()[-1:] in '.,;:!?' and all(x['midi'] is not None for x in evs[i:]):
+                return evs[i:]
+            break
+        return []
+
+    def last_syllable(self, p, n, on):
+        for m in range(n, max(0, n - 8), -1):
+            for e in reversed(self.bars[p].get(m, [])):
+                if m == n and e['on'] >= on: continue
+                if e['lyric']: return e['lyric']
+        return None
 
     # ---------------------------------------------------------------- meter
     def meter(self, n):
@@ -122,20 +163,61 @@ class Score:
         return any(self.notes(part, n) for n in range(a, b + 1))
 
     # ---------------------------------------------------------------- relations
-    def rhythm(self, part, n):
+    def rhythm(self, part, n, like=None):
         """attack points (not tie continuations) and rests"""
-        return tuple((e['on'], e['dur'] if not e['tie_start'] else None) for e in self.own(part, n)
+        return tuple((e['on'], e['dur'] if not e['tie_start'] else None) for e in self.own(part, n, like)
                      if e['midi'] is not None and not e['tie_stop'])
 
-    def line(self, part, n):
-        return tuple((e['on'], e['dur'], e['midi'], e['tie_stop']) for e in self.own(part, n) if e['midi'] is not None)
+    def line(self, part, n, like=None):
+        return tuple((e['on'], e['dur'], e['midi'], e['tie_stop']) for e in self.own(part, n, like) if e['midi'] is not None)
 
-    def words(self, part, n):
-        return tuple(e['lyric'] for e in self.own(part, n) if e['lyric'])
+    def words(self, part, n, like=None):
+        return tuple(e['lyric'] for e in self.own(part, n, like) if e['lyric'])
 
-    def own(self, part, n):
-        """bar n's events without a lead-in to the next letter"""
-        return [e for e in self.bars[part].get(n, []) if not e.get('lead_in')]
+    def window(self, part, n):
+        """the part of bar n that belongs to its own letter: (from, to) in quarters"""
+        return self.lo.get((part, n), F(0)), self.cut.get(n)
+
+    def own(self, part, n, like=None):
+        """bar n's events that belong to its letter: without a lead-in to the next letter or a note held over from
+        the letter before. With `like`, cut to the window of bar `like` instead, so an earlier bar is compared with a
+        bar of this letter over the same stretch; a note running past the window's end is cut at it"""
+        lo, hi = self.window(part, like if like is not None else n)
+        out = []
+        for e in self.bars[part].get(n, []):
+            if e.get('lead_in') or e.get('lead_out') or e['on'] < lo or (hi is not None and e['on'] >= hi): continue
+            if hi is not None and e['on'] + e['dur'] > hi:
+                e = dict(e, dur=hi - e['on'], tie_start=False)
+            out.append(e)
+        return out
+
+    def release_only(self, part, n, m, t=0):
+        """bar n against earlier bar m (t semitones away): when they differ only in how long a note is held before a
+        rest (the same attacks, pitches and words), the notes that differ as [(onset, syllable, (tied lengths, rest
+        after) in n, the same in m, last note of the bar?)]; otherwise None"""
+        a, b = self.own(part, n), self.own(part, m, like=n)
+        if self.line(part, n) == self.line(part, m, like=n): return None
+        att = lambda evs, k: [(e['on'], e['midi'] + k) for e in evs if e['midi'] is not None and not e['tie_stop']]
+        if att(a, 0) != att(b, t) or self.words(part, n) != self.words(part, m, like=n): return None
+        def held(evs):
+            # {onset: ([printed lengths of the note and the notes tied to it], length of the rest after it)} for each
+            # note attacked in the bar
+            out, last, rest = {}, None, False
+            for e in evs:
+                if e['midi'] is None:
+                    if last is not None: out[last][1] += e['dur']
+                    rest = True
+                elif e['tie_stop'] and last is not None and not rest: out[last][0].append(e['dur'])
+                else: last, rest = e['on'], False; out[last] = [[e['dur']], F(0)]
+            return out
+        ha, hb = held(a), held(b)
+        diff = []
+        for i, on in enumerate(sorted(ha)):
+            if on not in hb or sum(ha[on][0]) == sum(hb[on][0]): continue
+            e = next(x for x in a if x['on'] == on)
+            word = e['lyric'] or self.last_syllable(part, n, on + F(1, 64))
+            diff.append((on, word, ha[on], hb[on], i == len(ha) - 1))
+        return diff or None
 
     def relation(self, p, q, a, b):
         """over bars a..b where both sing: 'unison' (same pitches), 'octave', 'duet' (same rhythm and words),
@@ -212,11 +294,11 @@ def compare(S, a, a2, n, parts=PARTS):
     differ and the bars whose words differ"""
     best = None
     for t in range(-12, 13):
-        dn = {p: [a + i for i in range(n) if S.line(p, a + i) != shifted(S.line(p, a2 + i), t)] for p in parts}
+        dn = {p: [a + i for i in range(n) if S.line(p, a + i) != shifted(S.line(p, a2 + i, like=a + i), t)] for p in parts}
         k = sum(len(v) for v in dn.values())
         if best is None or k < best[0]: best = (k, t, dn)
     _, t, dn = best
-    dw = {p: [a + i for i in range(n) if S.words(p, a + i) != S.words(p, a2 + i)] for p in parts}
+    dw = {p: [a + i for i in range(n) if S.words(p, a + i) != S.words(p, a2 + i, like=a + i)] for p in parts}
     return t, dn, dw
 
 
@@ -231,18 +313,21 @@ def coverage(S, a, b, parts=PARTS):
     that match at one transposition. Returns {part: {bar: (earlier bar, shift, same words)}}"""
     out = {p: {} for p in parts}
     for p in parts:
-        lines = {n: S.line(p, n) for n in range(1, b + 1)}
+        # each earlier bar is seen over the stretch of the bar it is compared with (a letter's last bar ends where
+        # the next letter's phrase starts)
+        lines = {n: S.line(p, n) for n in range(a, b + 1)}
+        like = lambda n, x: S.line(p, n, like=x)
         for m in range(1, a):
             for t in range(-3, 4):
                 i = 0
                 while a + i <= b:
                     j = i
-                    while a + j <= b and m + j < a and lines[a + j] and lines[a + j] == shifted(lines[m + j], t):
+                    while a + j <= b and m + j < a and lines[a + j] and lines[a + j] == shifted(like(m + j, a + j), t):
                         j += 1
                     if j - i >= 2:
                         for k in range(i, j):
                             if a + k not in out[p]:
-                                out[p][a + k] = (m + k, t, S.words(p, a + k) == S.words(p, m + k))
+                                out[p][a + k] = (m + k, t, S.words(p, a + k) == S.words(p, m + k, like=a + k))
                         i = j
                     else:
                         i += 1

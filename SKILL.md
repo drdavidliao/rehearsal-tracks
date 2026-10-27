@@ -3010,18 +3010,49 @@ main director says, so the plan always covers every letter.
 - **The same notes as an earlier letter** (at any transposition, words free to
   differ): everyone sings it once, **all S**. The plan names the most recent
   identical letter ("= L"); a key change adds "give the starting pitches".
-- **A lead-in belongs to the letter it leads into.** Notes after the last rest of
-  a letter's last bar, starting on beat 3 or later, with words, are the pickup to
-  the next letter (its cue starts there), so they are left out when two letters
-  are compared. Otherwise a letter that repeats an earlier one exactly, except
-  that the earlier one's basses pick up into the letter after it, reads as a
-  near repeat with a "new notes, rhythm and words" bar to drill.
+- **A letter runs from phrase to phrase, not barline to barline.** Notes at the end
+  of a letter's last bar that start the next phrase are the pickup to the next
+  letter (its cue starts there): from beat 3 on, with words, after a rest, or
+  straight after a word that ends a phrase with punctuation ("long." then "ding",
+  no rest between). The letter's last bar is compared only up to where that
+  pickup starts, and the earlier bar it is compared with is cut at the same beat.
+  A note held over into a letter's first bar from the phrase before, up to a rest,
+  belongs to the letter before. Otherwise a letter that repeats an earlier one
+  exactly, except that the earlier one's basses pick up into the letter after it,
+  reads as a near repeat with a "new notes, rhythm and words" bar to drill; and on
+  an SAATB, L's last bar was drilled for every part because three of them began
+  M's "ding" on its beat 3, straight after L's "long.".
+- **A note held for another length before a rest is not drilled.** Where a bar
+  has the same attacks, pitches and words as the earlier letter's and only a
+  note's length before a rest differs, it is a **say** step at that bar,
+  "m99: 'gels' is a crotchet, then a crotchet rest (m51: a minim)", for the
+  director to announce. A note's length follows its ties ("a quaver tied to a
+  minim, then a crotchet rest"), and each rest is measured, not inferred. Every
+  sung bar is checked against its parallel bar in the earlier letter, also one
+  that matches some other earlier bar. That holds at the letter's last note too:
+  the director wants a brief announcement there as well. In a letter that also
+  has drilled bars, the announcements come first, each part's together (the
+  second "And in bar 105 …"), not in bar order: the singers see only their own
+  part, so the director turns to each part once. The director asked for this on
+  an SAATB whose basses had been given P+SS for one shortened note.
 - **Nearly the same:** at most a third of the sung bars differ (and under half).
   Only the parts that changed, only the bars that changed, from one bar earlier
   for a run-in; then everyone from the top of the letter. A "why" note says which
   bars differ from which bars of the earlier letter ("m62–63 differs from m30–31
   (in C)"), and for each part whether the
-  notes, the rhythm or the words are new.
+  notes, the rhythm or the words are new. Bars sung to other words on the same
+  notes (punctuation aside; a vocalise spelt "a" or "aa" is one sound) are
+  drilled with them, though they don't count towards how much of the letter
+  is new: on an SAATB, F's "song oo" (one slurred "oo") came back in L as "song,
+  they've practis'd all year long", and the sopranos' block had started only
+  where their notes changed, three bars later, with the altos left out. A part
+  whose bars there differ only in their words gets P+S ("new words only"), never
+  P+SS. A bar sung as some other earlier bar, words and all, is known and not
+  drilled. The
+  spoken line names each run of bars ("Only bar 67 and bar 72"). On the score
+  the why tag is laid out after every badge: within the block's bars, short of
+  the next badge on its row, in short form ("m101–105 vs m53–57 (F): S new
+  notes…") or a row up where the long one doesn't fit.
 - **Otherwise it is taught part by part:** **P** (play, they listen), then **SS**
   (play twice, they sing), or **S** once when the part is easy, or has the same
   rhythm and words as a part already taught. Parts in unison for most of the
@@ -3097,7 +3128,12 @@ main director says, so the plan always covers every letter.
   and forScore reads only PDF. The engraving's own geometry places each mark:
   - A step's badge: a translucent circle in the part's colour (Okabe–Ito:
     soprano vermilion, alto gold, tenor green, bass blue; everyone purple) above
-    that part's staff at the bar the step starts, below the words of the staff
+    that part's staff where its phrase starts (on a pickup note in the bar before
+    the letter, lifted over a dynamic there, or left of it with the caption on
+    the left where the words above leave no room; after a note held over into
+    the letter; otherwise the letter's bar; a badge on a note, a say step's
+    too, goes over a beam or stem there, or just after it where the words above
+    leave no room), below the words of the staff
     above, stepped right of a dynamic under it and clear of the boxed rehearsal
     letter, with the shorthand beside it. Several on one staff and bar share one
     caption; a caption with no room on the right goes left; with no room on
