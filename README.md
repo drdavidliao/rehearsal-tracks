@@ -10,6 +10,10 @@ sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
 
+**Choose Opus in Claude's model menu before you start**, above all for a scan
+or a phone photo of a score. (This is from a chorus member who tried both Opus
+and Sonnet.)
+
 - [🎼 &nbsp;PDF → MusicXML](#pdf-to-musicxml)
 - [✍️ &nbsp;Plan an arrangement or revoicing](#plan-an-arrangement-or-revoicing)
 - [🔧 &nbsp;Add kludges for Cantai](#add-kludges-for-cantai)
