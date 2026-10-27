@@ -1,17 +1,33 @@
-"""Draft a note/rhythm-learning lesson plan from a SATB MusicXML, following the director's teaching habits."""
+"""Draft a note/rhythm-learning lesson plan from a choral MusicXML (SATB, SAATB ...), following the director's teaching habits."""
 import itertools
 import re
 from fractions import Fraction as F
 from . import analyze
 from .analyze import PARTS
 
-ABBR = {'Soprano': 'S', 'Alto': 'A', 'Tenor': 'T', 'Bass': 'B'}
-PL = {'Soprano': 'sopranos', 'Alto': 'altos', 'Tenor': 'tenors', 'Bass': 'basses'}
+
+
+class _ByPart(dict):
+    """part name -> its short name or plural, for whatever parts the score has"""
+    def __init__(self, f): super().__init__(); self.f = f
+    def __missing__(self, p): return self.f(p)
+    def items(self): return [(p, self.f(p)) for p in PARTS]
+
+
+ABBR = _ByPart(analyze.abbr)
+PL = _ByPart(analyze.plural)
+
+
+NUM = {2: 'two', 3: 'three', 4: 'four', 5: 'five', 6: 'six', 7: 'seven', 8: 'eight'}
+
+
+def every(ps):
+    return len(ps) == len(PARTS)
 
 
 def who(parts):
     ns = [PL[p] for p in parts]
-    if len(ns) == 4: return 'everyone'
+    if every(ns): return 'everyone'
     return ns[0] if len(ns) == 1 else ', '.join(ns[:-1]) + ' and ' + ns[-1]
 
 
@@ -263,8 +279,8 @@ class Planner:
         joint, per = self.rhythm_plan(a, b, [p for g in gs for p in g])
         for bars, ps in joint:
             items.append(dict(kind='rhythm', bar=bars[0], bar_end=bars[-1], parts=ps, text=f"Rhythm work {mrange(bars[0], bars[-1])}, slowly: "
-                              + ('everyone' if len(ps) == 4 else '+'.join(ps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0]),
-                              say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if len(ps) == 4 else f"{Cap(who(ps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
+                              + ('everyone' if every(ps) else '+'.join(ps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0]),
+                              say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if every(ps) else f"{Cap(who(ps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
         taught = []
         for g in gs:
             name = '+'.join(g)
@@ -330,15 +346,24 @@ class Planner:
         rel = {}
         for p, q in itertools.combinations(act, 2):
             rel[(p, q)] = self.S.relation(p, q, a, b)[0]
-        if len(act) == 4 and all(r in ('duet', 'unison', 'octave') for r in rel.values()):
-            return 'All four sing the same rhythm and words (block chords).'
-        bits = []
-        for (p, q), r in rel.items():
-            if r == 'unison': bits.append(f"{ABBR[p]}+{ABBR[q]} in unison")
-            elif r == 'octave': bits.append(f"{ABBR[p]}+{ABBR[q]} in octaves")
-            elif r == 'duet': bits.append(f"{ABBR[p]}+{ABBR[q]} same rhythm and words")
-            elif r == 'rhythm': bits.append(f"{ABBR[p]}+{ABBR[q]} same rhythm")
-        return ('; '.join(bits) + '.') if bits else 'All four parts move independently.'
+        if every(act) and all(r in ('duet', 'unison', 'octave') for r in rel.values()):
+            return f'All {NUM.get(len(act), len(act))} sing the same rhythm and words (block chords).'
+        # parts that share a relation pairwise are named once, as a group: S+A+T same rhythm and words
+        # (parts in unison also share rhythm and words; a group inside a stronger one says nothing new)
+        groups = []
+        order = ('unison', 'octave', 'duet', 'rhythm')
+        for i, r in enumerate(order):
+            ok = order[:i + 1] if r != 'duet' else ('unison', 'octave', 'duet')
+            gs = []
+            for p in act:
+                for g in gs:
+                    if all(rel.get((q, p)) in ok for q in g): g.append(p); break
+                else: gs.append([p])
+            groups += [(r, g) for g in gs if len(g) > 1 and not any(set(g) <= set(g2) for _, g2 in groups)]
+        groups.sort(key=lambda rg: [act.index(p) for p in rg[1]])
+        said = {'unison': 'in unison', 'octave': 'in octaves', 'duet': 'same rhythm and words', 'rhythm': 'same rhythm'}
+        bits = ['+'.join(ABBR[p] for p in g) + ' ' + said[r] for r, g in groups]
+        return ('; '.join(bits) + '.') if bits else f'All {NUM.get(len(act), len(act))} parts move independently.'
 
     def plan(self):
         out = []
@@ -392,7 +417,7 @@ class Planner:
                 chg = [p for p in PARTS if new[p]]
                 sec['say'] = (f"Letter {l} is almost the same as letter {srcname[0]}. Only {bars_said(allnew[0], allnew[-1])} "
                               f"{'is' if allnew[0] == allnew[-1] else 'are'} different"
-                              + ('' if len(chg) == 4 else f", and only for the {who(chg)}")
+                              + ('' if every(chg) else f", and only for the {who(chg)}")
                               + f". We'll learn just that, then sing {l} together from the top.")
                 for r0, r1 in runs(allnew):
                     s0 = max(a, r0 - 1)            # a bar of run-up, inside the letter
@@ -410,7 +435,7 @@ class Planner:
             if doubled:
                 full = {v: k for k, v in ABBR.items()}
                 sec['say'] = f"In {lname(l)}, " + '; '.join(
-                    f"the {who([full[c] for c in b_.split(' ')[0].split('+')])} sing "
+                    f"the {who([full[c] for c in b_.rsplit(' in ', 1)[0].split('+')])} sing "
                     + ('in unison' if b_.endswith('in unison') else 'the same line in octaves') for b_ in doubled) + '.'
             # a section taught in full needs no remarks on what resembles earlier material
             dmax = max(self.difficulty(p, a, b) for p in PARTS)
@@ -437,8 +462,8 @@ class Planner:
                         hj[h] = self.rhythm_plan(h[0], h[1], ps)
                         for bars, rps in hj[h][0]:
                             sec['items'].append(dict(kind='rhythm', bar=bars[0], bar_end=bars[-1], parts=rps, text=f"Rhythm work {mrange(bars[0], bars[-1])}, slowly: "
-                                                     + ('everyone' if len(rps) == 4 else '+'.join(rps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0], rps),
-                                                     say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if len(rps) == 4 else f"{Cap(who(rps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
+                                                     + ('everyone' if every(rps) else '+'.join(rps)) + ' (same rhythm; speak it together)', cue=self.cue(bars[0], rps),
+                                                     say=(f"Let's take {bars_said(bars[0], bars[-1])} slowly together first." if every(rps) else f"{Cap(who(rps))}, let's take {bars_said(bars[0], bars[-1])} slowly together first.")))
                 for g in gs:
                     s_, pu = gsplit[tuple(g)]
                     halves = [(a, s_ - 1), (s_, b)]

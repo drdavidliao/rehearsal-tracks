@@ -10,6 +10,10 @@ sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
 
+**Choose Opus in Claude's model menu before you start**, above all for a scan
+or a phone photo of a score. (This is from a chorus member who tried both Opus
+and Sonnet.)
+
 - [🎼 &nbsp;PDF → MusicXML](#pdf-to-musicxml)
 - [✍️ &nbsp;Plan an arrangement or revoicing](#plan-an-arrangement-or-revoicing)
 - [🔧 &nbsp;Add kludges for Cantai](#add-kludges-for-cantai)
@@ -299,6 +303,7 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 | `lyric_sheet.py` | The lyric sheet made with the follow-along videos: every part's words on one printable page, and a video of that page per mp3 with each syllable lit in the colours of the parts singing it. Drafts the plan (sections, rows, bold words) and prints the melody bar by bar for naming sections. | `pycairo`, `pillow`, `numpy`, `lxml`, Noto Color Emoji; `score_video.py` beside it |
 | `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
 | `dorico_reader.py` | Reads a Dorico vector PDF (open SATB score, piano on two staves) straight into MusicXML: notes, ties, slurs, lyrics and their extender lines, dynamics, hairpins, chord symbols. | `pdfplumber`; `chorale/` to finish |
+| `mixset/` | A human singer's finished practice set (Balanced, accompaniment, Predominant and Muted mixes, no stems): lines the files up, shows which voice each mix features where, splices a part's track from the set's other mixes, and retimes existing follow-along videos onto the new audio through a measured time map. See `mixset/README.md`. | `librosa`, `soundfile`, `scipy`, `ffmpeg`; `matplotlib` for plots |
 | `lesson/` | Note-learning lesson plans: the checklist PDF and the marked score (`python3 -m lesson`). | `reportlab`, `pypdf`, `pdfplumber`, DejaVu fonts |
 | `stem_audit.py` | Audits a whole set of stems against the MusicXML they came from: silent stretches of written notes (Cantai's unfinished rendering), a stem singing another part's line (the export plug-in's leak), stems holding the same audio, and the basic file checks. | `numpy`, `ffmpeg` |
 

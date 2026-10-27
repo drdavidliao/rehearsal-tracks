@@ -1,10 +1,38 @@
-"""Read a SATB+piano MusicXML into per-part, per-bar note lists and compare parts and sections."""
+"""Read a choral MusicXML (SATB, or any one-staff voices such as S A1 A2 T B; a piano is ignored) into per-part,
+per-bar note lists and compare parts and sections."""
 import xml.etree.ElementTree as ET
 from fractions import Fraction as F
 from collections import defaultdict
 
 STEPS = 'CDEFGAB'
+VOICES = ('Soprano', 'Alto', 'Tenor', 'Baritone', 'Bass')
+# the sung parts, top to bottom as the score lists them. Score() fills it in place, so every module that imported
+# it sees the piece's parts: Soprano, Alto, Tenor, Bass by default; Soprano, Alto 1, Alto 2, Tenor, Bass for an SAATB
 PARTS = ['Soprano', 'Alto', 'Tenor', 'Bass']
+# Okabe-Ito, as score_video.py: a second part of the same voice (Alto 2) takes reddish purple
+COLOUR = {'Soprano': '#D55E00', 'Alto': '#B8860B', 'Tenor': '#009E73', 'Baritone': '#56B4E9', 'Bass': '#0072B2'}
+SECOND = '#CC79A7'
+EVERYONE = '#7B3FA0'
+
+
+def voice(name):
+    return next((v for v in VOICES if name.startswith(v)), None)
+
+
+def colour(p):
+    same = [q for q in PARTS if voice(q) == voice(p)]
+    return SECOND if p in same[1:] else COLOUR.get(voice(p), EVERYONE)
+
+
+def abbr(p):
+    """S, A, T, B; a numbered part keeps its name (Alto 1): A1 is a step label on the score"""
+    return p if p != voice(p) else p[0]
+
+
+def plural(p):
+    v = voice(p)
+    base = {'Soprano': 'sopranos', 'Alto': 'altos', 'Tenor': 'tenors', 'Baritone': 'baritones', 'Bass': 'basses'}.get(v, p.lower() + 's')
+    return base if p == v else p.lower() + 's'      # 'alto 1s'
 
 
 def midi(p):
@@ -20,6 +48,8 @@ class Score:
         self.keys = {}
         self.times = {}
         self.implicit = set()     # bars marked implicit (a pickup bar)
+        sung = [names[p.get('id')] for p in root.findall('part') if voice(names[p.get('id')])]
+        PARTS[:] = sung
         for part in root.findall('part'):
             nm = names[part.get('id')]
             if nm not in PARTS:
@@ -36,7 +66,7 @@ class Score:
                         if e.find('divisions') is not None: div = int(e.findtext('divisions'))
                         if e.find('key') is not None: self.keys[n] = int(e.find('key').findtext('fifths'))
                         if e.find('time') is not None: self.times[n] = (int(e.find('time').findtext('beats')), int(e.find('time').findtext('beat-type')))
-                    elif e.tag == 'direction' and nm == 'Soprano':
+                    elif e.tag == 'direction' and nm == PARTS[0]:
                         r = e.find('.//rehearsal')
                         if r is not None: self.letters[n] = r.text
                     elif e.tag == 'backup': t -= F(int(e.findtext('duration')), div)
@@ -54,7 +84,7 @@ class Score:
                         t += d
                 bars[n] = evs
             self.bars[nm] = bars
-        self.nbars = max(self.bars['Soprano'])
+        self.nbars = max(self.bars[PARTS[0]])
         # notes at the end of a letter's last bar that lead into the next letter (after the bar's last rest, on beat 3
         # or later, with words) belong to the next letter: they are left out when a letter is compared with another
         for p, bars in self.bars.items():

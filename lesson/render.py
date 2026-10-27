@@ -8,6 +8,7 @@ from reportlab.platypus import (BaseDocTemplate, PageTemplate, Frame, Paragraph,
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from xml.sax.saxutils import escape as E
+from . import analyze
 
 def _font_dir():
     """DejaVu has the ☐ ▶ ↓ ♭ ♯ glyphs the plan uses: the system copy, or the one matplotlib ships"""
@@ -68,13 +69,12 @@ def cue(c):
     return s
 
 
-LCOL = {'Soprano': '#D55E00', 'Alto': '#B8860B', 'Tenor': '#009E73', 'Bass': '#0072B2'}
 
 
 def lab(it):
     if not it.get('label'): return ''
     ps = it.get('parts') or []
-    col = LCOL.get(ps[0], '#7B3FA0') if len(ps) == 1 else '#7B3FA0'
+    col = analyze.colour(ps[0]) if len(ps) == 1 else analyze.EVERYONE
     return f'<font color="{col}"><b>{it["label"]}</b></font>&nbsp;&nbsp;'
 
 
@@ -124,7 +124,7 @@ def section_flow(sec):
                 else:
                     fl.append(item(L2, E(jt['text']), jt.get('cue')))
         elif it['kind'] == 'rhythm':
-            who_ = 'Everyone' if len(it['parts']) == 4 else '+'.join(it['parts'])
+            who_ = 'Everyone' if len(it['parts']) == len(analyze.PARTS) else '+'.join(it['parts'])
             fl.append(item(L1, f'{lab(it)}<b>{E(who_)}</b>&nbsp;&nbsp;{short(it)}', it.get('cue')))
             if it.get('say'): fl.append(say(it['say'], SAY2))
         else:

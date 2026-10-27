@@ -105,6 +105,18 @@ Make TTB tracks from the SSA practice tracks in the Shenandoah folder: everythin
 That is Step 9.5: shifted, measured, spliced by bars, mixed and balanced by ear-weighted
 measures; then the videos as usual.
 
+**Use a human singer's practice set.** When a singer sends finished tracks (Balanced, an
+accompaniment track, and a Predominant and Muted mix per part) for a song that already has
+follow-along videos, write something like:
+
+```
+I got human-sung tracks for Shenandoah; they're in its folder. Make Tenor 1, Tenor 2, Baritone and Bass tracks from them, and the usual videos from the existing ones.
+```
+
+That is Steps 9.6 and 10.4: what each mix holds is checked against the score, parts are spliced
+from the set's other mixes where needed, and the old videos are retimed onto the new audio
+without redrawing a frame.
+
 **Sync a dance video.** With the follow-along videos made and a choreography video in the
 folder, write something like:
 
@@ -161,11 +173,11 @@ in addition when asked for learning tracks.
 full under *Scripts* near the end. Write them out to disk verbatim before you
 start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
 `cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `stem_audit.py`,
-`verify.py`, `rehearsal_mix.py`, `score_video.py`, `lyric_sheet.py`, `dance_sync.py`. Five larger pieces live in the
+`verify.py`, `rehearsal_mix.py`, `score_video.py`, `lyric_sheet.py`, `dance_sync.py`. Six larger pieces live in the
 repository beside this file instead of being printed here: the `chorale` package
 (Steps 7–8), `dorico_reader.py` (a Dorico PDF read into MusicXML, 2.7), the
 `scanproof` package (proofreading a transcription against its scan, 1.2), the
-`voiceshift` package (recorded tracks revoiced in audio, and the bar grid of a recording, 9.5) and the `lesson` package (Step 11).
+`voiceshift` package (recorded tracks revoiced in audio, and the bar grid of a recording, 9.5), the `mixset` package (a human singer's finished practice set, and old videos retimed onto new audio, 9.6 and 10.4) and the `lesson` package (Step 11).
 
 **Nothing is delivered until `verify.py` has run on it** (Step 5), and its table
 goes into the handback as printed. The rules in this file are prose, and prose
@@ -860,6 +872,27 @@ What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
   note, with nothing after it. Where the singers' parts print none, drop it and
   say so (check 10 then reports it); where nothing else decides, keep what the
   score prints (check 14 then reports it). Either way it is a handback item.
+
+What an unaccompanied five-part score (S, A1, A2, T, B, 154 bars) added, all now in the reader:
+
+- **Pass `nstaves` and `staff_names`.** `Reader(..., nstaves=5, staff_names=['S', 'A1', 'A2', 'T', 'B'])`;
+  the build log labelled staves S A T B and crashed on a fifth.
+- **A tie keeps its note's alteration across the barline.** An F♮ tied into the next bar is
+  printed there with no accidental and is still F♮; the key signature made it F♯. Check 17
+  compares staff positions only, so it passed; list every chromatic note per part and read
+  it against the page.
+- **An arc between two heads on the same line is a slur when the second carries an
+  accidental that changes the pitch** (E to E♭, G to G♯). Read as ties, check 8 fails them.
+- **A hairpin across a system break** is drawn on the next system without its tip, as two
+  thin (0.6 pt) slanted strokes that the beam reader took for beams. The reader now pairs
+  them into one wedge and ends the hairpin there; before, it stopped where it started
+  (Verovio: "hairpin is ignored").
+- **A rehearsal letter on a double barline mid-system sits wholly left of it**, over the
+  previous bar's end; five of eighteen letters came out a bar early. A letter now goes
+  to the bar whose start is nearest the box's centre.
+- **Close-set staves push each part's words nearer the staff below**, so check 10 needs
+  `--lanes` with both lanes per part (`0b=Soprano,1a=Soprano,1b=Alto 1,2a=Alto 1,...`);
+  the default lanes reported 61 disagreements, all of them lanes.
 
 ## Step 3 — Exploding a condensed score into one part per voice
 
@@ -2208,6 +2241,83 @@ choice of formant engine. The repository's mixing and video tools ran in minutes
 Estimate the known steps from their real run times, and put the margin only on the
 genuinely new part.
 
+### 9.6 A human singer's finished practice set (`mixset/`)
+
+Some sets come from a person who sings every part and mixes it: a Balanced mix, an
+accompaniment track, and a Predominant and a Muted mix per part, with no stems. Five such
+sets came in at once, for songs that already had Cantai tracks and videos. Nothing in them
+can be remixed, so `rehearsal_mix.py` does not apply. The deliverable is the singer's own mixes, renamed for
+Chorus Connection (`TITLE - (Tenor 1) predominant.mp3`, `TITLE - Balanced.mp3`), copied byte
+for byte wherever they are already right. They are the singer's balance, not
+predominant-left tracks; say so in the handback. Keep the singer's name out of this repository
+like a song title.
+
+**Line the files up first.** `python3 -m mixset.lags ACCOMP.mp3 ...` measures each file's lead at
+the start and near the end. In every set the Predominant and Muted mixes ran exactly 1.000 s
+(44101–44103 samples) behind the Balanced and Accompaniment files, the same at both ends: one
+clock, with a second of lead-in. Every time below is on the Balanced file's timeline. A spliced
+track keeps its base file's lead, and a video over a Predominant mix adds it.
+
+**The mixes do not subtract.** Balanced − Muted left the accompaniment only 15 dB down, and
+even a 64-tap filter fitted between the accompaniment track and a mix left −8 to −13 dB. The
+accompaniment sits at a different gain in each kind of mix (0.12 Predominant, 0.35 Muted, 0.15
+Balanced). Two things do hold:
+- **The Predominant mixes of one set share their accompaniment exactly.** Two of them null to
+  digital silence wherever nobody sings. So a stretch of one Predominant mix can replace the
+  same stretch of another: accompaniment and background voices continue unbroken, and only the
+  featured voice changes.
+- **The Muted accompaniment was 3× the Predominant one** (0.3513 / 0.1171; 2.99 fitted on
+  another set). F = 3 × Predominant − Muted cancels it and keeps the featured voice, with a
+  part that rests about 30 dB under the parts that sing. `python3 -m mixset.featured` prints F
+  per hop for each part (`--wav` writes it for a pitch tracker; `--fit T0-T1` measures the factor
+  over a stretch where nobody sings). Fitted over an ending where the choir still held its
+  chord, the factor came out 0.18–0.37, which is wrong.
+
+**Check every part's mix against the score, by bar.** Compute bar times from the tempo map,
+read F per bar for each part, and compare with what the score gives that part. Pitch-track F
+(pYIN) where two parts' mixes might hold different lines. Three kinds of fault turned up, and
+none is audible until someone rehearses from the wrong track:
+- **Unison pasted at background level.** On a TTBB with piano the Tenor 1 mix featured Tenor 1
+  only where the tenors divide: F was 13–20 dB down in every bar the score writes the two
+  tenors identically. The user had noticed this by ear and asked the singer to fix it; the
+  measurement matched what they heard bar for bar.
+  - Fix: take the unison bars from the Tenor 2 mix, where the unison is the featured voice.
+  - Joints go in rests both parts share, with 50 ms crossfades.
+  - The two mixes differed in overall gain by 1.45 dB (fitted where neither tenor sings), and
+    both were limited at −0.01 dBFS. Raising the Tenor 2 sections pushed 58 samples over, so
+    bring the whole track to the quieter mix's level instead (`--post`).
+- **Fewer parts than the chorus has.** On a revoiced TTB the set had Tenor 1, Tenor 2 and Bass.
+  The Bass line was the Baritone's too, except two four-bar passages where the Baritone sings
+  Tenor 2's line. Read the revoicing from the record of how the old tracks were made (the
+  song's `_build` notes and revoicing script), not from memory.
+  - Fix: the Baritone track is the Bass mix, with those bars from the Tenor 2 mix, spliced
+    0.3 s before the barlines as in 9.5.
+- **Instructions superseded after the singer recorded.** A unison number with spoken bars came as
+  Tenor, Bass and "cues" mixes. Read by pitch and level:
+  - **Both voice mixes:** both sang the unison line, at the same pitch, spoken bars included.
+  - **Bar 22:** one mix shouted while the other held a note. The current score gives the shout
+    to B2 alone and the held note to T1, T2 and B1.
+  - **Bars 43–45:** both mixes sang the second line. Nobody sang the first line's rest.
+  - **Built from them:** T2 and Baritone from one mix unchanged. T1 and Bass from the other, with
+    T1's bar 22 from the first. For the rest in bars 43–45, the cues mix: its featured part is
+    silent there, so it is everyone else at background level, exactly a part that rests.
+  - **Not quite as written:** the singer ran one line's held note straight into the other's next
+    word on the same pitch, so that hold ended one eighth early.
+  - Put what was found and what was built in the handback, and ask the user to listen to those
+    parts.
+
+**Splice** with `python3 -m mixset.splice OUT.mp3 --base PRED.mp3 --ref BALANCED.mp3 --take
+"T0-T1=OTHER.mp3[:GAIN]" [--post G]`. It allows for each file's lead and writes the base
+file's timeline. Check each stretch afterwards: the new track should match its source mix there
+to encoder noise (−33 to −41 dB) and the base mix elsewhere.
+- **Encoder gain:** ffmpeg's libmp3lame wrote float input at 0.9700× (−0.26 dB) on the build
+  used. The script measures every encode against its input and redoes it with the inverse gain.
+- **Peaks:** the decoded mp3s already go above full scale (+4.4 and +5.4 dBFS in two sets). Keep
+  those as they are; only a peak the splice raised above the source's needs fixing.
+
+**Record it in the song folder** (`_notes/NOTES.md` in the set's folder): every joint in seconds,
+every gain, which mix each part's track comes from, and the time map (10.4).
+
 ## Step 10 — Follow-along score videos
 
 A **follow-along video** is the score on screen with each note, and its syllable,
@@ -2788,6 +2898,71 @@ against our 120.
 - **Checks:** `dance_sync.py` checks the overlay on the lower part of the frame, below the systems.
   It read one frame later than the stacked render, at all four points.
 
+### 10.4 Old videos retimed onto new audio (`mixset/`)
+
+When a song already has its follow-along videos and new audio arrives in a different
+performance (a human singer's set, 9.6), the videos do not need redrawing. Every frame of a
+`score_video.py` video belongs to a moment of the old audio. So move each frame's start through
+a time map from the old audio to the new, and encode again over the new mp3:
+
+```
+python3 -m mixset.retime "OLD - (Tenor 1) predominant.mp4" knots.npy "NEW - (Tenor 1) predominant.mp3" OUT.mp4 --lag 1.0
+```
+
+- **Cost:** about 7 s a video, against minutes for a render; 82 videos (score, lyrics and lyrics
+  iPad for 28 mp3s, plus three dance composites) in a few minutes.
+- **What can be retimed:** anything timed to the old audio. The memorization videos (10.2) and
+  the dance composites (10.3, `--tune film` for 30 fps of motion) went through the same map as
+  the score videos; the dance stays with the music because it was already synced to the old
+  audio.
+- **Frames:** frames that land in one millisecond keep the later. Frames mapped before zero
+  collapse into the first: the new audio started 1.2 s sooner on one set, and the old intro's
+  first second went.
+- **Same picture, other audio:** a song whose old videos have no per-part versions (the
+  one-staff memorization video) gets its one picture over every part's mp3.
+
+**The time map** (`python3 -m mixset.timemap`, old seconds → new Balanced seconds) comes from
+the audio, not the score:
+1. `dtw` for the coarse path.
+2. `refine` to correct it by onset cross-correlation in 3 s windows every 0.5 s.
+3. Run both twice: old accompaniment stem against the new accompaniment track (sharp where the
+   piano plays), and old Balanced against new Balanced (needed where the piano rests).
+4. `build` keeps windows correlating 0.5 or more and drops outliers more than 60 ms from their
+   neighbours' median.
+
+Where the two performances follow the same tempo map, that is the whole job. On one set the
+offset held at −1.155 s within 10 ms for two and a half minutes; the singer's accompaniment was
+another recording at the same tempo. The rest needs looking at, in a plot of new − old against
+old, and hand pins for what the windows cannot see:
+- **A tempo the old render ignored.** The old render played q=66 throughout; the singer played
+  16 bars at about q=76 and came back. That is a straight segment between the two bars' times,
+  which onsets confirmed to a 2 ms median. The drift shows as a steady slope in the plot.
+- **A rit., a fermata or a breath taken differently.** At the end of a TTBB with piano the piano
+  rests for three bars, the windows find nothing, and DTW on the voices wandered. Pin the
+  featured part's notes one by one from its pitch track (F, 9.6) against the old stem's. Pin the
+  piano's re-entry and each eighth of the rit. from onsets. The singer took a 2 s breath the
+  render does not have; the map stretches the rest to cover it.
+- **A spliced old track.** An old track built from a film soundtrack in its middle bars has
+  bar times of its own. Pair them, bar by bar, with the new performance's bars.
+- **The end.** Pin where the sound stops (−50 dBFS) in each, so the last chord stays lit as long
+  as it sounds. Then pin file end to file end.
+
+`timemap local OLD NEW O0 O1 N0 N1 --png` aligns one stretch with both ends pinned
+and draws both chromagrams. A passage DTW found jumpy could be read off the picture as a constant
+offset.
+
+**Check, and compare with the old video.**
+- `python3 -m mixset.check frames RESULT.json MP3`: every frame where planned (0.0 ms in every
+  video) and the audio not shifted (0.0 ms).
+- `python3 -m mixset.check sync VIDEO MP3`: the lights against the sound, per 20 s, as the median
+  of the nearest onset within ±100 ms. Its numbers are this detector's, so read them against the
+  old video on its own audio (+0 to +21 ms on these songs).
+- **What it found:** maps built on the accompaniment left two sets' lights 13–18 ms later than
+  the old videos, up to 35 ms in places. A singer's consonants come ahead of the piano, and
+  sound before light is what shows (Step 10). Moving the map earlier per 15 s window by the
+  difference brought them to +4 and −3 ms against the old +5 and +4.
+- **Stills:** look at a few at the hand-pinned moments, old against new.
+
 ## Step 11 — Note-learning lesson plans
 
 A different job from tracks and revoicing. A section leader teaches notes and
@@ -2804,8 +2979,11 @@ python3 -m lesson "Shenandoah.musicxml" --pdf "Shenandoah - Full score.pdf" --rh
 
 It writes `<title> - lesson plan.pdf` (a checklist to print: US Letter, landscape,
 two columns) and, with `--pdf`, `<pdf name> (lesson marks).pdf`: the score with
-the steps stamped on it. The MusicXML is what the plan is worked out from, SATB
-with one voice per staff (any piano ignored). The PDF must be the vector
+the steps stamped on it. The MusicXML is what the plan is worked out from, one voice per staff (any piano
+ignored): SATB, or any other sung parts, taken from the score's part names (Soprano, Alto 1,
+Alto 2, Tenor, Bass). A numbered part keeps its name in the checklist ("Alto 1+Alto 2 in
+unison"), since A1 is already a step label; a second part of the same voice is drawn in
+reddish purple. The PDF must be the vector
 engraving it was read from, since the marks are placed from that PDF's own staff
 and bar positions (`dorico_reader.py`, 2.7); `--pages` picks the full-score pages
 when parts follow. The director prepares the whole piece and stops wherever the
@@ -2887,6 +3065,9 @@ main director says, so the plan always covers every letter.
   arrangers this was built for write homorhythm as a matter of course: never
   remark on parts sharing rhythm and words, in a letter's opener or before a part.
   A letter taught in full gets no remarks about resembling earlier material.
+- **Texture notes name each group once:** "S+Alto 1+Alto 2+T same rhythm and words; Alto 1+Alto 2 in unison",
+  not every pair (ten pairs with five parts). Parts in unison count as sharing rhythm and
+  words too, and a group inside a stronger one is not repeated.
 - **Printable, and dense:** landscape, two columns, 7.5–8.5 pt. A part's step stays
   in one piece but a letter may break across columns; keeping whole letters
   together left half-empty columns.
@@ -2935,9 +3116,12 @@ main director says, so the plan always covers every letter.
 - Unisons shorter than most of a letter are shaded on the score but not yet taught
   together in the plan (a letter whose first four bars are S+A+T in unison still
   teaches them one at a time).
-- SATB only, one voice per staff; the marks need a PDF `dorico_reader.py` can read.
-- Captions can still collide where systems are tight (badges over the staff
-  above in a crowded last system), and counts crowd in a narrow bar of 16ths.
+- One voice per staff; the marks need a PDF `dorico_reader.py` can read.
+- Captions can still collide where systems are tight, and counts crowd in a narrow bar
+  of 16ths. With five staves the gap between systems is small: an "everyone" badge, a
+  "why" tag and a split label are kept below the words of the system above, and an
+  "everyone" badge with no room there joins the letter's row (after the part badges, or
+  before the boxed letter at the page edge). Look at every page.
 
 ## Scripts
 
