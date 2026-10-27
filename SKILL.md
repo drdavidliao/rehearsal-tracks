@@ -2732,13 +2732,27 @@ what the user settled on:
   *Shenandoah*: river, rolling, wide), the same emoji for the same word throughout, a row's second line
   included when it is written out on its own line. The letters are bold, not the
   punctuation or quote marks around them.
-- **No line break inside a phrase.** The type is the largest at which the longest row fits
-  on one line (10.2 pt on the page, 23 px on video, for that piece); a row too long for that
-  is split only where the music rests (`"continues": true`), and only if the rest is really
-  there: on that piece an eleven-word line with no rest in it set the size.
-  Room left on the page goes into line spacing.
+- **The largest type the page holds.** The first sheets kept every row on one line, so the
+  longest row set the size for the whole page: 7 pt on the 16:9 page of two songs, too small
+  to read on a phone, and two thirds of one screen left empty. The user's ruling (2026-10-27):
+  larger type, as much of the page used as possible, more wrapping allowed, but broken at
+  sensible phrase breaks. So the layout tries one column and more (one to three on the
+  page, one to four on the 16:9 screen) and takes the count with the largest type, less
+  0.5% per wrapped line. A row too wide for its column wraps, indented, onto as few lines
+  as it can (three at most), or one more if that avoids a bad break. The breaks it prefers,
+  best first: a rest of an eighth or more, or the end of a sentence; a comma or a short rest;
+  a held note (two quarters) or a capital starting a sentence the words run into; before a
+  word that starts a phrase ("and", "when", "in", "with"); before a subject ("I", "we",
+  "there"). Never after "the", "a", "my", "to" and the like. A row the plan splits with
+  `"continues": true` (only where the music really rests) still starts a new line. A
+  section stays whole in its column when that fits; otherwise it goes on in the next one
+  between two sung lines, under "NAME (CONTINUED)". Room left over goes into line spacing
+  (1.34 to 1.8). Each row's dots sit high and its label tight under them, so at close line
+  spacing the label reads with its own row, not the one below. On the eight autumn-2026 sets
+  whose old sizes were recorded, the 16:9 type (as printed on page 2) went from 7.0–10.1 pt
+  to 9.4–15.9 pt, and the printed page from 7.4–10.9 pt to 11.6–17.6 pt.
 - **Two videos per mp3: 16:9, and 3:4 portrait for an iPad.** `…, lyrics.mp4` is the
-  same rows in three columns at 1920×1080 (the portrait page shrunk onto a 16:9 screen is
+  same rows in its own columns at 1920×1080 (the portrait page shrunk onto a 16:9 screen is
   unreadable). `…, lyrics, iPad.mp4` is 1536×2048 and shows the printed page exactly,
   scaled to the full width at the top, so a singer can read along on the iPad already in
   their music folder; the bar number sits in the band left below the page. A syllable
@@ -8605,10 +8619,13 @@ The plan is JSON, written as a draft and finished by hand:
   "names":  short part names for the legend;  "sets": label and tag for each set of parts
   "reviewed": true once all of that is done.
 
-Every row prints on one line: the page's font is the largest at which the longest row fits, and a row
-too long for a readable size is split, with "continues", only where the music rests. The video uses the
-same rows in three columns at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows
-the printed page itself. The PDF has two pages: first the portrait page to print; then the 16:9
+The type is as large as the page allows: the layout tries one column and more, and takes the column
+count that gives the largest type, every section whole in its column. A row too wide for its column
+wraps, indented, onto as few lines as it can (three at most), at the best phrase break: a rest, the end
+of a sentence or clause, a held note, or before a word that starts a phrase ("and", "when", "in"); a
+row the plan splits with "continues" (where the music rests) always starts a new line. The video uses
+the same rows at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows the printed
+page itself. The PDF has two pages: first the portrait page to print; then the 16:9
 video's page, landscape, the full width with the paper below it empty.
 
 Needs lxml, numpy, pycairo, pillow, the Noto Color Emoji font and one of Carlito, Lato or
@@ -8629,6 +8646,17 @@ except ImportError:          # the plan and structure commands need no drawing
 
 PLAN_KEYS = ('lyrics', 'title', 'credits', 'reviewed', 'names', 'colours', 'sets', 'sections', 'words', 'edits')
 GREY = '#BDBDBD'
+MAX_WRAP = 3                 # a row wraps onto at most this many lines
+# words a phrase can start with: a line may begin with one
+PHRASE_START = {'and', 'but', 'or', 'nor', 'so', 'yet', 'for', 'that', 'when', 'where', 'while', 'as', 'if',
+                'though', 'because', "'cause", 'till', 'until', 'with', 'without', 'to', 'in', 'on', 'of',
+                'from', 'by', 'like', 'through', 'who', 'which', 'how', 'what', 'than', 'then', 'into',
+                'at', 'over', 'under', 'all', 'just', 'although', 'once', 'since', 'before', 'after'}
+# a line may begin with one of these less happily (a clause's subject), and never end with one of NO_END
+SUBJECT = {'i', "i'm", "i'll", "i'd", 'you', "you're", "you'll", 'we', "we're", "we'll", 'they', "they're",
+           'he', 'she', 'it', "it's", 'there', "there's", 'this'}
+NO_END = {'the', 'a', 'an', 'my', 'your', 'our', 'their', 'his', 'her', 'its', 'to', 'of', 'in', 'on', 'and',
+          'with', 'for', 'from', 'by', 'at', 'so', 'but', 'or', 'as'}
 EMO_W = 1.12                 # an emoji's advance, in font sizes (a thin space, the glyph, a thin space)
 
 
@@ -9055,11 +9083,12 @@ class Layout:
         self.S, self.W, self.H, self.fs, self.font = S, W, H, fs, font_family()
         self.cx = cairo.Context(cairo.RecordingSurface(cairo.CONTENT_COLOR_ALPHA, None))
         set_opts(self.cx)
-        self.items, self.boxes, self.overflow = [], {}, -1e9
+        self.items, self.boxes, self.overflow, self.widths = [], {}, -1e9, {}
         self.m, self.gutter, self.col_gap, self.ncols = margin, gutter, col_gap, ncols
         self.lead, self.sec_gap = lead * fs, 0.9 * fs
         y = margin + title_fs * 0.9
         self.text(margin, y, S.plan['title'], title_fs, bold=True)
+        self.title_right = margin + self.width(S.plan['title'], title_fs, bold=True)
         if subtitle and S.plan.get('credits'):
             self.text(margin, y + fs * 1.15, S.plan['credits'], fs * 0.72, colour='#555555')
         x = W - margin
@@ -9078,6 +9107,12 @@ class Layout:
         self.colw = (W - 2 * margin - (ncols - 1) * col_gap) / ncols
 
     def width(self, s, size, bold=False, italic=False):
+        k = (s, size, bold, italic)
+        if k not in self.widths:
+            self.widths[k] = self._width(s, size, bold, italic)
+        return self.widths[k]
+
+    def _width(self, s, size, bold, italic):
         self.cx.select_font_face(self.font, cairo.FONT_SLANT_ITALIC if italic else cairo.FONT_SLANT_NORMAL,
                                  cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL)
         self.cx.set_font_size(size)
@@ -9098,30 +9133,129 @@ class Layout:
             out.append([t, s, space, set(t['parts']) != line_parts])
         return out
 
+    @staticmethod
+    def tag_here(pcs, j):
+        """Does the small tag follow piece j (the last of a run of words the same few parts sing)?"""
+        t, sub = pcs[j][0], pcs[j][3]
+        return sub and (j == len(pcs) - 1 or not pcs[j + 1][3] or set(pcs[j + 1][0]['parts']) != set(t['parts']))
+
     def measure(self, pcs):
+        """A line's width as row() draws it."""
         fs, w = self.fs, 0
-        for t, s, sp, sub in pcs:
+        for j, (t, s, sp, sub) in enumerate(pcs):
             w += sum(self.width(p, fs, italic=sub, bold=b) for p, b in segs(s, t.get('bold', False)))
             w += self.width(' ', fs) if sp else 0
             w += fs * EMO_W if t.get('emoji') else 0
-            if sub:
+            if self.tag_here(pcs, j):
                 w += self.width(self.S.set_info(t['parts'])['tag'], fs * 0.5, bold=True) + fs * 0.06
         return w
 
-    def flow(self):
-        """Lay out every section; returns the tallest column's height. Rows never wrap: a row wider than
-        its column shows as self.overflow > 0, and the caller makes the type smaller."""
+    def break_cost(self, a, b):
+        """How bad a line break is between tokens a and b: 0 at a rest or a sentence's end, worst
+        between two words of one phrase."""
+        W = self.S.W
+        gap = W.starts[b['mi']] + b['q'] - max(v[1] for v in a['parts'].values())
+        held = max(v[1] - v[0] for v in a['parts'].values())
+        c = 10.0
+        if gap >= Fr(1, 2) or re.search(r'[.?!…]["”’\')]*$', a['text']):
+            c = 0.0
+        elif re.search(r'[,;:—–)]["”’\']*$', a['text']) or gap > 0:
+            c = 1.0
+        elif held >= 2 or (b['text'][:1].isupper() and norm(b['text']) not in ('i', "i'm", "i'll", "i'd")):
+            c = 3.0                                    # a held note, or a sentence the words run into
+        elif norm(b['text']) in PHRASE_START and b['syl'] in ('single', 'begin'):
+            c = 4.0
+        elif norm(b['text']) in SUBJECT and b['syl'] in ('single', 'begin'):
+            c = 6.0
+        if norm(a['text']) in NO_END and a['syl'] == 'single' and c > 0:
+            c = 15.0
+        return c
+
+    def wrap(self, pcs, first_avail, avail):
+        """A row as lines: itself if it fits, else the fewest lines (up to MAX_WRAP) that fit, broken
+        where break_cost and the lines' raggedness are least; one line more if that avoids a bad break
+        (an extra line costs 8). None if it cannot fit."""
+        n = len(pcs)
+        if self.measure(pcs) <= first_avail:
+            return [pcs]
+
+        memo = {}
+
+        def width(i, j):                              # pieces i..j-1 as one line
+            if (i, j) not in memo:
+                seg = [list(p) for p in pcs[i:j]]
+                seg[-1][2] = False
+                memo[i, j] = self.measure(seg)
+            return memo[i, j]
+        ends = [j + 1 for j in range(n - 1) if pcs[j][0]['syl'] in ('single', 'end')]
+        bc = {j: self.break_cost(pcs[j - 1][0], pcs[j][0]) for j in ends}
+        words = lambda i, j: sum(1 for p in pcs[i:j] if p[0]['syl'] in ('single', 'end')) + \
+            (pcs[j - 1][0]['syl'] not in ('single', 'end'))
+
+        def line_cost(i, j, last):
+            room = first_avail if i == 0 else avail
+            wd = width(i, j)
+            if wd > room:
+                return None
+            c = 0.0 if last else 4 * ((room - wd) / room) ** 2
+            return c + (5 if words(i, j) == 1 else 0)
+
+        found = None
+        for K in range(2, MAX_WRAP + 1):
+            best = {0: (0.0, [])}                     # line start -> (cost, breaks so far)
+            for k in range(K):
+                last = k == K - 1
+                nxt = {}
+                for i, (c0, br) in best.items():
+                    for j in ([n] if last else [e for e in ends if e > i]):
+                        lc = line_cost(i, j, last)
+                        if lc is None:
+                            continue
+                        c = c0 + lc + (0 if last else bc[j])
+                        if j not in nxt or c < nxt[j][0]:
+                            nxt[j] = (c, br + [j])
+                best = nxt
+            if n in best:
+                if found is None:
+                    found = best[n]
+                    continue                          # and try one line more
+                if best[n][0] + 8 < found[0]:
+                    found = best[n]
+            if found is not None:
+                break
+        if found is None:
+            return None
+        cuts = [0] + found[1]
+        out = []
+        for a, b in zip(cuts[:-1], cuts[1:]):
+            seg = [list(p) for p in pcs[a:b]]
+            seg[-1][2] = False
+            out.append(seg)
+        return out
+
+    def flow(self, room=None):
+        """Lay out every section; returns the tallest column's height. A row wider than its column
+        wraps (wrap); one that cannot shows as self.overflow > 0, and the caller makes the type smaller.
+        Sections stay whole in a column when they fit in room that way; otherwise a section may go on
+        in the next column, between two sung lines, under its heading again."""
         fs = self.fs
         avail = self.colw - self.gutter - fs * 1.25
         blocks = []
+        self.nwrap = 0
         for name, lines in self.S.sections:
-            rows = []
+            rows, units = [], []
             for ln in lines:
+                units.append(len(rows))
                 for k, ts in enumerate([ln['tokens']] + ln['conts']):
                     pcs = self.pieces(ts, ln['parts'])
-                    self.overflow = max(self.overflow, self.measure(pcs) + (fs * 0.8 if k else 0) - avail)
-                    rows.append(dict(pcs=pcs, line=ln, first=k == 0))
-            blocks.append((name, rows, fs * 1.25 + len(rows) * self.lead))
+                    parts = self.wrap(pcs, avail - (fs * 0.8 if k else 0), avail - fs * 0.8)
+                    if parts is None:
+                        self.overflow = max(self.overflow, 1.0)
+                        parts = [pcs]
+                    self.nwrap += len(parts) - 1
+                    for i, seg in enumerate(parts):
+                        rows.append(dict(pcs=seg, line=ln, first=k == 0 and i == 0))
+            blocks.append((name, rows, fs * 1.25 + len(rows) * self.lead, units))
         tot = [b[2] for b in blocks]
         hcol = lambda a, b: sum(tot[a:b]) + (b - a - 1) * self.sec_gap
         best = None
@@ -9130,11 +9264,16 @@ class Layout:
             v = max(hcol(a, b) for a, b in zip(e[:-1], e[1:]))
             if best is None or v < best[0]:
                 best = (v, e)
-        e = best[1]
-        for ci, (a, b) in enumerate(zip(e[:-1], e[1:])):
+        cols = [[(name, rows) for name, rows, _, _ in blocks[a:b]] for a, b in zip(best[1][:-1], best[1][1:])]
+        height = best[0]
+        if room is not None and height > room:
+            split = self.fill(blocks, room)
+            if split is not None:
+                cols, height = split
+        for ci, col in enumerate(cols):
             x0 = self.m + ci * (self.colw + self.col_gap)
             y = self.top
-            for name, rows, h in blocks[a:b]:
+            for name, rows in col:
                 y += fs * 0.95
                 self.text(x0, y, name.upper(), fs * 0.66, bold=True, colour='#6b6b6b')
                 y += fs * 0.3
@@ -9142,16 +9281,58 @@ class Layout:
                     y += self.lead
                     self.row(x0, y, r)
                 y += self.sec_gap
-        return best[0]
+        return height
+
+    def fill(self, blocks, room):
+        """Columns filled top to bottom, a section going on in the next column (between two sung
+        lines, at least two of them on each side) when it does not fit in what is left of this one.
+        (columns, tallest height), or None if it needs more columns than there are."""
+        fs, lead = self.fs, self.lead
+        head = fs * 1.25
+        cols, col, y = [], [], 0.0
+        for name, rows, h, units in blocks:
+            gap = self.sec_gap if col else 0.0
+            if y + gap + h <= room:
+                col.append((name, rows))
+                y += gap + h
+                continue
+            start, nm = 0, name
+            while True:
+                gap = self.sec_gap if col else 0.0
+                left = (len(rows) - start) * lead + head
+                if y + gap + left <= room:
+                    col.append((nm, rows[start:]))
+                    y += gap + left
+                    break
+                fit_to = [u for u in units if u > start and y + gap + head + (u - start) * lead <= room
+                          and units.index(u) - units.index(start) >= 2 and len(units) - units.index(u) >= 2]
+                if fit_to and start in units:
+                    u = fit_to[-1]
+                    col.append((nm, rows[start:u]))
+                    y += gap + head + (u - start) * lead
+                    start, nm = u, name + ' (continued)'
+                elif not col:
+                    return None                        # not even a fresh column holds it
+                cols.append((col, y))
+                col, y = [], 0.0
+        cols.append((col, y))
+        if len(cols) > self.ncols:
+            return None
+        return [c for c, _ in cols], max(h for _, h in cols)
 
     def row(self, x0, y, r):
         fs, S, ln = self.fs, self.S, r['line']
         if r['first']:
             lx = x0
             for p in S.W.sort_parts(ln['parts']):
-                self.items.append(('dot', lx + fs * 0.17, y - fs * 0.3, fs * 0.17, S.colours[p]))
+                self.items.append(('dot', lx + fs * 0.17, y - fs * 0.42, fs * 0.17, S.colours[p]))
                 lx += fs * 0.38
-            self.text(x0, y + fs * 0.62, S.set_info(ln['parts'])['label'], fs * 0.5, colour='#777777')
+            # the label tight under the dots, nearer them than the next row's, and within the gutter
+            lab, size = S.set_info(ln['parts'])['label'], fs * 0.5
+            w = self.width(lab, size)
+            if w > self.gutter - fs * 0.25:
+                size = max(fs * 0.36, size * (self.gutter - fs * 0.25) / w)
+            self.text(x0, y + fs * 0.3, lab, size, colour='#777777')
             s = str(ln['bar'])
             self.text(x0 + self.colw - self.width(s, fs * 0.55), y, s, fs * 0.55, colour='#9a9a9a')
         x = x0 + self.gutter + (0 if r['first'] else fs * 0.8)
@@ -9163,7 +9344,7 @@ class Layout:
                 w += self.width(p, fs, italic=sub, bold=b)
             self.boxes.setdefault(t['id'], []).append((x, y, x + w))
             x += w
-            if sub and (j == len(pcs) - 1 or not pcs[j + 1][3] or set(pcs[j + 1][0]['parts']) != set(t['parts'])):
+            if self.tag_here(pcs, j):
                 tg = S.set_info(t['parts'])['tag']
                 x += fs * 0.06
                 self.text(x, y - fs * 0.38, tg, fs * 0.5, bold=True,
@@ -9222,24 +9403,40 @@ class Layout:
                 cx.fill()
 
 
-def fit(S, W, H, margin, ncols, start, step, gutter_k, col_gap, bottom, subtitle, title_k=None):
-    """The largest type with every row on one line and every column on the page; then the line
-    spacing opened into the room left."""
-    fs = start
-    mk = lambda fs, lead: Layout(S, W, H, margin=margin, fs=fs, title_fs=title_k * fs if title_k else 22,
-                                 gutter=fs * gutter_k, col_gap=col_gap(fs), lead=lead, ncols=ncols,
-                                 subtitle=subtitle)
-    while True:
-        L = mk(fs, 1.34)
-        h = L.flow()
-        if L.overflow <= 0 and L.top + h <= H - bottom:
-            break
-        fs -= step
+def fit(S, W, H, margin, cols, start, step, gutter_k, col_gap, bottom, subtitle, title_k=None):
+    """For each column count, the largest type at which every row fits its column (wrapped where it
+    must be) and every column the page; the count with the largest type wins, less 0.5% for each
+    wrapped line (a wrap costs some reading). Then the line spacing opened into the room left."""
+    mk = lambda fs, lead, nc: Layout(S, W, H, margin=margin, fs=fs, title_fs=title_k * fs if title_k else 22,
+                                     gutter=fs * gutter_k, col_gap=col_gap(fs), lead=lead, ncols=nc,
+                                     subtitle=subtitle)
+
+    def ok(fs, nc, lead=1.34):
+        L = mk(fs, lead, nc)
+        room = H - bottom - L.top - 0.5 * fs           # the last row's label hangs below its line
+        h = L.flow(room)
+        return L if L.overflow <= 0 and h <= room else None
+
+    best = None
+    for nc in cols:
+        lo, hi = step, start
+        if ok(lo, nc) is None:
+            continue
+        while hi - lo > step / 2:                     # bisect to the step, then step down to a fit
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if ok(mid, nc) else (lo, mid)
+        fs = math.floor(lo / step) * step
+        while fs > step and ok(fs, nc) is None:
+            fs -= step
+        L = ok(fs, nc)
+        score = fs * (1 - 0.005 * L.nwrap)
+        if best is None or score > best[0]:
+            best = (score, fs, nc, L)
+    _, fs, nc, L = best
     lead = 1.34
     while lead < 1.8:
-        L2 = mk(fs, lead + 0.02)
-        h2 = L2.flow()
-        if L2.top + h2 > H - bottom:
+        L2 = ok(fs, nc, lead + 0.02)
+        if L2 is None:
             break
         L, lead = L2, lead + 0.02
     return L, fs, lead
@@ -9251,12 +9448,13 @@ FOOTNOTE = ('Dots: who sings the row.  Italic words with a small tag: only those
 
 def layouts(S):
     """The two layouts, each computed once, so every copy of a layout is the same:
-    'page', the letter portrait page in two columns (the PDF's first page, and the iPad video);
-    'screen', 1920x1080 in three columns (the 16:9 video, and the PDF's second page)."""
+    'page', the letter portrait page in one to three columns (the PDF's first page, and the iPad video);
+    'screen', 1920x1080 in one to four columns (the 16:9 video, and the PDF's second page)."""
     if not hasattr(S, '_layouts'):
         S._layouts = {
-            'page': fit(S, 612, 792, 34, 2, 12.0, 0.1, 2.75, lambda fs: 18, 30, True),
-            'screen': fit(S, 1920, 1080, 34, 3, 32.0, 0.25, 2.75, lambda fs: fs * 1.3, 20, False, title_k=1.45),
+            'page': fit(S, 612, 792, 34, (1, 2, 3), 30.0, 0.1, 2.75, lambda fs: 18, 30, True),
+            'screen': fit(S, 1920, 1080, 34, (1, 2, 3, 4), 90.0, 0.25, 2.75, lambda fs: fs * 1.3, 20, False,
+                          title_k=1.45),
         }
     return S._layouts
 
@@ -9287,10 +9485,11 @@ def pdf(S, out):
     cx.scale(k, k)
     Ls.draw(cx)
     surf.finish()
-    print(f'lyric sheet: {os.path.basename(out)}: page 1 portrait, to print ({fs_p:.1f} pt type, line '
-          f'spacing {lead_p:.2f}); page 2 landscape, the 16:9 video\'s page ({fs_s * k:.1f} pt type, '
-          f'{612 - Ls.H * k:.0f} pt empty below); '
-          f'{sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)} rows, all on one line each')
+    rows = sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)
+    print(f'lyric sheet: {os.path.basename(out)}: page 1 portrait, to print ({fs_p:.1f} pt type, '
+          f'{Lp.ncols} column(s), line spacing {lead_p:.2f}, {Lp.nwrap} wrapped line(s)); page 2 landscape, '
+          f'the 16:9 video\'s page ({fs_s * k:.1f} pt type, {Ls.ncols} column(s), {Ls.nwrap} wrapped line(s), '
+          f'{612 - Ls.H * k:.0f} pt empty below); {rows} rows')
     return out
 
 
@@ -9303,16 +9502,86 @@ SHAPES = {
 }
 
 
+def draw_frame(S, L, st, path, featured=None, shape='screen'):
+    """One frame of a lyric video as a PNG (or, with path None, the cairo surface): L (the shape's
+    layout) with st = (lit (token id, part) pairs, bar number) lit and labelled."""
+    W, H = SHAPES[shape]['size']
+    fs = L.fs
+    k = min(W / L.W, H / L.H)
+    band = H - L.H * k                       # below the page: the iPad's bar number goes here
+    act, bar = st
+    surf = cairo.ImageSurface(cairo.FORMAT_RGB24, W, H)
+    cx = cairo.Context(surf)
+    cx.set_source_rgb(1, 1, 1)
+    cx.paint()
+    cx.save()
+    cx.translate((W - L.W * k) / 2, 0)
+    cx.scale(k, k)
+    by = {}
+    for tid, p in act:
+        by.setdefault(tid, []).append(p)
+    for tid, ps in by.items():
+        if featured is None:
+            L.highlight(cx, tid, [S.colours[p] for p in S.W.sort_parts(ps)])
+        else:
+            L.highlight(cx, tid, [S.colours[featured] if featured in ps else GREY])
+    L.draw(cx)
+    if shape == 'ipad':
+        footnote(cx, L)
+    cx.restore()
+    # the bar number, and whose video it is: in the header on the 16:9 screen, below the page on
+    # the iPad
+    size = fs * 0.7 * k if shape == 'screen' else min(band * 0.45, 30)
+    y = L.head_y * k if shape == 'screen' else H - band / 2 + size * 0.35
+    cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cx.set_font_size(size)
+    bits = []
+    if bar is not None:
+        bits.append((f'bar {bar}', '#8a8a8a', False))
+    if featured is not None:
+        bits.append((f'{S.short(featured)} in colour, other parts grey', S.colours[featured], True))
+    if shape == 'screen':
+        # between the title and the legend: the bar number in a slot as wide as the widest, then
+        # whose video it is; smaller type if they do not fit
+        lo, hi = (L.title_right + fs) * k, (L.legend_left - fs) * k
+
+        def adv(s, b):
+            cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+            cx.set_font_size(size)
+            return cx.text_extents(s).x_advance
+        while True:
+            wbar = max(adv(f'bar {n}', False) for n in set(S.W.numbers))
+            tot = wbar + sum(size * 1.5 + adv(s, b) for s, c, b in bits if b)
+            if tot <= hi - lo or size < 10:
+                break
+            size *= 0.95
+        x = (lo + hi) / 2 - tot / 2
+        for s, c, b in bits:
+            adv(s, b)
+            cx.set_source_rgb(*rgb(c))
+            cx.move_to(x if not b else x + wbar + size * 1.5, y)
+            cx.show_text(s)
+    else:
+        x = 34 * k
+        for s, c, b in bits:
+            cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+            cx.set_source_rgb(*rgb(c))
+            cx.move_to(x, y)
+            cx.show_text(s)
+            x += cx.text_extents(s).x_advance + size * 1.5
+    if path is None:
+        return surf
+    surf.write_to_png(path)
+
+
 def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
     """The sheet with each syllable lit while it is sung: in the colours of every part singing it
     (stacked), or in a part's own video, that part's colour where it sings and grey where only others
-    do. shape 'screen': 1920x1080, three columns. shape 'ipad': 1536x2048 (3:4 portrait), exactly the
+    do. shape 'screen': 1920x1080, its own columns. shape 'ipad': 1536x2048 (3:4 portrait), exactly the
     printed page. wins: (audio start, audio end, token id, part name). bars: (audio time, bar
     number) for the bar number shown. One frame per change, exact to the millisecond."""
-    W, H = SHAPES[shape]['size']
-    L, fs, lead = layouts(S)[SHAPES[shape]['layout']]
-    k = min(W / L.W, H / L.H)
-    band = H - L.H * k                       # below the page: the iPad's bar number goes here
     dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0',
                                 mp3], capture_output=True, text=True).stdout)
     bar_t = np.array([b[0] for b in bars])
@@ -9321,58 +9590,6 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
         act = tuple(sorted((tid, p) for t0, t1, tid, p in wins if t0 <= t < t1))
         j = int(np.searchsorted(bar_t, t, side='right')) - 1
         return act, (bars[j][1] if j >= 0 else None)
-
-    def draw(st, path):
-        act, bar = st
-        surf = cairo.ImageSurface(cairo.FORMAT_RGB24, W, H)
-        cx = cairo.Context(surf)
-        cx.set_source_rgb(1, 1, 1)
-        cx.paint()
-        cx.save()
-        cx.translate((W - L.W * k) / 2, 0)
-        cx.scale(k, k)
-        by = {}
-        for tid, p in act:
-            by.setdefault(tid, []).append(p)
-        for tid, ps in by.items():
-            if featured is None:
-                L.highlight(cx, tid, [S.colours[p] for p in S.W.sort_parts(ps)])
-            else:
-                L.highlight(cx, tid, [S.colours[featured] if featured in ps else GREY])
-        L.draw(cx)
-        if shape == 'ipad':
-            footnote(cx, L)
-        cx.restore()
-        # the bar number, and whose video it is: in the header on the 16:9 screen, below the page on
-        # the iPad
-        size = fs * 0.7 * k if shape == 'screen' else min(band * 0.45, 30)
-        y = L.head_y * k if shape == 'screen' else H - band / 2 + size * 0.35
-        cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
-        cx.set_font_size(size)
-        bits = []
-        if bar is not None:
-            bits.append((f'bar {bar}', '#8a8a8a', False))
-        if featured is not None:
-            bits.append((f'{S.short(featured)} in colour, other parts grey', S.colours[featured], True))
-        if shape == 'screen':
-            x = W / 2
-            for s, c, b in bits:
-                cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
-                                    cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
-                cx.set_source_rgb(*rgb(c))
-                w = cx.text_extents(s).x_advance
-                cx.move_to(x - (w / 2 if not b else 0) + (fs * 3 * k if b else 0), y)
-                cx.show_text(s)
-        else:
-            x = 34 * k
-            for s, c, b in bits:
-                cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
-                                    cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
-                cx.set_source_rgb(*rgb(c))
-                cx.move_to(x, y)
-                cx.show_text(s)
-                x += cx.text_extents(s).x_advance + size * 1.5
-        surf.write_to_png(path)
 
     times = sorted({0.0} | {x for w in wins for x in w[:2] if 0 <= x < dur} | {b for b in bar_t if 0 <= b < dur})
     segs_ = []
@@ -9384,6 +9601,15 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
                 segs_[-1] = (ms, st)
             continue
         segs_.append((ms, st))
+    return encode(S, segs_, mp3, out, dur, featured=featured, crf=crf, shape=shape)
+
+
+def encode(S, segs_, audio, out, dur, featured=None, crf=20, shape='screen', copy_audio=False):
+    """segs_: (start in ms, state) per frame, each shown until the next; drawn by draw_frame and
+    encoded over audio (an mp3, or with copy_audio an earlier video whose sound is kept as it is)."""
+    W, H = SHAPES[shape]['size']
+    L, fs, lead = layouts(S)[SHAPES[shape]['layout']]
+    k = min(W / L.W, H / L.H)
     end_ms = int(round(1000 * dur))
     tmpd = tempfile.mkdtemp(prefix='lyric_video_')
     lines, files = ['ffconcat version 1.0'], {}
@@ -9392,7 +9618,7 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
         for j, (ms, st) in enumerate(segs_):
             if st not in files:
                 files[st] = os.path.join(tmpd, f'{len(files):06d}.png')
-                futs.append(pool.submit(draw, st, files[st]))
+                futs.append(pool.submit(draw_frame, S, L, st, files[st], featured, shape))
             nxt = segs_[j + 1][0] if j + 1 < len(segs_) else end_ms
             lines += [f"file '{files[st]}'", 'option framerate 1000', f'duration {(nxt - ms) / 1000:.3f}']
         for f in futs:
@@ -9400,10 +9626,11 @@ def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
     lines += [f"file '{files[segs_[-1][1]]}'", 'option framerate 1000']
     lst = os.path.join(tmpd, 'frames.ffconcat')
     open(lst, 'w').write('\n'.join(lines) + '\n')
-    r = subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst, '-i', mp3,
+    acodec = ['-c:a', 'copy'] if copy_audio else ['-c:a', 'aac', '-b:a', '192k']
+    r = subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst, '-i', audio,
                         '-map', '0:v', '-map', '1:a', *sv.vfr_flag(), '-video_track_timescale', '1000',
                         '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'stillimage', '-g', '30',
-                        '-crf', str(crf), '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-b:a', '192k',
+                        '-crf', str(crf), '-pix_fmt', 'yuv420p', *acodec,
                         '-t', f'{dur:.3f}', '-movflags', '+faststart', out])
     shutil.rmtree(tmpd, ignore_errors=True)
     if r.returncode:
