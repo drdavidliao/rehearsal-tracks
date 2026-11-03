@@ -112,7 +112,7 @@ class Score:
     def phrase_tail(self, p, n):
         """the notes at the end of bar n that start a new phrase leading into bar n+1, or []: from beat 3 on (the
         second half of a compound bar), with words, after a rest, or straight after a word that ends a phrase
-        ('long.' then 'ding' with no rest between)"""
+        ('long.' then 'ding' with no rest between); from beat 2 when a beat's rest is all that comes before them"""
         evs = self.bars[p].get(n, [])
         tail = []
         for e in reversed(evs):
@@ -120,6 +120,12 @@ class Score:
             tail.append(e)
         tail.reverse()
         if tail and len(tail) < len(evs) and tail[0]['on'] >= self.pickup_from(n) and tail[0]['lyric']:
+            return tail
+        # a bar that is only a beat's rest and then words running straight over the barline: the whole bar leads in,
+        # though it starts on beat 2
+        nxt = self.bars[p].get(n + 1, [])
+        if (tail and len(tail) == len(evs) - 1 and not self.meter(n)[1] and tail[0]['on'] == self.meter(n)[0] and tail[0]['lyric']
+                and nxt and nxt[0]['midi'] is not None and nxt[0]['lyric']):
             return tail
         # no rest: the first note from beat 3 on that begins a word, when the syllable sung before it ends a phrase
         for i, e in enumerate(evs):

@@ -894,6 +894,23 @@ What an unaccompanied five-part score (S, A1, A2, T, B, 154 bars) added, all now
   `--lanes` with both lanes per part (`0b=Soprano,1a=Soprano,1b=Alto 1,2a=Alto 1,...`);
   the default lanes reported 61 disagreements, all of them lanes.
 
+What a swung SATB + piano in G (108 bars, Dorico 6.2) added, all in the reader except the swing mark:
+
+- **Triplets.** The digit is Bravura `E883`. `Reader.triplets` times at 2/3 the run of notes the digit is centred over,
+  three of some value (a quarter and an eighth count), and the emit writes `<time-modification>` and `<tuplet>`.
+- **A key signature is counted on the top staff only.** A wide piano chord's accidentals can stand more than a staff
+  space left of the chord, and they were read as a key change (18 false ones) and lost from the notes. On other
+  staves only that many leftmost accidentals are the signature.
+- **A clef just before a barline takes effect in the next bar**, in Bravura `E052` at size 9 or `F472`, the small G
+  clef (a staff that swaps treble for octave-treble). Pitches were right without this, but the file showed the wrong clef.
+- **A trill's auxiliary note** is a small head between `E0F5` and `E0F6`: not a note of the bar. Check 17 reports that
+  bar, which is expected. `E566` writes a trill mark. `E5D4` is a doit, written as `<doit/>`.
+- **Chord symbols can sit nearer the staff above than the piano**, so the midpoint band loses them. Where the words
+  are another size than the symbols, the band starts at the staff above. The kinds now include `m6`, `m11`, `dim7`,
+  `9`, `9sus4`, and a small `(#11)` (`F4DE`), whose hidden degree is altered.
+- **A swing mark is in Metrico** (`E230 E232 = E2A0`), which the reader skips: read it by eye and write `<swing>` in
+  the tempo's `<sound>` in the build, or tracks come out straight.
+
 ## Step 3 — Exploding a condensed score into one part per voice
 
 For singing synthesis you need one monophonic part per voice, because a synth
@@ -3021,7 +3038,10 @@ main director says, so the plan always covers every letter.
   exactly, except that the earlier one's basses pick up into the letter after it,
   reads as a near repeat with a "new notes, rhythm and words" bar to drill; and on
   an SAATB, L's last bar was drilled for every part because three of them began
-  M's "ding" on its beat 3, straight after L's "long.".
+  M's "ding" on its beat 3, straight after L's "long.". A bar that is only a beat's
+  rest and then words running over the barline leads in too, from beat 2: in a swung
+  SATB the chorus's three-note entry was cued without its lead-in, and its last bar
+  was drilled as all new though every part had sung it.
 - **A note held for another length before a rest is not drilled.** Where a bar
   has the same attacks, pitches and words as the earlier letter's and only a
   note's length before a rest differs, it is a **say** step at that bar,
@@ -3034,7 +3054,10 @@ main director says, so the plan always covers every letter.
   has drilled bars, the announcements come first, each part's together (the
   second "And in bar 105 …"), not in bar order: the singers see only their own
   part, so the director turns to each part once. The director asked for this on
-  an SAATB whose basses had been given P+SS for one shortened note.
+  an SAATB whose basses had been given P+SS for one shortened note. A letter's last
+  bar holding only the next letter's lead-in, where the parallel bar still had the
+  part singing, is a say step as well: the held note stops at the barline, or one
+  note less comes (`Planner.ended_early`).
 - **Nearly the same:** at most a third of the sung bars differ (and under half).
   Only the parts that changed, only the bars that changed, from one bar earlier
   for a run-in; then everyone from the top of the letter. A "why" note says which
@@ -3136,7 +3159,7 @@ main director says, so the plan always covers every letter.
     leave no room), below the words of the staff
     above, stepped right of a dynamic under it and clear of the boxed rehearsal
     letter, with the shorthand beside it. Several on one staff and bar share one
-    caption; a caption with no room on the right goes left; with no room on
+    caption; a caption keeps off a boxed letter on the top staff; with no room on the right it goes left; with no room on
     either side it runs on to the right past the dynamic in its way, and only
     then above (where it lands on the words of the staff above).
   - "Everyone" steps sit a row higher, by the letter; a spoken drill for everyone

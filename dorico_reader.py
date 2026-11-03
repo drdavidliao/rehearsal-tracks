@@ -23,13 +23,20 @@ RESTS = {0xE4E3: F(4), 0xE4E4: F(2), 0xE4E5: F(1), 0xE4E6: F(1, 2), 0xE4E7: F(1,
 ACC = {0xE260: -1, 0xE261: 0, 0xE262: 1}
 FLAGS = {0xE240: (1, 'up'), 0xE241: (1, 'down'), 0xE242: (2, 'up'), 0xE243: (2, 'down')}
 DOT = 0xE1E7
-CLEF = {0xE050: 'G', 0xE052: 'G8', 0xE062: 'F'}
+CLEF = {0xE050: 'G', 0xE052: 'G8', 0xE062: 'F', 0xF472: 'G'}    # F472: the small G clef of a change at a barline
 TOPLINE = {'G': 5 * 7 + 3, 'G8': 4 * 7 + 3, 'F': 3 * 7 + 5}   # diatonic index of the top line, sounding
 DYN = {0xE520: 'p', 0xE522: 'f', 0xE52B: 'pp', 0xE52C: 'mp', 0xE52D: 'mf', 0xE52F: 'ff', 0xE530: 'fff', 0xE52A: 'ppp'}
 STACC = {0xE4A2, 0xE4A3}
 ACCENT = {0xE4A0, 0xE4A1}
+DOIT = 0xE5D4
+TRILL = 0xE566
+TUPLET3 = 0xE883
+PARENS = {0xE0F5, 0xE0F6}
 STEPS = 'CDEFGAB'
 KEY_SHARPS = 'FCGDAEB'
+
+
+TIME_MOD = '<time-modification><actual-notes>3</actual-notes><normal-notes>2</normal-notes></time-modification>'
 
 
 class Glyph:
@@ -66,6 +73,9 @@ class PageModel:
         for si, sy in enumerate(self.systems):
             for k, s in enumerate(sy): s['sys'] = si; s['k'] = k
         self.glyphs = [Glyph(c, H) for c in page.chars if 'Bravura' in c['fontname']]
+        # a trill's auxiliary note, a small head in parentheses, is not a note of the bar
+        parens = [g for g in self.glyphs if g.code in PARENS]
+        self.glyphs = [g for g in self.glyphs if not (g.code in HEADS and any(abs(p.y - g.y) < 1 and abs(p.cx - g.cx) < 6 for p in parens))]
         self.text = [c for c in page.chars if 'Bravura' not in c['fontname']]
         for g in self.glyphs:
             s = self.nearest_staff(g.y)
@@ -347,7 +357,32 @@ class Reader:
         for d in left:
             self.problems.append(f"bar {bar['num']} staff {k}: unclaimed dot at x{d.x0:.0f}")
         items.sort(key=lambda it: it['x'])
+        self.triplets(items, [g for g in gl if g.code == TUPLET3], bar, k)
         return dict(items=items, accs=accs, clefs=clefs, s=s, glyphs=gl)
+
+    def triplets(self, items, digits, bar, k):
+        """each "3" times the run of notes it is centred over at 2/3: the run that holds three of some note value and
+        whose middle is nearest the digit (the digit sits over the middle of the group, bracketed or not)"""
+        for d in sorted(digits, key=lambda g: g.x0):
+            best = None
+            free = [it for it in items if not it.get('tup') and not it.get('whole')]
+            for i in range(len(free)):
+                for j in range(i, len(free)):
+                    run = free[i:j + 1]
+                    # a chord and its neighbour voice on one staff are not one run: stay with one stem direction
+                    if len({it['dir'] for it in run if it['kind'] == 'chord'}) > 1: continue
+                    tot = sum(it['dur'] for it in run)
+                    unit = tot / 3
+                    if unit not in (F(1, 4), F(1, 2), F(1), F(2)): continue
+                    if not all(it['dur'] / unit == int(it['dur'] / unit) for it in run): continue
+                    dist = abs((run[0]['x'] + run[-1]['xr']) / 2 - d.cx)
+                    if best is None or dist < best[0] - 0.01: best = (dist, run)
+            if best is None or best[0] > 12:
+                self.problems.append(f"bar {bar['num']} staff {k}: triplet digit at x{d.x0:.0f} has no run of notes"); continue
+            run = best[1]
+            for it in run:
+                it['dur'] = it['dur'] * F(2, 3); it['tup'] = 'mid'
+            run[0]['tup'] = 'start'; run[-1]['tup'] = 'stop'
 
     # -------------------------------------------------------------- pass 2: voices and onsets
     BAR = F(4)
@@ -446,6 +481,12 @@ class Reader:
                 sb['keyaccs'] = kacc
                 ks.append(kacc)
             newkey = None
+            # the top staff (one line, whose accidentals stand close to their notes) says how many; on other staves
+            # only that many leftmost are the signature: a wide piano chord's accidentals can stand far left of it too
+            for sb, kacc in zip(bar['staves'][1:], ks[1:]):
+                kacc.sort(key=lambda a: a.x0)
+                del kacc[len(ks[0]):]
+                sb['keyaccs'] = kacc
             if any(ks):
                 sharps = sum(1 for a in ks[0] if ACC[a.code] == 1)
                 flats = sum(1 for a in ks[0] if ACC[a.code] == -1)
@@ -506,6 +547,11 @@ class Reader:
                     cur_clef = CLEF[g.code]
                 if cur_clef: clef[k] = cur_clef
                 sb['clef_start'] = CLEF[clefs_x[0].code] if clefs_x and clefs_x[0].x0 < min([it['x'] for it in sb['items']], default=1e9) else None
+                # a clef printed just before a barline takes effect in the next bar
+                if not sb['clef_start'] and bar['num'] > 1 and self.bars[bar['num'] - 2]['staves'][k].get('clef_after'):
+                    sb['clef_start'] = self.bars[bar['num'] - 2]['staves'][k]['clef_after']
+                if clefs_x and clefs_x[-1].x0 > max([it['x'] for it in sb['items']], default=-1e9):
+                    sb['clef_after'] = CLEF[clefs_x[-1].code]
         return self
 
     # -------------------------------------------------------------- pass 4: ties and slurs
@@ -668,6 +714,7 @@ class Reader:
 
     # -------------------------------------------------------------- pass 5: lyrics
     def lyrics(self, vocal_staves, font_re, size):
+        self.lyric_pt = size
         self.lyric_size = size
         self.notes = getattr(self, 'notes', [])
         rows_by_staff = collections.defaultdict(list)    # k -> [(pi, si, row tokens)]
@@ -816,6 +863,14 @@ class Reader:
                         self.problems.append(f"bar {bar['num']} staff {k}: articulation with no note"); continue
                     it = min(its, key=lambda it: abs((it['x'] + it['xr']) / 2 - g.cx))
                     it.setdefault('artic', []).append('staccato' if g.code in STACC else 'accent')
+                elif g.code in (DOIT, TRILL):
+                    bar, _ = self.locate(pi, si, k, g.cx)
+                    its = [it for it in bar['staves'][k]['items'] if it['kind'] == 'chord']
+                    if not its:
+                        self.problems.append(f"bar {bar['num']} staff {k}: doit or trill with no note"); continue
+                    # a doit stands just after its note, a trill sign under or over its note's start
+                    it = min(its, key=lambda it: abs(it['xr'] - g.x0) if g.code == DOIT else abs(it['x'] - g.x0))
+                    it['doit' if g.code == DOIT else 'trill'] = True
                 elif g.code == 0xECA5:
                     pass
             for w in pm.wedges:
@@ -879,16 +934,20 @@ class Reader:
                     s = sy[chord_staff]; sp = s['sp']
                     prev = sy[chord_staff - 1]
                     lo = (prev['bot'] + s['top']) / 2
+                    # where the words above are another size than the symbols, size alone tells them apart: symbols can
+                    # sit nearer the staff above than the piano on a tight system
+                    if getattr(self, 'lyric_pt', None) not in (chord_size if isinstance(chord_size, (tuple, list)) else (chord_size,)): lo = prev['bot']
                     cs = [c for c in pm.page.chars if lo < c['top'] < s['top'] and c['bottom'] < s['top']
                           and (('BravuraText' in c['fontname']) or (re.search(chord_font, c['fontname'])
                                and any(abs(c['size'] - z) < 0.15 for z in (chord_size if isinstance(chord_size, (tuple, list)) else (chord_size,)))))]
                     cs.sort(key=lambda c: c['x0'])
                     toks = []
                     for c in cs:
-                        if toks and c['x0'] - toks[-1][-1]['x1'] < 1.2: toks[-1].append(c)
+                        # a small "(add9)" can stand a little further from its chord than the chord's own letters
+                        if toks and (c['x0'] - toks[-1][-1]['x1'] < 1.2 or (c['text'] == '(' and c['x0'] - toks[-1][-1]['x1'] < 4)): toks[-1].append(c)
                         else: toks.append([c])
                     for t in toks:
-                        txt = ''.join({0xED60: 'b', 0xED61: 'n', 0xED62: '#', 0xE87B: '/'}.get(ord(c['text']), c['text']) for c in t)
+                        txt = ''.join({0xED60: 'b', 0xED61: 'n', 0xED62: '#', 0xF4DE: '#', 0xE87B: '/'}.get(ord(c['text']), c['text']) for c in t)
                         bar, on = self.locate(pi, si, chord_staff, t[0]['x0'])
                         # onset: the piano column nearest the symbol's left edge, either staff
                         cand = [it for kk in (chord_staff, chord_staff + 1) for it in bar['staves'][kk]['items'] if 'on' in it]
@@ -1091,7 +1150,10 @@ class Reader:
             s = '<note>' + ('<rest measure="yes"/>' if meas else '<rest/>') + f'<duration>{int(it["dur"] * DIV)}</duration>'
             s += f'<voice>{voice}</voice>'
             if not meas: s += f'<type>{TYPE[it["base"]]}</type>' + '<dot/>' * it['dots']
-            return s + stf + '</note>'
+            if it.get('tup'): s += TIME_MOD
+            s += stf
+            if it.get('tup') in ('start', 'stop'): s += f'<notations><tuplet type="{it["tup"]}"/></notations>'
+            return s + '</note>'
         out = ''
         beams = self.beams_of(it, pm)
         heads = sorted(it['heads'], key=lambda h: h.y, reverse=True)   # low to high
@@ -1106,6 +1168,7 @@ class Reader:
             s += f'<voice>{voice}</voice><type>{TYPE[it["base"]]}</type>' + '<dot/>' * it['dots']
             if p['acc']:
                 s += '<accidental>' + {1: 'sharp', -1: 'flat', 0: 'natural'}[p['acc_val']] + '</accidental>'
+            if it.get('tup'): s += TIME_MOD
             if it['dir']: s += f'<stem>{it["dir"]}</stem>'
             if h.code == XHEAD: s += '<notehead>x</notehead>'
             s += stf
@@ -1121,8 +1184,10 @@ class Reader:
                 for _ in range(it.get('slur_start', 0)):
                     n_ = min(set(range(1, 7)) - set(op)); op.append(n_)
                     nots += f'<slur type="start" number="{n_}"/>'
-                if it.get('artic'):
-                    nots += '<articulations>' + ''.join(f'<{a}/>' for a in it['artic']) + '</articulations>'
+                if it.get('tup') in ('start', 'stop'): nots += f'<tuplet type="{it["tup"]}"/>'
+                if it.get('trill'): nots += '<ornaments><trill-mark/></ornaments>'
+                if it.get('artic') or it.get('doit'):
+                    nots += '<articulations>' + ''.join(f'<{a}/>' for a in it.get('artic', [])) + ('<doit/>' if it.get('doit') else '') + '</articulations>'
             if nots: s += f'<notations>{nots}</notations>'
             if i == 0 and it.get('lyric'):
                 t = it['lyric']
@@ -1226,7 +1291,9 @@ def direction_xml(d, off, staff, DIV):
     raise ValueError(d)
 
 
-KIND = [('maj7', 'major-seventh', None), ('m7', 'minor-seventh', None), ('sus2', 'suspended-second', None),
+KIND = [('maj7', 'major-seventh', None), ('m7', 'minor-seventh', None), ('m6', 'minor-sixth', None), ('m11', 'minor-11th', None),
+        ('dim7', 'diminished-seventh', None), ('dim', 'diminished', None), ('9', 'dominant-ninth', None),
+        ('9sus4', 'suspended-fourth', None), ('7sus4', 'suspended-fourth', None), ('sus2', 'suspended-second', None),
         ('sus4', 'suspended-fourth', None), ('sus', 'suspended-fourth', None), ('m', 'minor', None),
         ('7', 'dominant', None), ('6', 'major-sixth', None), ('add9', 'major', 'add9'), ('11', 'dominant-11th', None),
         ('', 'major', None)]
@@ -1239,8 +1306,8 @@ def harmony_xml(txt, off, staff, DIV):
     alt = {'b': -1, '#': 1}
     kind = None
     # Dorico sets "(add9)", "(add11)", "(omit3)" smaller after the kind: the kind text keeps them, degrees play them
-    degs = re.findall(r'\((add|omit)(\d+)\)', rest)
-    base = re.sub(r'\((?:add|omit)\d+\)', '', rest)
+    degs = re.findall(r'\((add|omit|#|b)(\d+)\)', rest)
+    base = re.sub(r'\((?:add|omit|#|b)\d+\)', '', rest)
     for suf, k, deg in KIND:
         if base == suf: kind = (k, suf); break
     if kind is None: raise ValueError(f'chord kind {rest!r} in {txt!r}')
@@ -1249,8 +1316,8 @@ def harmony_xml(txt, off, staff, DIV):
     if bass:
         s += '<bass><bass-step>%s</bass-step>%s</bass>' % (bass, f'<bass-alter>{alt[ba]}</bass-alter>' if ba in alt else '')
     for typ, n in degs:
-        s += (f'<degree print-object="no"><degree-value>{n}</degree-value><degree-alter>0</degree-alter>'
-              f'<degree-type>{"add" if typ == "add" else "subtract"}</degree-type></degree>')
+        s += (f'<degree print-object="no"><degree-value>{n}</degree-value><degree-alter>{ {"#": 1, "b": -1}.get(typ, 0) }</degree-alter>'
+              f'<degree-type>{"subtract" if typ == "omit" else "add"}</degree-type></degree>')
     if off: s += f'<offset>{int(off * DIV)}</offset>'
     if staff: s += f'<staff>{staff}</staff>'
     return s + '</harmony>'

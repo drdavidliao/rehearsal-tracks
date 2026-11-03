@@ -408,6 +408,24 @@ class Planner:
                     short=f"{PL[p]} m{n}: {'; '.join(bits)}",
                     say=f"{Cap(PL[p])}, in bar {n} " + '; '.join(said) + '.')
 
+    def ended_early(self, p, n, m):
+        """a step for a letter's last bar n where part p sings nothing before the next letter's lead-in, though the
+        parallel bar m had it still singing: a held note ran on, or one more note came"""
+        if n not in self.S.cut or self.S.line(p, n) or not 1 <= m < n: return None
+        before = [e for e in self.S.bars[p].get(m, []) if e['midi'] is not None and e['on'] < self.S.cut[n] and not e.get('lead_in')]
+        if not before: return None
+        word = self.S.last_syllable(p, n, F(0))
+        w = f"'{word.strip(',.;:!?')}'" if word else 'the note'
+        ln = length(before[0]['dur'])
+        if before[0]['tie_stop']:
+            text = f"m{n - 1}: {w} stops at the barline (m{m - 1}: held on for a {ln} into m{m})"
+            say = f"{Cap(PL[p])}, {w} stops at the end of bar {n - 1}; in bar {m - 1} it was held on for a {ln} into bar {m}."
+        else:
+            text = f"m{n}: nothing on beat 1 (m{m}: a {ln} on beat 1)"
+            say = f"{Cap(PL[p])}, you sing nothing on beat 1 of bar {n}; in bar {m} you had a {ln} there."
+        return dict(kind='say', bar=n, on=F(0), parts=[p], who=p, text=text, cap='say: ' + text.split(': ', 1)[1],
+                    short=f"{PL[p]} {text}", say=say)
+
     def plan(self):
         out = []
         for l, a, b in self.secs:
@@ -453,6 +471,8 @@ class Planner:
                         if d is None: continue
                         if n in new[p]: new[p].remove(n)
                         tell.append(self.announce(p, n, n + off, d, srcname))
+                    t_ = self.ended_early(p, b, b + off)
+                    if t_: tell.append(t_)
                 # a part's announcements go together, the second carrying on from the first
                 for t0, t1 in zip(tell, tell[1:]):
                     if t1['who'] == t0['who']:
