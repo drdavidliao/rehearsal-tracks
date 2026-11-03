@@ -43,6 +43,7 @@ ends. The script prints the curve; the fit assumes the rit runs to the last bar.
 | m s a t b o | Balanced, Soprano, Alto, Tenor, Bass only, Other |
 | v / i | next stretch method for the voices / instruments |
 | l | loop on or off |
+| d | light or dark score |
 | right-click a note | mute or transpose it |
 | ⌘F | hear without fixes |
 | ⌘2 | two pages side by side |

@@ -1,5 +1,6 @@
 // Follow a marked score against separated stems: click a beat to start there, choose a part, choose a tempo.
 import AppKit
+import CoreImage
 import CEngine
 import PDFKit
 import SwiftUI
@@ -31,6 +32,9 @@ final class Player: ObservableObject {
     @Published var voiceMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "voiceMethod") as? Int ?? 1)
     @Published var instMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "instMethod") as? Int ?? 1)
     @Published var waiting = false
+    @Published var darkScore = UserDefaults.standard.bool(forKey: "darkScore") {
+        didSet { UserDefaults.standard.set(darkScore, forKey: "darkScore"); score?.applyDark() }
+    }
     /// the voice files hold one voice each, rather than a part with the others bleeding through. Belongs to the song.
     @Published var isolated = false {
         didSet {
@@ -313,6 +317,7 @@ final class Player: ObservableObject {
         if c.first!.isNumber { typed += c; return true }
         if let md = Mode.allCases.first(where: { $0.key == c }) { mode = md; return true }
         if c == "l" { if loopBars != nil { loopOn.toggle() } else { NSSound.beep() }; return true }
+        if c == "d" { darkScore.toggle(); return true }
         if c == "v" { setMethods(voices: (voiceMethod + 1) % Int32(stretchNames.count)); return true }
         if c == "i" { setMethods(instruments: (instMethod + 1) % 4); return true }
         if c.first!.isUppercase, map!.bars.contains(where: { $0.letter == c }) { go(letter: c); return true }
@@ -356,7 +361,29 @@ final class ScoreCanvas: NSView {
         }
     }
 
-    func reload() { pdf.document = player?.pdf; lastPage = -1; setTwoPages(player?.twoPages ?? false); refresh() }
+    /// Dark is a filter on the page's view, not the PDF: white goes to a soft dark grey and black to a soft white. The hue turns
+    /// back after the inversion, so the colored marks stay near their own colors. The line and rings are drawn above, unfiltered.
+    func applyDark() {
+        let dark = player?.darkScore ?? false
+        pdf.wantsLayer = true
+        pdf.layerUsesCoreImageFilters = true
+        guard dark, let invert = CIFilter(name: "CIColorInvert"), let hue = CIFilter(name: "CIHueAdjust"), let soft = CIFilter(name: "CIColorMatrix") else {
+            pdf.contentFilters = []
+            pdf.backgroundColor = .underPageBackgroundColor
+            return
+        }
+        hue.setValue(Double.pi, forKey: "inputAngle")
+        // in linear light, which is how these filters work: about 12% and 90% on screen
+        let k: CGFloat = 0.76, b: CGFloat = 0.014
+        soft.setValue(CIVector(x: k, y: 0, z: 0, w: 0), forKey: "inputRVector")
+        soft.setValue(CIVector(x: 0, y: k, z: 0, w: 0), forKey: "inputGVector")
+        soft.setValue(CIVector(x: 0, y: 0, z: k, w: 0), forKey: "inputBVector")
+        soft.setValue(CIVector(x: b, y: b, z: b, w: 0), forKey: "inputBiasVector")
+        pdf.contentFilters = [invert, hue, soft]
+        pdf.backgroundColor = .white       // the surround, filtered along with the page
+    }
+
+    func reload() { pdf.document = player?.pdf; applyDark(); lastPage = -1; setTwoPages(player?.twoPages ?? false); refresh() }
     func setTwoPages(_ on: Bool) { pdf.displayMode = on ? .twoUp : .singlePage; pdf.autoScales = true }
 
     func refresh() {
@@ -624,6 +651,12 @@ struct Controls: View {
                     Text("System output").tag("")
                     ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
                 }.labelsHidden().controlSize(.small).help("Audio output")
+                Divider()
+                heading("Score")
+                Picker("", selection: $p.darkScore) {
+                    Text("Light").tag(false)
+                    Text("Dark").tag(true)
+                }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden()
                 Divider()
                 heading("Source files")
                 Picker("", selection: $p.isolated) {
