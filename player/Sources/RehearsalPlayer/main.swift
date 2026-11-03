@@ -341,7 +341,20 @@ final class ScoreCanvas: NSView {
         reload()
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func layout() { super.layout(); pdf.frame = bounds; overlay.frame = bounds; pdf.autoScales = true; refresh() }
+    override func layout() {
+        super.layout()
+        pdf.frame = bounds; overlay.frame = bounds
+        useWholeHeight(pdf)
+        pdf.autoScales = true
+        refresh()
+    }
+    /// A scroll view keeps its content clear of the window's title bar, even a see-through one. The page may go under it.
+    func useWholeHeight(_ v: NSView) {
+        for sub in v.subviews {
+            if let sv = sub as? NSScrollView { sv.automaticallyAdjustsContentInsets = false; sv.contentInsets = NSEdgeInsets() }
+            useWholeHeight(sub)
+        }
+    }
 
     func reload() { pdf.document = player?.pdf; lastPage = -1; setTwoPages(player?.twoPages ?? false); refresh() }
     func setTwoPages(_ on: Bool) { pdf.displayMode = on ? .twoUp : .singlePage; pdf.autoScales = true }
