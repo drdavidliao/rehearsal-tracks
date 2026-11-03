@@ -1,7 +1,7 @@
 # Rehearsal Player
 
 A Mac app that shows a marked score and plays a song's separated stems in time with it. Click a beat to start there,
-choose a part, and choose a tempo. It opens on the right half of the screen, one page at a time.
+choose a part, and choose a tempo. It opens on the right 60% of the screen, with the controls down its left edge and one page of score at the window's full height.
 
 On another system, see [PORTING.md](PORTING.md): enough to have an AI coding assistant write your own version.
 

@@ -15,7 +15,7 @@ You need your own stems and score. Nothing in this repository includes any music
 
 ## What it's for
 
-A director runs a rehearsal over Zoom with half a screen left over. That half shows the score, marked up for the lesson. They
+A director runs a rehearsal over Zoom with part of the screen left over (60% for us, with the controls down the left edge so the score gets the full height). That part shows the score, marked up for the lesson. They
 click a beat and the song plays from there, with a line following the music, and they can pick out parts, slow it down, loop a
 passage, and repair wrong notes in the audio. It replaces a DAW and a tablet for this one job.
 
@@ -49,7 +49,7 @@ is being typed in.
 | Trim | 0 dB | -3 dB | -3 dB | 0 dB |
 | Pan (Logic's knob, -64 to +63) | -45 | -15 | +15 | +45 |
 
-Radio buttons choose Balanced, Soprano only, Alto only, Tenor only, Bass only, or Other. Other opens a list of checkboxes, "Check
+Radio buttons choose Balanced, Soprano only, Alto only, Tenor only, Bass only, or Other. Other shows a list of checkboxes, "Check
 all parts you want to hear:". The voices heard get a boost on top of their trim, and the others are off:
 
 | Voices heard | Boost |

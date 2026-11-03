@@ -94,12 +94,10 @@ final class Player: ObservableObject {
     @Published var mode = Mode.balanced {
         didSet {
             applyVoices()
-            showOther = mode == .other
         }
     }
     /// what "Other" has checked, S A T B as bits of a mask; none is the instruments alone
     @Published var otherVoices: Int32 = 0
-    @Published var showOther = false
     @Published var playing = false
     @Published var bpm = 120.0
     @Published var progress = -1.0
@@ -528,15 +526,16 @@ struct ScoreRep: NSViewRepresentable {
 struct OtherParts: View {
     @ObservedObject var p: Player
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("Check all parts you want to hear:").font(.headline)
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Check all parts you want to hear:").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
             ForEach(Array(zip(["Soprano", "Alto", "Tenor", "Bass"], [Int32(1), 2, 4, 8])), id: \.0) { name, bit in
                 Toggle(name, isOn: Binding(get: { p.otherVoices & bit != 0 }, set: { _ in p.toggleOther(bit) })).toggleStyle(.checkbox)
             }
-        }.padding(12)
+        }.padding(.leading, 20)
     }
 }
 
+/// the controls, down the left edge, so the score has the window's whole height
 struct Controls: View {
     @ObservedObject var p: Player
     @State var tempoText = ""
@@ -547,79 +546,82 @@ struct Controls: View {
     @FocusState var editingVol: Bool
     @FocusState var editingBar2: Bool
     // back to the score's keys (space, arrows and so on) once a box has been used
-    func partsRow(slider: Bool) -> some View {
-        HStack(spacing: 6) {
-            Picker("", selection: $p.mode) {
-                ForEach(Mode.allCases) { Text($0.label).tag($0) }
-            }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
-            if p.mode == .other {
-                Button(otherSummary) { p.showOther = true }.controlSize(.small).frame(width: 62)
-            }
-            Spacer()
-            Text("Vol").fixedSize()
-            TextField("", text: $volText).frame(width: 40).focused($editingVol).multilineTextAlignment(.trailing)
-                .onSubmit {
-                    let t = volText.replacingOccurrences(of: "−", with: "-").replacingOccurrences(of: "dB", with: "", options: .caseInsensitive)
-                        .trimmingCharacters(in: .whitespaces)
-                    if let v = Double(t) { p.setVolume(v) } else { NSSound.beep() }
-                    volText = volString(p.volume)
-                    leave()
-                }
-            Text("dB").fixedSize()
-            if slider { Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).frame(minWidth: 60, maxWidth: 140).controlSize(.small) }
-        }
-    }
-    var otherSummary: String {
-        let s = zip(["S", "A", "T", "B"], [Int32(1), 2, 4, 8]).filter { p.otherVoices & $0.1 != 0 }.map(\.0).joined(separator: "+")
-        return (s.isEmpty ? "None" : s) + " ▾"
-    }
     func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
     func volString(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
+    func heading(_ t: String) -> some View { Text(t).font(.caption).foregroundStyle(.secondary) }
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 10) {
-                Button(action: p.toggle) { Image(systemName: p.playing ? "pause.fill" : "play.fill").frame(width: 18) }
-                    .keyboardShortcut(.none)
-                Text(p.typed.isEmpty ? p.where_ : "Go to bar \(p.typed)…")
-                    .font(.system(size: 13, weight: .medium).monospacedDigit()).frame(minWidth: 130, alignment: .leading).lineLimit(1)
-                Text("Bar").fixedSize()
-                TextField("", text: $barText).frame(width: 40).focused($editingBar).multilineTextAlignment(.trailing)
-                    .onSubmit {
-                        if p.go(typed: barText) { barText = ""; leave() } else { NSSound.beep() }
-                    }
-                Spacer()
-                Text("♩ =")
-                TextField("", text: $tempoText).frame(width: 44).focused($editing).multilineTextAlignment(.trailing)
-                    .onSubmit { if let v = Double(tempoText) { p.setTempo(v) }; tempoText = String(Int(p.bpm)); leave() }
-                Stepper("", value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange, step: 1).labelsHidden()
-                Slider(value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange).frame(minWidth: 60, maxWidth: 180).controlSize(.small)
-                Button("Reset") { if let t = p.map?.tempo { p.setTempo(t) } }.controlSize(.small)
+        ScrollView(.vertical, showsIndicators: false) {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Button(action: p.toggle) { Image(systemName: p.playing ? "pause.fill" : "play.fill").frame(width: 22, height: 18) }
+                        .keyboardShortcut(.none)
+                    Text(p.typed.isEmpty ? p.where_ : "Go to bar \(p.typed)…")
+                        .font(.system(size: 12, weight: .medium).monospacedDigit()).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                }
+                HStack(spacing: 6) {
+                    Text("Go to bar").fixedSize()
+                    TextField("", text: $barText).frame(width: 44).focused($editingBar).multilineTextAlignment(.trailing)
+                        .onSubmit {
+                            if p.go(typed: barText) { barText = ""; leave() } else { NSSound.beep() }
+                        }
+                }
+                Divider()
+                HStack(spacing: 6) {
+                    Text("Tempo ♩ =").fixedSize()
+                    TextField("", text: $tempoText).frame(width: 44).focused($editing).multilineTextAlignment(.trailing)
+                        .onSubmit { if let v = Double(tempoText) { p.setTempo(v) }; tempoText = String(Int(p.bpm)); leave() }
+                    Stepper("", value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange, step: 1).labelsHidden()
+                }
+                HStack(spacing: 6) {
+                    Slider(value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange).controlSize(.small)
+                    Button("Reset") { if let t = p.map?.tempo { p.setTempo(t) } }.controlSize(.small)
+                }
+                Divider()
+                heading("Hear")
+                Picker("", selection: $p.mode) {
+                    ForEach(Mode.allCases) { Text($0.label).tag($0) }
+                }.pickerStyle(.radioGroup).labelsHidden()
+                if p.mode == .other { OtherParts(p: p) }
+                Divider()
+                Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
+                HStack(spacing: 6) {
+                    Text("bar").fixedSize()
+                    TextField("", text: $p.loopFrom).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
+                        .onSubmit { p.commitLoop(); leave() }
+                    Text("to").fixedSize()
+                    TextField("", text: $p.loopTo).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
+                        .onSubmit { p.commitLoop(); leave() }
+                }
+                Divider()
+                HStack(spacing: 6) {
+                    Text("Volume").fixedSize()
+                    TextField("", text: $volText).frame(width: 44).focused($editingVol).multilineTextAlignment(.trailing)
+                        .onSubmit {
+                            let t = volText.replacingOccurrences(of: "−", with: "-").replacingOccurrences(of: "dB", with: "", options: .caseInsensitive)
+                                .trimmingCharacters(in: .whitespaces)
+                            if let v = Double(t) { p.setVolume(v) } else { NSSound.beep() }
+                            volText = volString(p.volume)
+                            leave()
+                        }
+                    Text("dB").fixedSize()
+                }
+                Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).controlSize(.small)
+                heading("Output")
                 Picker("", selection: Binding(get: { p.deviceUID }, set: { p.setDevice($0) })) {
                     Text("System output").tag("")
                     ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
-                }.labelsHidden().controlSize(.small).frame(width: 125).help("Audio output")
-            }
-            HStack(spacing: 6) {
-                Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
-                Text("bar").fixedSize()
-                TextField("", text: $p.loopFrom).frame(width: 40).focused($editingBar2).multilineTextAlignment(.trailing)
-                    .onSubmit { p.commitLoop(); leave() }
-                Text("to").fixedSize()
-                TextField("", text: $p.loopTo).frame(width: 40).focused($editingBar2).multilineTextAlignment(.trailing)
-                    .onSubmit { p.commitLoop(); leave() }
-                Spacer()
-                Text("Source files:").fixedSize()
+                }.labelsHidden().controlSize(.small).help("Audio output")
+                Divider()
+                heading("Source files")
                 Picker("", selection: $p.isolated) {
-                    Text("1 purely isolated voice per audio file").tag(true)
+                    Text("1 purely isolated voice\nper audio file").tag(true)
                     Text("part-predominant files").tag(false)
-                }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
+                }.pickerStyle(.radioGroup).labelsHidden()
             }
-            // on a narrow window the volume slider gives way: the box does its job
-            ViewThatFits(in: .horizontal) { partsRow(slider: true); partsRow(slider: false) }
-                // on the row, not the button: it stays open as parts are checked
-                .popover(isPresented: $p.showOther, attachmentAnchor: .point(UnitPoint(x: 0.72, y: 1)), arrowEdge: .bottom) { OtherParts(p: p) }
+            .padding(.horizontal, 10).padding(.top, 34).padding(.bottom, 10)     // the top clears the window's buttons
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.horizontal, 10).padding(.vertical, 7)
+        .frame(width: 208)
         .onChange(of: p.bpm) { tempoText = String(Int($0)) }
         .onChange(of: p.volume) { if !editingVol { volText = volString($0) } }
         .onAppear { tempoText = String(Int(p.bpm)); volText = volString(p.volume) }
@@ -630,29 +632,32 @@ struct RootView: View {
     @ObservedObject var p: Player
     func note<V: View>(_ v: V) -> some View { v.padding(5).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6)) }
     var body: some View {
-        VStack(spacing: 0) {
+        HStack(spacing: 0) {
             Controls(p: p)
             Divider()
-            if let e = p.error {
-                Text(e).padding().frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else if p.map == nil {
-                Text("File ▸ Open Song Folder…").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-            ScoreRep(player: p).frame(maxHeight: p.map == nil ? 0 : .infinity).opacity(p.map == nil ? 0 : 1)
-                .overlay(alignment: .topTrailing) {
-                    VStack(alignment: .trailing, spacing: 4) {
-                        if let t = p.toast { note(Text(t).font(.caption)) }
-                        if p.waiting { note(Text("Getting the audio ready…").font(.caption)) }
-                        else if p.progress >= 0 {
-                            // playback doesn't wait for this: it only matters for jumping around at once
-                            note(HStack(spacing: 6) {
-                                ProgressView(value: p.progress).frame(width: 50).controlSize(.mini)
-                                Text("rendering the rest").font(.caption2)
-                            }.foregroundStyle(.secondary))
-                        }
-                    }.padding(6)
+            ZStack {
+                if let e = p.error {
+                    Text(e).padding().frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else if p.map == nil {
+                    Text("File ▸ Open Song Folder…").foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
+                ScoreRep(player: p).opacity(p.map == nil || p.error != nil ? 0 : 1)
+                    .overlay(alignment: .topTrailing) {
+                        VStack(alignment: .trailing, spacing: 4) {
+                            if let t = p.toast { note(Text(t).font(.caption)) }
+                            if p.waiting { note(Text("Getting the audio ready…").font(.caption)) }
+                            else if p.progress >= 0 {
+                                // playback doesn't wait for this: it only matters for jumping around at once
+                                note(HStack(spacing: 6) {
+                                    ProgressView(value: p.progress).frame(width: 50).controlSize(.mini)
+                                    Text("rendering the rest").font(.caption2)
+                                }.foregroundStyle(.secondary))
+                            }
+                        }.padding(6)
+                    }
+            }
         }
+        .ignoresSafeArea()
     }
 }
 
@@ -668,21 +673,23 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.regular)
-        // the right half of the screen: the left half is for the Zoom window
+        // the right 60% of the screen: the rest is for the Zoom window
         let vis = NSScreen.main?.visibleFrame ?? NSRect(x: 0, y: 0, width: 800, height: 900)
-        let half = NSRect(x: vis.midX, y: vis.minY, width: vis.width / 2, height: vis.height)
-        window = NSWindow(contentRect: half, styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+        let right = NSRect(x: vis.minX + vis.width * 0.4, y: vis.minY, width: vis.width * 0.6, height: vis.height)
+        window = NSWindow(contentRect: right, styleMask: [.titled, .closable, .miniaturizable, .resizable, .fullSizeContentView], backing: .buffered, defer: false)
+        // no title bar taking the score's height: the buttons sit over the controls, and the top of the window still drags it
+        window.titlebarAppearsTransparent = true
+        window.titleVisibility = .hidden
         window.title = "Rehearsal Player"
-        window.minSize = NSSize(width: 690, height: 480)
-        window.setFrame(half, display: false)
-        window.setFrameAutosaveName("main")
+        window.minSize = NSSize(width: 640, height: 480)
+        window.setFrame(right, display: false)
+        window.setFrameAutosaveName("sidebar layout")
         window.contentView = NSHostingView(rootView: RootView(p: player))
         window.makeKeyAndOrderFront(nil)
         buildMenu()
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
             guard let self else { return e }
             if self.window.firstResponder is NSText { return e }     // typing a tempo
-            if NSApp.keyWindow !== self.window, e.keyCode == 53 { return e }     // Esc closes the Other popover
             return self.player.key(e) ? nil : e
         }
         if let v = UserDefaults.standard.object(forKey: "volume") as? Double { player.setVolume(v) }
