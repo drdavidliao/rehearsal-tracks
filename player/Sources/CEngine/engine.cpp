@@ -70,6 +70,7 @@ struct Take {
     double speed = 1;
     int64_t frames = 0;
     double swap_at = -1;    // in seconds of the original audio: the mixer moves to this take there, or at once if negative
+    bool after_turn = false;     // and only once the loop has gone back to its start: swap_at is that far into the next time round
     TrackP full[STEM_COUNT], ahead[STEM_COUNT];
     bool same_as(const Take &o) const {
         if (speed != o.speed) return false;
@@ -622,9 +623,22 @@ void plan_job(double speed, uint64_t gen) {
         if (!cur->full[i] || cur->full[i]->key != keys[i]) changed = true;
     }
     // the new version starts a moment ahead of the playhead, so it's ready when the playhead gets there and nothing stops
-    double target = source_now();
+    const double started_at = source_now();
+    double target = started_at;
     if (changed && playing) target += 1.0 * g_cur_speed.load();
-    const int64_t tgt = int64_t(target * g_rate);
+    // in a loop the playhead may never get past its end, so the move happens that far on from the loop's start. A loop that
+    // short is covered from its start, and the render starts there too, since it will go round to it
+    const int64_t loop_a = g_loop_a.load(), loop_b = g_loop_b.load();
+    double render_from = target;
+    bool wrapped = false, in_loop = false;
+    if (loop_a >= 0 && loop_b > loop_a && source_now() * g_rate >= double(loop_a) && source_now() * g_rate < double(loop_b)) {
+        const double a = double(loop_a) / g_rate, b = double(loop_b) / g_rate;
+        if (target >= b) { target = a + std::fmod(target - a, b - a); wrapped = true; }
+        render_from = a;
+        in_loop = true;
+    }
+    const int64_t tgt = int64_t(render_from * g_rate);
+    const int64_t from_out = int64_t(render_from * g_rate / speed);
     const int64_t tgt_out = int64_t(target * g_rate / speed);
     const bool first_fulls = g_full_active.load() == 0;
     if (first_fulls) { g_full_total = 0; g_full_done = 0; }
@@ -649,7 +663,7 @@ void plan_job(double speed, uint64_t gen) {
         const bool soon = f->to.load() + int64_t(WAIT_FOR_RENDER * g_rate / speed) > tgt_out;
         if (soon) { if (!(t->ahead[i] && t->ahead[i]->covers(tgt_out))) t->ahead[i] = nullptr; continue; }
         const TrackP &a = t->ahead[i];
-        const bool held = a && a->from <= tgt_out && a->to.load() + int64_t(WAIT_FOR_RENDER * g_rate / speed) > tgt_out;
+        const bool held = a && a->from <= from_out && (in_loop || a->to.load() + int64_t(WAIT_FOR_RENDER * g_rate / speed) > tgt_out);
         if (!held) {
             TrackP na = new_track(keys[i], speed, tgt);
             render_track(na, g_source[i], methods[i], tgt, false);
@@ -659,9 +673,10 @@ void plan_job(double speed, uint64_t gen) {
     if (t->same_as(*cur)) return;
     for (int i = 0; i < STEM_COUNT; i++) t->frames = std::min(t->frames, t->full[i]->frames);
     t->swap_at = changed && playing ? target : -1;
+    t->after_turn = changed && playing && wrapped;
     if (changed && playing) {
         // give the new version its head start, unless asked for something else first
-        const int64_t need = std::min(t->frames, tgt_out + int64_t(0.3 * g_rate));
+        const int64_t need = std::min(t->frames, int64_t(target * g_rate / speed) + int64_t(0.3 * g_rate));
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
         while (g_gen.load() == gen && std::chrono::steady_clock::now() < deadline) {
             bool ok = true;
@@ -672,6 +687,7 @@ void plan_job(double speed, uint64_t gen) {
         }
     }
     if (g_gen.load() != gen) { cancel_unused(t.get(), cur); return; }
+    if (t->after_turn && source_now() < started_at) t->after_turn = false;     // it has turned while this was getting ready
     hand_over(t.release());
 }
 
@@ -723,7 +739,10 @@ void mix_block(float *out, int frames) {
         if (pos == loop_out && play && g_seek.load(std::memory_order_relaxed) < 0) g_seek.store(loop_a, std::memory_order_relaxed);
         const bool seeking = g_seek.load(std::memory_order_relaxed) >= 0;
         Take *pn = g_pending.load(std::memory_order_acquire);
-        const bool swapping = pn && (!play || pn->swap_at < 0 || double(pos) * t->speed / g_rate >= pn->swap_at);
+        // a move planned for a place the loop no longer reaches happens at the loop's next turn
+        const bool beyond = pn && loop_a >= 0 && pn->swap_at >= double(g_loop_b.load(std::memory_order_relaxed)) / g_rate;
+        if (pn && pn->after_turn && seeking) pn->after_turn = false;
+        const bool swapping = pn && (!play || pn->swap_at < 0 || (!pn->after_turn && double(pos) * t->speed / g_rate >= pn->swap_at) || (beyond && seeking));
         if (g_env <= 0 && (seeking || swapping || !covered)) {
             // at silence: position in the original audio is the common coin between takes
             double source = double(pos) * t->speed;

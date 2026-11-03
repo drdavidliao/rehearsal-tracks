@@ -140,6 +140,52 @@ if let st = env["STRESS"], let cycles = Int(st) {
     play(14)     // time for vmmap to look from outside
     exit(0)
 }
+// LOOPTEMPO=start,end,at,speed: loops, changes tempo with the playhead at `at`, then plays in real time and says what's heard
+if let lt = env["LOOPTEMPO"] {
+    let p = lt.split(separator: ",").map { Double($0)! }
+    engine_set_loop(p[0], p[1])
+    engine_set_voices(15)
+    engine_seek(p[2])
+    engine_set_playing(1)
+    var buf = [Float](repeating: 0, count: 1024)
+    func play(_ secs: Double, _ note: ((Double) -> Void)? = nil) -> Int {
+        let t0 = Date()
+        var waits = 0, next = 1.0
+        while Date().timeIntervalSince(t0) < secs {
+            buf.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 512) }
+            if engine_waiting() != 0 { waits += 1; engine_render_here() }
+            let e = Date().timeIntervalSince(t0)
+            if e >= next { note?(e); next += 1 }
+            Thread.sleep(forTimeInterval: 0.0116)
+        }
+        return waits
+    }
+    _ = play(0.05)
+    engine_set_speed(p[3])
+    let t0 = Date()
+    var movedAt: Double?
+    var trace = [String]()
+    var waits = 0
+    do {
+        // not through the helper's closure: a top-level closure capturing these has crashed this program
+        var next = 1.0
+        while Date().timeIntervalSince(t0) < 12 {
+            buf.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 512) }
+            if engine_waiting() != 0 { waits += 1; engine_render_here() }
+            let e = Date().timeIntervalSince(t0)
+            if e >= next {
+                if movedAt == nil && engine_speed() == p[3] { movedAt = e }
+                trace.append(String(format: "%.2f@%.1f", engine_speed(), engine_position()))
+                next += 1
+            }
+            Thread.sleep(forTimeInterval: 0.0116)
+        }
+    }
+    print("loop", p[0], "-", p[1], "change at", p[2], ": moved to the new tempo by", movedAt.map { String(format: "%.0f s", $0) } ?? "NEVER", "; blocks waiting", waits)
+    for line in trace { print(" ", line, terminator: "") }
+    print("")
+    exit(0)
+}
 // LOOP=start,end: plays for a while from just before the end and says where the playhead went
 if let lp = env["LOOP"] {
     let p = lp.split(separator: ",").map { Double($0)! }

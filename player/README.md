@@ -79,7 +79,8 @@ unplugged, sound goes to the system output until it's chosen again.
 
 The Loop boxes take a start and end bar, or a rehearsal letter (to the end of that letter); Return turns the loop on. Green
 lines mark it. Reaching the end by playing goes back to the start. A click past the end plays on, and a click before the
-start plays into the loop.
+start plays into the loop. A tempo change or fix made during a loop takes effect about a second later, carrying round to the start if that
+falls past the end.
 
 ## Correcting a note
 
