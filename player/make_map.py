@@ -2,11 +2,12 @@
 """Write the beat map the rehearsal player needs for a song folder (see README.md here).
 
     python3 player/make_map.py "song folder" --reader-pdf "... Full score copy.pdf" --score "... (lesson marks).pdf"
-        --xml "....musicxml" --stems S=...wav A=...wav T=...wav B=...wav I=...wav [--nstaves 6] [--offset 1.02]
+        --xml "....musicxml" --stems S=...wav A=...wav T=...wav B=...wav I=...wav [A2=...wav] [--nstaves 6] [--offset 1.02]
 
 Bars, beats and their x positions come from the vector PDF through dorico_reader.py; times come from the MusicXML's
 tempo marks. Without --offset, the time of bar 1 is measured: the fit of the on-beat piano attacks to the instrumental
-stem. Swung offbeats are left out of that fit, and it reports how far the stems drift from the score bar by bar.
+stem, or in a score with no such part, of each voice's on-beat attacks to its own stem. Swung offbeats are left out of
+that fit, and it reports how far the stems drift from the score bar by bar. Alto 1 and Alto 2 parts use stems A and A2.
 A rit mark in the MusicXML (rit, riten, rall) bends the times from its bar to the end of the song, fitted to the stems.
 Writes "player map.json" in the song folder, paths relative to it.
 """
@@ -59,6 +60,8 @@ def read_xml(path):
     return bars, attacks
 
 
+VOICES = ['Soprano', 'Alto', 'Alto 1', 'Alto 2', 'Tenor', 'Bass']
+STEM_OF = {'Soprano': 'S', 'Alto': 'A', 'Alto 1': 'A', 'Alto 2': 'A2', 'Tenor': 'T', 'Bass': 'B'}
 STEP = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
 
 
@@ -227,7 +230,24 @@ def main():
         if b['tempos']: tempo = b['tempos'][-1][1]
     total = t
 
-    if a.offset is None:
+    if a.offset is None and a.instrument_part not in attacks:
+        # unaccompanied: each voice against its own stem
+        fits = [(flux(at(stems[STEM_OF[n]])), np.array([secs(i, q) for i, q in attacks[n] if q == int(q)])) for n in VOICES if n in attacks and STEM_OF[n] in stems]
+        def best_all(fs, lo, hi, step=0.005):
+            os_ = np.arange(lo, hi, step)
+            def score(o):
+                v = 0.0
+                for d, ss in fs:
+                    idx = ((ss + o) * SR / HOP).astype(int)
+                    idx = idx[(idx >= 0) & (idx < len(d) - 1)]
+                    v += (d[idx] + d[idx + 1]).sum()
+                return v
+            return float(max(os_, key=score))
+        offset = best_all(fits, 0.0, 30.0)
+        print(f'offset from the voices\' on-beat attacks on their own stems: {offset:.3f} s')
+        sections = [(np.array_split(ss, 8)) for _, ss in fits]
+        print('  drift by section, s:', [round(best_all([(fits[v][0], sections[v][k]) for v in range(len(fits))], offset - 0.15, offset + 0.15) - offset, 3) for k in range(8)])
+    elif a.offset is None:
         d = flux(at(stems['I']))
         on = [(i, q) for i, q in attacks[a.instrument_part] if q == int(q)]
         ss = np.array([secs(i, q) for i, q in on])
@@ -244,13 +264,13 @@ def main():
     anchors = []
     rits = rit_bars(at(a.xml))
     if rits:
-        vn, swing0 = read_voice_notes(at(a.xml), ['Soprano', 'Alto', 'Tenor', 'Bass'])
+        vn, swing0 = read_voice_notes(at(a.xml), VOICES)
         first = rits[0]
         s0 = plain_secs(first, F(0))
         ev = []
         for name, ns in vn.items():
-            if name[0] not in stems: continue
-            e = np.log(fine_envelope(at(stems[name[0]])) + 1e-3)
+            if STEM_OF[name] not in stems: continue
+            e = np.log(fine_envelope(at(stems[STEM_OF[name]])) + 1e-3)
             fl = np.convolve(np.maximum(np.diff(e, prepend=e[0]), 0), np.ones(4), 'same')
             for n in ns:
                 if n['start'][0] >= first: ev.append((plain_secs(n['start'][0], swung(n['start'][1], swing0)) - s0, fl))
@@ -290,12 +310,12 @@ def main():
                          beat_t=[round(offset + secs(i, k * bl), 4) for k in range(nb)],
                          end_t=round(offset + secs(i, x['quarters']), 4)))
     # each voice's notes, for marking one to mute or transpose: where its heads are, and when its stem sings it
-    parts = ['Soprano', 'Alto', 'Tenor', 'Bass']
+    parts = [n for n in VOICES if n in attacks]     # top to bottom, as on the staves
     vnotes, swing = read_voice_notes(at(a.xml), parts)
     notes = []
     for k, name in enumerate(parts):
-        if name not in vnotes or name[0] not in stems: continue
-        env = fine_envelope(at(stems[name[0]]))
+        if name not in vnotes or STEM_OF[name] not in stems: continue
+        env = fine_envelope(at(stems[STEM_OF[name]]))
         for n in vnotes[name]:
             bi, q = n['start']; ei, qe = n['end']
             n['start_t'] = offset + secs(bi, swung(q, swing)); n['end_t'] = offset + secs(ei, swung(qe, swing)) if qe < xbars[ei]['quarters'] else offset + secs(ei, qe)
@@ -311,7 +331,7 @@ def main():
                 heads.append(dict(page=b['page'], x=round(h.cx, 2), y=round(h.y, 2)))
             if not heads: continue
             bi, q = n['start']
-            notes.append(dict(id=f"{name[0]}{bi + 1}.{float(q):g}", part=name[0], bar=bi + 1, beat=round(float(q / beat_len(r.bars[bi]['meter'])) + 1, 2),
+            notes.append(dict(id=f"{STEM_OF[name]}.{bi + 1}.{float(q):g}" if STEM_OF[name] == 'A2' else f"{STEM_OF[name]}{bi + 1}.{float(q):g}", part=STEM_OF[name], bar=bi + 1, beat=round(float(q / beat_len(r.bars[bi]['meter'])) + 1, 2),
                               midi=n['midi'], word=n['word'], start=round(n['start_t'], 4), end=round(n['end_t'], 4), heads=heads))
         print(f"{name}: {len(vnotes[name])} notes, {moved} starts snapped to the stem, {lost} heads not found")
     # the dark mode's copy of the score, with notes and everything else in their own colors

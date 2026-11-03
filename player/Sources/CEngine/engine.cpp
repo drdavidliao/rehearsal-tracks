@@ -27,13 +27,16 @@ using RubberBand::RubberBandStretcher;
 namespace {
 
 // ------------------------------------------------------------------------------------------- the mix, as specified
-const float TRIM_DB[STEM_COUNT] = {0, -3, -3, 0, 0};
-const float PAN_KNOB[STEM_COUNT] = {-45, -15, 15, 45, 0};    // Logic's pan knob, -64 to +63
+const float TRIM_DB[STEM_COUNT] = {0, -3, -3, 0, 0, -3};
+const float PAN_KNOB[STEM_COUNT] = {-45, -15, 15, 45, 0, -10};    // Logic's pan knob, -64 to +63
+const float PAN_KNOB_A1 = -20;      // the first alto, where there's a second: the two sit either side of a lone alto's place
 // the boost each heard voice gets, by how many are heard
-const float FEATURE_DB[5] = {0, 6, 3, 1.5f, 0};
+const float FEATURE_DB[6] = {0, 6, 3, 1.5f, 0.75f, 0};
 // files with one voice each: what's heard is at 0 dB and the other voices stay faintly there
 const float BEHIND_DB = -18;
 std::atomic<bool> g_isolated{false};
+std::atomic<bool> g_instruments{true};
+std::atomic<int> g_stems{STEM_COUNT - 1};     // this song's: STEM_COUNT if it has a second alto part
 std::atomic<float> g_master_db{-3};
 
 float db(float d) { return std::pow(10.f, d / 20.f); }
@@ -69,6 +72,7 @@ using TrackP = std::shared_ptr<Track>;
 struct Take {
     double speed = 1;
     int64_t frames = 0;
+    int stems = STEM_COUNT - 1;
     double swap_at = -1;    // in seconds of the original audio: the mixer moves to this take there, or at once if negative
     bool after_turn = false;     // and only once the loop has gone back to its start: swap_at is that far into the next time round
     TrackP full[STEM_COUNT], ahead[STEM_COUNT];
@@ -537,7 +541,7 @@ void apply_fix(std::vector<float> &v, const Fix &f) {
 // brings each stem's corrected audio up to date with the list; the worker thread's alone
 void prepare_sources(const std::vector<Fix> &fixes) {
     std::vector<std::thread> th;
-    for (int i = 0; i < STEM_COUNT; i++) {
+    for (int i = 0; i < g_stems.load(); i++) {
         uint64_t key = stem_key(i, fixes);
         if (key == g_source_key[i]) continue;
         th.emplace_back([i, key, &fixes] {
@@ -613,7 +617,8 @@ void plan_job(double speed, uint64_t gen) {
     bool changed = false;
     uint64_t keys[STEM_COUNT];
     int methods[STEM_COUNT];
-    for (int i = 0; i < STEM_COUNT; i++) {
+    t->stems = g_stems.load();
+    for (int i = 0; i < t->stems; i++) {
         methods[i] = (i == STEM_I ? g_method_inst : g_method_voices).load();
         keys[i] = g_source_key[i];
         if (speed != 1.0) {
@@ -642,7 +647,7 @@ void plan_job(double speed, uint64_t gen) {
     const int64_t tgt_out = int64_t(target * g_rate / speed);
     const bool first_fulls = g_full_active.load() == 0;
     if (first_fulls) { g_full_total = 0; g_full_done = 0; }
-    for (int i = 0; i < STEM_COUNT; i++) {
+    for (int i = 0; i < t->stems; i++) {
         if (cur->full[i] && cur->full[i]->key == keys[i]) {
             t->full[i] = cur->full[i];
             t->ahead[i] = cur->ahead[i];
@@ -671,7 +676,7 @@ void plan_job(double speed, uint64_t gen) {
         }
     }
     if (t->same_as(*cur)) return;
-    for (int i = 0; i < STEM_COUNT; i++) t->frames = std::min(t->frames, t->full[i]->frames);
+    for (int i = 0; i < t->stems; i++) t->frames = std::min(t->frames, t->full[i]->frames);
     t->swap_at = changed && playing ? target : -1;
     t->after_turn = changed && playing && wrapped;
     if (changed && playing) {
@@ -680,7 +685,7 @@ void plan_job(double speed, uint64_t gen) {
         const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(4);
         while (g_gen.load() == gen && std::chrono::steady_clock::now() < deadline) {
             bool ok = true;
-            for (int i = 0; i < STEM_COUNT; i++)
+            for (int i = 0; i < t->stems; i++)
                 ok = ok && ((t->full[i]->data && t->full[i]->covers(need)) || (t->ahead[i] && t->ahead[i]->data && t->ahead[i]->covers(need)));
             if (ok) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -710,7 +715,7 @@ Take *g_sel_take = nullptr;
 
 void choose_tracks(Take *t, int64_t pos) {
     g_sel_take = t;
-    for (int s = 0; s < STEM_COUNT; s++) {
+    for (int s = 0; s < t->stems; s++) {
         const Track *f = t->full[s].get(), *a = t->ahead[s].get();
         g_sel[s] = (f->data && f->covers(pos)) || !a ? f : a;
     }
@@ -729,7 +734,7 @@ void mix_block(float *out, int frames) {
     bool covered = true;
     auto check = [&] {
         covered = true;
-        for (int s = 0; s < STEM_COUNT; s++) if (!g_sel[s]->data || !g_sel[s]->covers(pos, frames)) covered = false;
+        for (int s = 0; s < t->stems; s++) if (!g_sel[s]->data || !g_sel[s]->covers(pos, frames)) covered = false;
     };
     check();
     const int64_t loop_a = g_loop_a.load(std::memory_order_relaxed);
@@ -766,7 +771,7 @@ void mix_block(float *out, int frames) {
         g_env = std::clamp(g_env + (sound ? ENV_STEP : -ENV_STEP), 0.f, 1.f);
         float l = 0, r = 0;
         if (g_env > 0 && ready) {
-            for (int s = 0; s < STEM_COUNT; s++) {
+            for (int s = 0; s < t->stems; s++) {
                 g_gain[s][0] += (target[s][0] - g_gain[s][0]) * GAIN_SMOOTH;
                 g_gain[s][1] += (target[s][1] - g_gain[s][1]) * GAIN_SMOOTH;
                 const float *d = g_sel[s]->data;
@@ -855,14 +860,16 @@ void engine_gains(int voices, float gains[STEM_COUNT][2]) {
     const float master = db(g_master_db.load(std::memory_order_relaxed));
     for (int s = 0; s < STEM_COUNT; s++) {
         float g = db(TRIM_DB[s]);
-        const int heard = (voices & VOICES_ALL);
-        if (s != STEM_I && heard != VOICES_ALL) {
+        const int all = g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? VOICES_ALL : VOICES_FOUR;
+        const int heard = voices & all;
+        if (s != STEM_I && heard != all) {
             const bool on = voices >> s & 1;
             if (g_isolated.load(std::memory_order_relaxed)) g = !heard ? 0 : on ? 1 : db(BEHIND_DB);
             else g = on ? g * db(FEATURE_DB[std::popcount(unsigned(heard))]) : 0;
         }
+        if (s == STEM_I && !g_instruments.load(std::memory_order_relaxed)) g = 0;
         float l, r;
-        pan_gains(PAN_KNOB[s], l, r);
+        pan_gains(s == STEM_A && g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? PAN_KNOB_A1 : PAN_KNOB[s], l, r);
         gains[s][0] = g * l * master;
         gains[s][1] = g * r * master;
     }
@@ -874,12 +881,13 @@ int engine_load(const char *const *paths, const char *cache_dir) {
     std::atomic<int> ok{1};
     std::vector<std::thread> th;
     int rates[STEM_COUNT]; int64_t lens[STEM_COUNT];
-    for (int i = 0; i < STEM_COUNT; i++)
+    const int stems = paths[STEM_A2] ? STEM_COUNT : STEM_COUNT - 1;
+    for (int i = 0; i < stems; i++)
         th.emplace_back([&, i] { if (!read_file(paths[i], loaded[i], rates[i], lens[i])) ok = 0; });
     for (auto &x : th) x.join();
     if (!ok.load()) return 0;
     int64_t len0 = lens[0];
-    for (int i = 0; i < STEM_COUNT; i++) {
+    for (int i = 0; i < stems; i++) {
         if (rates[i] != rates[0]) { fprintf(stderr, "stem %d is at another sample rate\n", i); return 0; }
         len0 = std::min(len0, lens[i]);
     }
@@ -887,10 +895,13 @@ int engine_load(const char *const *paths, const char *cache_dir) {
     g_rate = rates[0];
     g_frames = len0;
     t->frames = len0;
+    t->stems = stems;
+    g_stems = stems;
+    g_voices = stems == STEM_COUNT ? VOICES_ALL : VOICES_FOUR;
     g_cache_root = cache_dir;
     { std::lock_guard<std::mutex> lk(g_fix_mutex); g_fixes.clear(); }
     { std::lock_guard<std::mutex> lk(g_marks_mutex); g_marks.clear(); }
-    for (int i = 0; i < STEM_COUNT; i++) {
+    for (int i = 0; i < stems; i++) {
         g_paths[i] = paths[i];
         g_base[i] = std::make_shared<std::vector<float>>(std::move(loaded[i]));
         g_source[i] = g_base[i];
@@ -966,6 +977,7 @@ void engine_set_playing(int p) {
 }
 int engine_is_playing(void) { return g_playing.load(); }
 void engine_set_voices(int v) { g_voices.store(v & VOICES_ALL); }
+void engine_set_instruments(int on) { g_instruments.store(on != 0); }
 void engine_set_isolated(int isolated) { g_isolated.store(isolated != 0); }
 void engine_set_master_db(double d) { g_master_db.store(float(d)); }
 void engine_seek(double source_seconds) {

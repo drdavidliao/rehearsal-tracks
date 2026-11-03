@@ -18,10 +18,12 @@ struct SongMap: Codable {
     let tempo: Double; let music_end: Double; let systems: [Sys]; let bars: [Bar]
 }
 enum Mode: Int32, CaseIterable, Identifiable {
-    case balanced = 0, soprano, alto, tenor, bass, other
+    case balanced = 0, soprano, alto, alto2, tenor, bass, other
     var id: Int32 { rawValue }
-    var label: String { ["Balanced", "Soprano only", "Alto only", "Tenor only", "Bass only", "Other"][Int(rawValue)] }
-    var key: String { ["m", "s", "a", "t", "b", "o"][Int(rawValue)] }
+    func label(twoAltos: Bool) -> String {
+        ["Balanced", "Soprano only", twoAltos ? "Alto 1 only" : "Alto only", "Alto 2 only", "Tenor only", "Bass only", "Other"][Int(rawValue)]
+    }
+    var key: String { ["m", "s", "a", "z", "t", "b", "o"][Int(rawValue)] }
 }
 
 // a position within this of a beat counts as on it: the engine works in whole samples
@@ -101,7 +103,35 @@ final class Player: ObservableObject {
             applyVoices()
         }
     }
-    /// what "Other" has checked, S A T B as bits of a mask; none is the instruments alone
+    /// the instrumental stem, or the click in an unaccompanied song: remembered for each song
+    @Published var instruments = true {
+        didSet {
+            engine_set_instruments(instruments ? 1 : 0)
+            if let f = folder { UserDefaults.standard.set(instruments, forKey: "instruments:" + f.path) }
+        }
+    }
+    /// the sections to rehearse, tinted on the score: remembered for each song
+    @Published var markedSections = Set<String>() {
+        didSet {
+            if let f = folder { UserDefaults.standard.set(Array(markedSections), forKey: "sections:" + f.path) }
+            score?.refresh()
+        }
+    }
+    /// the rehearsal letters in order, with an Intro for any bars before the first; each runs to the next letter
+    var sections: [(name: String, bars: ArraySlice<Bar>)] {
+        guard let m = map else { return [] }
+        let starts = m.bars.indices.filter { m.bars[$0].letter != nil }
+        guard let first = starts.first else { return [] }
+        var out: [(name: String, bars: ArraySlice<Bar>)] = first > 0 ? [("Intro", m.bars[0..<first])] : []
+        for (i, a) in starts.enumerated() {
+            out.append((m.bars[a].letter!, m.bars[a..<(i + 1 < starts.count ? starts[i + 1] : m.bars.count)]))
+        }
+        return out
+    }
+    /// the song has a second alto part, with its own stem
+    var twoAltos: Bool { map?.stems["A2"] != nil }
+    var allVoices: Int32 { twoAltos ? 47 : 15 }
+    /// what "Other" has checked, the voices as bits of a mask; none is the instruments alone
     @Published var otherVoices: Int32 = 0
     @Published var playing = false
     @Published var bpm = 120.0
@@ -130,10 +160,12 @@ final class Player: ObservableObject {
             let data = try Data(contentsOf: folder.appendingPathComponent("player map.json"))
             let m = try JSONDecoder().decode(SongMap.self, from: data)
             let order = ["S", "A", "T", "B", "I"]
-            let paths = order.map { folder.appendingPathComponent(m.stems[$0] ?? "").path }
+            var paths = order.map { folder.appendingPathComponent(m.stems[$0] ?? "").path }
+            if let a2 = m.stems["A2"] { paths.append(folder.appendingPathComponent(a2).path) }
             let cstrs = paths.map { strdup($0) }
             defer { cstrs.forEach { free($0) } }
             var ptrs = cstrs.map { UnsafePointer<CChar>($0) as UnsafePointer<CChar>? }
+            if m.stems["A2"] == nil { ptrs.append(nil) }
             let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Rehearsal Player").path
             engine_set_playing(0)
             guard engine_load(&ptrs, cache) != 0 else { error = "Couldn't read the stems named in player map.json."; return }
@@ -147,9 +179,16 @@ final class Player: ObservableObject {
             guard pdf != nil else { error = "Couldn't open \(m.score)."; return }
             pdfDark = m.score_dark.flatMap { PDFDocument(url: folder.appendingPathComponent($0)) }
             map = m
+            if !twoAltos {
+                if mode == .alto2 { mode = .balanced }
+                otherVoices &= 15
+            }
+            applyVoices()     // the engine starts each song with all its voices
             songName = folder.lastPathComponent
             self.folder = folder
             isolated = UserDefaults.standard.bool(forKey: "isolated:" + folder.path)
+            instruments = UserDefaults.standard.object(forKey: "instruments:" + folder.path) as? Bool ?? true
+            markedSections = Set(UserDefaults.standard.stringArray(forKey: "sections:" + folder.path) ?? [])
             bypass = false
             loopOn = false
             fixes = (try? JSONDecoder().decode([NoteFix].self, from: Data(contentsOf: fixesFile))) ?? []
@@ -207,7 +246,7 @@ final class Player: ObservableObject {
 
     func sendFixes() {
         let on = bypass ? [] : fixes
-        var st = on.map { Int32(["S", "A", "T", "B"].firstIndex(of: $0.part) ?? 0) }, s0 = on.map(\.start), s1 = on.map(\.end)
+        var st = on.map { Int32(["S", "A", "T", "B", "I", "A2"].firstIndex(of: $0.part) ?? 0) }, s0 = on.map(\.start), s1 = on.map(\.end)
         var mu = on.map { Int32($0.mute ? 1 : 0) }, se = on.map { Double($0.semitones) }
         engine_set_fixes(Int32(on.count), &st, &s0, &s1, &mu, &se)
     }
@@ -233,13 +272,13 @@ final class Player: ObservableObject {
     }
 
     func applyVoices() {
-        engine_set_voices(mode == .other ? otherVoices : [15, 1, 2, 4, 8, 0][Int(mode.rawValue)])
+        engine_set_voices(mode == .other ? otherVoices : [allVoices, 1, 2, 32, 4, 8, 0][Int(mode.rawValue)])
     }
 
     func toggleOther(_ bit: Int32) {
         otherVoices ^= bit
-        if otherVoices == 15 {
-            // all four is the balanced mix, and Other starts clear again
+        if otherVoices == allVoices {
+            // all of them is the balanced mix, and Other starts clear again
             otherVoices = 0
             mode = .balanced
         } else { applyVoices() }
@@ -318,7 +357,8 @@ final class Player: ObservableObject {
         }
         guard let c = e.charactersIgnoringModifiers, c.count == 1 else { return false }
         if c.first!.isNumber { typed += c; return true }
-        if let md = Mode.allCases.first(where: { $0.key == c }) { mode = md; return true }
+        if let md = Mode.allCases.first(where: { $0.key == c }), md != .alto2 || twoAltos { mode = md; return true }
+        if c == "c" { instruments.toggle(); return true }
         if c == "l" { if loopBars != nil { loopOn.toggle() } else { NSSound.beep() }; return true }
         if c == "d" { darkScore.toggle(); return true }
         if c == "v" { setMethods(voices: (voiceMethod + 1) % Int32(stretchNames.count)); return true }
@@ -487,7 +527,7 @@ final class Overlay: NSView {
     override func rightMouseDown(with e: NSEvent) {
         guard let c = canvas, let p = c.player, let n = c.note(near: convert(e.locationInWindow, from: nil)) else { return }
         let fix = p.fixes.first(where: { $0.id == n.id })
-        let names = ["S": "Soprano", "A": "Alto", "T": "Tenor", "B": "Bass"]
+        let names = ["S": "Soprano", "A": p.twoAltos ? "Alto 1" : "Alto", "A2": "Alto 2", "T": "Tenor", "B": "Bass"]
         let beat = n.beat == n.beat.rounded() ? String(Int(n.beat)) : String(n.beat)
         let menu = NSMenu()
         menu.autoenablesItems = false
@@ -516,6 +556,7 @@ final class Overlay: NSView {
     override func magnify(with e: NSEvent) { canvas?.pdf.magnify(with: e) }
     override func draw(_ dirty: NSRect) {
         guard let c = canvas else { return }
+        drawSections(c)
         drawFixes(c)
         drawLoop(c)
         if let h = hover, let r = c.rect(x: h.x, bar: h.bar), c.pdf.visiblePages.contains(where: { c.pdf.document?.index(for: $0) == h.bar.page }) {
@@ -531,6 +572,27 @@ final class Overlay: NSView {
 }
 
 extension Overlay {
+    /// a tint over the bars of each section marked to rehearse, words under the staves included, one piece per system
+    func drawSections(_ c: ScoreCanvas) {
+        guard let p = c.player, let m = p.map, !p.markedSections.isEmpty, let doc = c.pdf.document else { return }
+        NSColor.systemBlue.withAlphaComponent(p.darkScore ? 0.11 : 0.065).setFill()
+        for sec in p.sections where p.markedSections.contains(sec.name) {
+            var at = sec.bars.startIndex
+            while at < sec.bars.endIndex {
+                let a = sec.bars[at]
+                var end = at
+                while end + 1 < sec.bars.endIndex, sec.bars[end + 1].page == a.page, sec.bars[end + 1].sys == a.sys { end += 1 }
+                let b = sec.bars[end]
+                at = end + 1
+                guard let page = doc.page(at: a.page), c.pdf.visiblePages.contains(page),
+                      let s = m.systems.first(where: { $0.page == a.page && $0.sys == a.sys }) else { continue }
+                let p0 = c.pdf.convert(NSPoint(x: a.xa, y: m.page_height - s.top + 14), from: page)
+                let p1 = c.pdf.convert(NSPoint(x: b.xb, y: m.page_height - s.bottom - 22), from: page)
+                NSRect(x: p0.x, y: min(p0.y, p1.y), width: p1.x - p0.x, height: abs(p0.y - p1.y)).fill()
+            }
+        }
+    }
+
     /// green lines at the loop's ends
     func drawLoop(_ c: ScoreCanvas) {
         guard let p = c.player, p.loopOn, let (a, b) = p.loopBars else { return }
@@ -583,7 +645,8 @@ struct OtherParts: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Check all parts you want to hear:").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ForEach(Array(zip(["Soprano", "Alto", "Tenor", "Bass"], [Int32(1), 2, 4, 8])), id: \.0) { name, bit in
+            ForEach(p.twoAltos ? [("Soprano", Int32(1)), ("Alto 1", 2), ("Alto 2", 32), ("Tenor", 4), ("Bass", 8)]
+                                : [("Soprano", Int32(1)), ("Alto", 2), ("Tenor", 4), ("Bass", 8)], id: \.0) { name, bit in
                 Toggle(name, isOn: Binding(get: { p.otherVoices & bit != 0 }, set: { _ in p.toggleOther(bit) })).toggleStyle(.checkbox)
             }
         }.padding(.leading, 20)
@@ -634,9 +697,10 @@ struct Controls: View {
                 Divider()
                 heading("Hear")
                 Picker("", selection: $p.mode) {
-                    ForEach(Mode.allCases) { Text($0.label).tag($0) }
+                    ForEach(Mode.allCases.filter { $0 != .alto2 || p.twoAltos }) { Text($0.label(twoAltos: p.twoAltos)).tag($0) }
                 }.pickerStyle(.radioGroup).labelsHidden()
                 if p.mode == .other { OtherParts(p: p) }
+                Toggle("Instruments / click", isOn: $p.instruments).toggleStyle(.checkbox).help("c")
                 Divider()
                 Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
                 HStack(spacing: 6) {
@@ -646,6 +710,17 @@ struct Controls: View {
                     Text("to").fixedSize()
                     TextField("", text: $p.loopTo).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
                         .onSubmit { p.commitLoop(); leave() }
+                }
+                if !p.sections.isEmpty {
+                    Divider()
+                    heading("Sections to rehearse")
+                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 4), alignment: .leading, spacing: 4) {
+                        ForEach(p.sections.map(\.name), id: \.self) { name in
+                            Toggle(name, isOn: Binding(get: { p.markedSections.contains(name) }, set: { on in
+                                if on { p.markedSections.insert(name) } else { p.markedSections.remove(name) }
+                            })).toggleStyle(.checkbox).fixedSize()
+                        }
+                    }
                 }
                 Divider()
                 HStack(spacing: 6) {

@@ -1,4 +1,4 @@
-// The player's audio: five stems in memory, mixed by mode; another tempo is a Rubber Band R3 offline render of every stem.
+// The player's audio: five or six stems in memory, mixed by mode; another tempo is a Rubber Band R3 offline render of every stem.
 #ifndef ENGINE_H
 #define ENGINE_H
 #include <stdint.h>
@@ -6,11 +6,12 @@
 extern "C" {
 #endif
 
-enum { STEM_S = 0, STEM_A, STEM_T, STEM_B, STEM_I, STEM_COUNT };
-// which voices are heard: a mask of these. All four is the balanced mix, none is the instruments alone.
-enum { VOICE_S = 1, VOICE_A = 2, VOICE_T = 4, VOICE_B = 8, VOICES_ALL = 15 };
+// STEM_A2 is a second alto part, for a song that has one: STEM_A is then the first
+enum { STEM_S = 0, STEM_A, STEM_T, STEM_B, STEM_I, STEM_A2, STEM_COUNT };
+// which voices are heard: a mask of these. All of the song's voices is the balanced mix, none is the instruments alone.
+enum { VOICE_S = 1, VOICE_A = 2, VOICE_T = 4, VOICE_B = 8, VOICE_A2 = 32, VOICES_FOUR = 15, VOICES_ALL = 47 };
 
-// paths in stem order; false on a file that can't be read or stems of different rate or length
+// paths in stem order, STEM_COUNT of them, with a null one for STEM_A2 where the song has no second alto part; false on a file that can't be read or stems of different rate or length
 int engine_load(const char *const *paths, const char *cache_dir);
 int engine_start_output(void);
 // output devices: count, then each one's Core Audio UID and name. Listing also refreshes what the index means.
@@ -23,6 +24,8 @@ void engine_stop_output(void);
 void engine_set_playing(int playing);
 int engine_is_playing(void);
 void engine_set_voices(int voices);
+// the instrumental stem (a click, in an unaccompanied song) heard or not, whatever the voices are doing: on until set
+void engine_set_instruments(int on);
 // What the voice files are. Part-predominant (0): a file has its part loudest with the others bleeding through, so voices not
 // heard are off and those heard are boosted. Isolated (1): one voice per file, so those heard are at 0 dB and the others at -18 dB.
 void engine_set_isolated(int isolated);

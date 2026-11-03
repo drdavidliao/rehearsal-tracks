@@ -21,6 +21,9 @@ The app opens a song folder that has a `player map.json`. Make one with:
     python3 player/make_map.py "song folder" --reader-pdf "... Full score copy.pdf" --score "... (lesson marks).pdf" \
         --xml "....musicxml" --stems "S=...wav" "A=...wav" "T=...wav" "B=...wav" "I=...wav"
 
+A score with Alto 1 and Alto 2 parts takes their stems as `A=` and `A2=`, and the app then has both parts in place of one.
+With no Piano part, as in an unaccompanied score, the time of bar 1 is fitted from each voice's attacks on its own stem.
+
 `--reader-pdf` is the vector score the bar and beat positions are read from, through `dorico_reader.py`. `--score` is
 what the app shows, with the same pages. `I` is the one instrumental stem. Times come from the MusicXML's tempo marks,
 so this suits tracks rendered to the score's tempo. The script fits the time of bar 1 from the piano's on-beat attacks
@@ -40,9 +43,10 @@ ends. The script prints the curve; the fit assumes the rit runs to the last bar.
 | capital letter | go to that rehearsal letter |
 | ← → | a bar back or on (with Shift, a beat) |
 | ↑ ↓ | tempo up or down by 1 |
-| m s a t b o | Balanced, Soprano, Alto, Tenor, Bass only, Other |
+| m s a t b o | Balanced, Soprano, Alto, Tenor, Bass only, Other (with two alto parts, `a` is Alto 1 and `z` Alto 2) |
 | v / i | next stretch method for the voices / instruments |
 | l | loop on or off |
+| c | instruments (or click) on or off |
 | d | light or dark score |
 | right-click a note | mute or transpose it |
 | ⌘F | hear without fixes |
@@ -60,11 +64,13 @@ signatures, slurs and words are cool. The colors are at the top of that file. Fo
 In `Sources/CEngine/engine.cpp`.
 
 - Trims: S 0, A -3, T -3, B 0 dB. Pan on Logic's knob scale (-64 to +63): S -45, A -15, T +15, B +45. Instruments 0 dB, centred.
+- With two alto parts: Alto 1 and Alto 2 both -3 dB, pans -20 and -10, either side of a lone alto's -15.
+- The Instruments / click checkbox, or `c`, takes the instrumental stem out of every mode, for a stem that's a click, say. It's remembered for each song.
 - The whole mix is -3 dB until the Volume box says otherwise. The setting is remembered.
 - The Source files switch says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.
 - With part-predominant files (each has its part loudest and the others bleeding through):
   - "Only": that voice +6 dB on top of its trim, keeping its pan; the other voices off; instruments on.
-  - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB.
+  - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB, four of five +0.75 dB.
 - With purely isolated files (one voice per file), for "only" and for "Other": the voices heard at 0 dB in place of their trims,
   the others at -18 dB, all keeping their pans.
 - In "Other", none checked is the instruments alone, and checking all four is Balanced, with either kind of file. Gains are worked
@@ -81,6 +87,11 @@ The Loop boxes take a start and end bar, or a rehearsal letter (to the end of th
 lines mark it. Reaching the end by playing goes back to the start. A click past the end plays on, and a click before the
 start plays into the loop. A tempo change or fix made during a loop takes effect about a second later, carrying round to the start if that
 falls past the end.
+
+## Sections to rehearse
+
+The sidebar lists the rehearsal letters, and Intro if there are bars before the first. A checked section gets a blue tint on the
+score, from its letter's bar to the bar before the next letter. Uncheck it once it's rehearsed. The checks are remembered for each song.
 
 ## Correcting a note
 

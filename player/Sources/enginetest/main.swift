@@ -5,9 +5,12 @@ import Foundation
 
 let a = CommandLine.arguments
 let paths = Array(a[1...5])
+// A2=path in the environment: a second alto part
+let a2 = ProcessInfo.processInfo.environment["A2"].map { strdup($0)! }
 let cstrs = paths.map { strdup($0) }
 defer { cstrs.forEach { free($0) } }
 var ptrs = cstrs.map { UnsafePointer<CChar>($0) as UnsafePointer<CChar>? }
+ptrs.append(a2.map { UnsafePointer<CChar>($0) })
 guard engine_load(&ptrs, a[6]) != 0 else { print("load failed"); exit(1) }
 let outDir = a[7], speed = Double(a[8])!
 print("rate", engine_sample_rate(), "duration", engine_duration())
@@ -30,17 +33,21 @@ func render(_ name: String, voices: Int32, seconds: Double, startAt: Double) {
 
 if ProcessInfo.processInfo.environment["ISOLATED"] != nil { engine_set_isolated(1) }
 let names = ["balanced", "S", "A", "T", "B"], masks: [Int32] = [15, 1, 2, 4, 8]
-for m in [15, 1, 2, 4, 8, 3, 5, 12, 7, 14, 0] {
-    var t: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+for m in [15, 1, 2, 4, 8, 3, 5, 12, 7, 14, 0] + (a2 != nil ? [47, 32, 34] : []) {
+    var t: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
     withUnsafeMutablePointer(to: &t) {
-        $0.withMemoryRebound(to: (Float, Float).self, capacity: 5) { engine_gains(Int32(m), $0) }
+        $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(Int32(m), $0) }
     }
-    print("voices", m, "gains L/R S A T B I:", t)
+    print("voices", m, "gains L/R S A T B I A2:", t)
 }
 engine_set_master_db(-9)
-var v: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-withUnsafeMutablePointer(to: &v) { $0.withMemoryRebound(to: (Float, Float).self, capacity: 5) { engine_gains(15, $0) } }
+var v: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+withUnsafeMutablePointer(to: &v) { $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(15, $0) } }
 print("balanced at -9 dB: instruments", v.8, "soprano left", v.0)
+engine_set_instruments(0)
+withUnsafeMutablePointer(to: &v) { $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(15, $0) } }
+print("instruments off: instruments", v.8, v.9, "soprano left", v.0)
+engine_set_instruments(1)
 engine_set_master_db(-3)
 if speed != 1 {
     let t0 = Date()
