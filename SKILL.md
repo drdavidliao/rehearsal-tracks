@@ -147,6 +147,21 @@ why, and the bar to type into Logic for each start. And a copy of the score
 PDF with the same steps stamped on it (circled A1, A2 … on the part's staff)
 and the unison passages shaded, for forScore.
 
+**Rehearse from the score with the player app.** With the stems, the score PDFs and the MusicXML in
+the song's folder, write something like:
+
+```
+Set up the rehearsal player for the Shenandoah folder.
+```
+
+That is `player/README.md`: build the Mac app and write the folder's `player map.json`. The score
+is clickable by the beat, with a choice of parts, tempo, a loop and single-note fixes. On Windows
+or anything else:
+
+```
+Read player/PORTING.md and build me a version of the rehearsal player for Windows.
+```
+
 `BENCH` in the second command means the clickable beat-grid page: build it
 with `python3 -m chorale.bench`, publish it, and read the spans back with
 `python3 -m chorale.instructions`.

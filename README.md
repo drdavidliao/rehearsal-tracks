@@ -5,7 +5,7 @@ tracks, revoicings, printable parts.
 
 **The work happens in a conversation with Claude**, following the method written
 down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
-any of the scripts in this repository yourself — Claude does that. The eight
+any of the scripts in this repository yourself — Claude does that. The nine
 sentences below are the ones worth knowing.
 
 Typing `README` to Claude prints this same list back to you.
@@ -22,6 +22,7 @@ and Sonnet.)
 - [🔁 &nbsp;Revoice recorded tracks](#revoice-recorded-tracks)
 - [💃 &nbsp;Sync a dance video](#sync-a-dance-video)
 - [📋 &nbsp;Plan note-learning rehearsals](#plan-note-learning-rehearsals)
+- [🎹 &nbsp;Rehearse from the score with the player app](#rehearsal-player)
 
 ---
 
@@ -285,6 +286,38 @@ It is a draft for your pen: it measures difficulty rather than hearing it.
 
 ---
 
+<a id="rehearsal-player"></a>
+
+### 🎹 &nbsp;Rehearse from the score with the player app
+
+For running a rehearsal from a Mac with no DAW or tablet, there is a player app: the lesson-marked score on half the screen,
+clickable by the beat, in time with the song's stems. Put the stems, the score PDFs and the MusicXML in the song's folder and
+write something like:
+
+```
+Set up the rehearsal player for the Shenandoah folder.
+```
+
+Click a beat to start there, or type a bar or a rehearsal letter. You get:
+
+- Balanced, one part alone, or any mix of parts, with the instruments always on.
+- Any tempo, without changing the pitch, starting in a moment instead of waiting for a render.
+- A loop between two bars, and your choice of audio output.
+- Single wrong notes in a stem muted or moved by semitones, with a right-click on the note.
+
+It needs an Apple Silicon Mac. [`player/README.md`](player/README.md) has the details.
+
+**On Windows or anything else**, your own version can be written from a guide to the app:
+
+```
+Read player/PORTING.md and build me a version of the rehearsal player for Windows.
+```
+
+[`player/PORTING.md`](player/PORTING.md) has what the app does, the numbers it uses and what went wrong the first time. Nobody has
+tried it on Windows yet.
+
+---
+
 ## What is here
 
 | File | What it does | Needs |
@@ -345,12 +378,6 @@ arranger, its catalogue number or its lyrics. Pieces are described by what they
 are ("the unaccompanied TTBB"), and examples use *Shenandoah*. Scores, stems,
 bench pages and mp3s belong in each song's own folder, outside this repo;
 `.gitignore` refuses them here as a backstop.
-
-## Rehearsal player
-
-`player/` is a Mac app for a director running a rehearsal: the lesson-marked score, clickable by the beat, in time with a
-song's stems, with part selection, tempo, looping and single-note fixes. `player/README.md` covers building and using it.
-On Windows or anything else, give `player/PORTING.md` to an AI coding assistant: it has what's needed to write your own version.
 
 ## Licence
 
