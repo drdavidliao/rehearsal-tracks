@@ -54,9 +54,14 @@ In `Sources/CEngine/engine.cpp`.
 
 - Trims: S 0, A -3, T -3, B 0 dB. Pan on Logic's knob scale (-64 to +63): S -45, A -15, T +15, B +45. Instruments 0 dB, centred.
 - The whole mix is -3 dB until the Volume box says otherwise. The setting is remembered.
-- "Only": that voice +6 dB on top of its trim, keeping its pan; the other voices off; instruments on.
-- "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB. None checked is the instruments
-  alone. Checking all four is Balanced. Gains are worked out from the voices each audio block, so no boost is left behind.
+- The Source files switch says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.
+- With part-predominant files (each has its part loudest and the others bleeding through):
+  - "Only": that voice +6 dB on top of its trim, keeping its pan; the other voices off; instruments on.
+  - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB.
+- With purely isolated files (one voice per file), for "only" and for "Other": the voices heard at 0 dB in place of their trims,
+  the others at -18 dB, all keeping their pans.
+- In "Other", none checked is the instruments alone, and checking all four is Balanced, with either kind of file. Gains are worked
+  out from the voices each audio block, so no boost is left behind.
 - A stereo stem pans as a balance with a constant-power law, unity at centre.
 - Past 0.9 the output rounds off smoothly towards 1 so a boosted part can't hard-clip. Below that the samples are untouched.
 

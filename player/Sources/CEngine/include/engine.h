@@ -23,6 +23,9 @@ void engine_stop_output(void);
 void engine_set_playing(int playing);
 int engine_is_playing(void);
 void engine_set_voices(int voices);
+// What the voice files are. Part-predominant (0): a file has its part loudest with the others bleeding through, so voices not
+// heard are off and those heard are boosted. Isolated (1): one voice per file, so those heard are at 0 dB and the others at -18 dB.
+void engine_set_isolated(int isolated);
 // the whole mix, in dB: -3 until set
 void engine_set_master_db(double db);
 void engine_seek(double source_seconds);

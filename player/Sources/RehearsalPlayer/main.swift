@@ -31,6 +31,13 @@ final class Player: ObservableObject {
     @Published var voiceMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "voiceMethod") as? Int ?? 1)
     @Published var instMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "instMethod") as? Int ?? 1)
     @Published var waiting = false
+    /// the voice files hold one voice each, rather than a part with the others bleeding through. Belongs to the song.
+    @Published var isolated = false {
+        didSet {
+            engine_set_isolated(isolated ? 1 : 0)
+            if let f = folder { UserDefaults.standard.set(isolated, forKey: "isolated:" + f.path) }
+        }
+    }
     @Published var loopOn = false { didSet { applyLoop() } }
     @Published var loopFrom = "" 
     @Published var loopTo = ""
@@ -137,6 +144,7 @@ final class Player: ObservableObject {
             map = m
             songName = folder.lastPathComponent
             self.folder = folder
+            isolated = UserDefaults.standard.bool(forKey: "isolated:" + folder.path)
             bypass = false
             loopOn = false
             fixes = (try? JSONDecoder().decode([NoteFix].self, from: Data(contentsOf: fixesFile))) ?? []
@@ -600,6 +608,11 @@ struct Controls: View {
                 TextField("", text: $p.loopTo).frame(width: 40).focused($editingBar2).multilineTextAlignment(.trailing)
                     .onSubmit { p.commitLoop(); leave() }
                 Spacer()
+                Text("Source files:").fixedSize()
+                Picker("", selection: $p.isolated) {
+                    Text("1 purely isolated voice per audio file").tag(true)
+                    Text("part-predominant files").tag(false)
+                }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().fixedSize()
             }
             // on a narrow window the volume slider gives way: the box does its job
             ViewThatFits(in: .horizontal) { partsRow(slider: true); partsRow(slider: false) }

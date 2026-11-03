@@ -60,6 +60,10 @@ all parts you want to hear:". The voices heard get a boost on top of their trim,
 | 3 | +1.5 dB |
 | 4 | none: this is Balanced, and checking the fourth selects it |
 
+That table is for part-predominant files, where each file has its part loudest and the others bleeding through. A switch, remembered
+for each song, says "Source files: 1 purely isolated voice per audio file / part-predominant files". With isolated files, the voices heard
+in "only" and Other are at 0 dB in place of their trims, and the others at -18 dB. Balanced and "instruments alone" don't change.
+
 The master volume starts at -3 dB, typed or on a slider, and is remembered. Pan a stereo stem as a balance with a constant-power
 law, unity at centre: with `pos = knob / 64` and `th = (pos + 1) * pi / 4`, left gain is `cos(th) * sqrt(2)` and right gain is
 `sin(th) * sqrt(2)`. Work out the gains from the current choice each audio block and smooth them, so a boost can't be left behind

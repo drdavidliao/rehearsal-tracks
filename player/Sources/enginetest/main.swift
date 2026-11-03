@@ -28,6 +28,7 @@ func render(_ name: String, voices: Int32, seconds: Double, startAt: Double) {
     FileManager.default.createFile(atPath: "\(outDir)/\(name).f32", contents: buf.withUnsafeBufferPointer { Data(buffer: $0) })
 }
 
+if ProcessInfo.processInfo.environment["ISOLATED"] != nil { engine_set_isolated(1) }
 let names = ["balanced", "S", "A", "T", "B"], masks: [Int32] = [15, 1, 2, 4, 8]
 for m in [15, 1, 2, 4, 8, 3, 5, 12, 7, 14, 0] {
     var t: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0)

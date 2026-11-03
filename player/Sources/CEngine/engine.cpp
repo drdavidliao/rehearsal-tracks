@@ -31,6 +31,9 @@ const float TRIM_DB[STEM_COUNT] = {0, -3, -3, 0, 0};
 const float PAN_KNOB[STEM_COUNT] = {-45, -15, 15, 45, 0};    // Logic's pan knob, -64 to +63
 // the boost each heard voice gets, by how many are heard
 const float FEATURE_DB[5] = {0, 6, 3, 1.5f, 0};
+// files with one voice each: what's heard is at 0 dB and the other voices stay faintly there
+const float BEHIND_DB = -18;
+std::atomic<bool> g_isolated{false};
 std::atomic<float> g_master_db{-3};
 
 float db(float d) { return std::pow(10.f, d / 20.f); }
@@ -833,7 +836,12 @@ void engine_gains(int voices, float gains[STEM_COUNT][2]) {
     const float master = db(g_master_db.load(std::memory_order_relaxed));
     for (int s = 0; s < STEM_COUNT; s++) {
         float g = db(TRIM_DB[s]);
-        if (s != STEM_I) g = (voices >> s & 1) ? g * db(FEATURE_DB[std::popcount(unsigned(voices & VOICES_ALL))]) : 0;
+        const int heard = (voices & VOICES_ALL);
+        if (s != STEM_I && heard != VOICES_ALL) {
+            const bool on = voices >> s & 1;
+            if (g_isolated.load(std::memory_order_relaxed)) g = !heard ? 0 : on ? 1 : db(BEHIND_DB);
+            else g = on ? g * db(FEATURE_DB[std::popcount(unsigned(heard))]) : 0;
+        }
         float l, r;
         pan_gains(PAN_KNOB[s], l, r);
         gains[s][0] = g * l * master;
@@ -939,6 +947,7 @@ void engine_set_playing(int p) {
 }
 int engine_is_playing(void) { return g_playing.load(); }
 void engine_set_voices(int v) { g_voices.store(v & VOICES_ALL); }
+void engine_set_isolated(int isolated) { g_isolated.store(isolated != 0); }
 void engine_set_master_db(double d) { g_master_db.store(float(d)); }
 void engine_seek(double source_seconds) {
     g_seek.store(int64_t(std::max(0.0, source_seconds) * g_rate));
