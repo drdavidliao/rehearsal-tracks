@@ -16,12 +16,22 @@ struct SongMap: Codable {
     let score_dark: String?
     let score: String; let stems: [String: String]; let offset: Double; let page_height: Double; let pages: Int
     let tempo: Double; let music_end: Double; let systems: [Sys]; let bars: [Bar]
+    /// what to call the stems' parts, for a song that isn't SATB: "S": "Tenor 1" and so on. "A2": "Solo" makes the sixth stem a soloist.
+    let part_names: [String: String]?
 }
 enum Mode: Int32, CaseIterable, Identifiable {
     case balanced = 0, soprano, alto, alto2, tenor, bass, other
     var id: Int32 { rawValue }
-    func label(twoAltos: Bool) -> String {
-        ["Balanced", "Soprano only", twoAltos ? "Alto 1 only" : "Alto only", "Alto 2 only", "Tenor only", "Bass only", "Other"][Int(rawValue)]
+    func label(_ p: Player) -> String {
+        switch self {
+        case .balanced: return "Balanced"
+        case .other: return "Other"
+        case .soprano: return p.partName("S") + " only"
+        case .alto: return p.partName("A") + " only"
+        case .alto2: return p.partName("A2") + " only"
+        case .tenor: return p.partName("T") + " only"
+        case .bass: return p.partName("B") + " only"
+        }
     }
     var key: String { ["m", "s", "a", "z", "t", "b", "o"][Int(rawValue)] }
 }
@@ -128,8 +138,14 @@ final class Player: ObservableObject {
         }
         return out
     }
-    /// the song has a second alto part, with its own stem
+    /// the song has a sixth stem: a second alto part, or a soloist
     var twoAltos: Bool { map?.stems["A2"] != nil }
+    var soloStem: Bool { map?.part_names?["A2"] == "Solo" }
+    var modes: [Mode] { soloStem ? [.balanced, .alto2, .soprano, .alto, .tenor, .bass, .other] : Mode.allCases.filter { $0 != .alto2 || twoAltos } }
+    func partName(_ stem: String) -> String {
+        if let n = map?.part_names?[stem] { return n }
+        return ["S": "Soprano", "A": twoAltos ? "Alto 1" : "Alto", "A2": "Alto 2", "T": "Tenor", "B": "Bass"][stem] ?? stem
+    }
     var allVoices: Int32 { twoAltos ? 47 : 15 }
     /// what "Other" has checked, the voices as bits of a mask; none is the instruments alone
     @Published var otherVoices: Int32 = 0
@@ -179,6 +195,7 @@ final class Player: ObservableObject {
             guard pdf != nil else { error = "Couldn't open \(m.score)."; return }
             pdfDark = m.score_dark.flatMap { PDFDocument(url: folder.appendingPathComponent($0)) }
             map = m
+            engine_set_sixth_solo(soloStem ? 1 : 0)
             if !twoAltos {
                 if mode == .alto2 { mode = .balanced }
                 otherVoices &= 15
@@ -197,6 +214,8 @@ final class Player: ObservableObject {
             error = nil
             seek(lastStart)
             UserDefaults.standard.set(folder.path, forKey: "lastFolder")
+            let recent = UserDefaults.standard.stringArray(forKey: "recentFolders") ?? []
+            UserDefaults.standard.set(Array(([folder.path] + recent.filter { $0 != folder.path }).prefix(12)), forKey: "recentFolders")
             score?.reload()
         } catch {
             self.error = "\(folder.lastPathComponent) has no usable player map.json. (\(error.localizedDescription))"
@@ -527,11 +546,10 @@ final class Overlay: NSView {
     override func rightMouseDown(with e: NSEvent) {
         guard let c = canvas, let p = c.player, let n = c.note(near: convert(e.locationInWindow, from: nil)) else { return }
         let fix = p.fixes.first(where: { $0.id == n.id })
-        let names = ["S": "Soprano", "A": p.twoAltos ? "Alto 1" : "Alto", "A2": "Alto 2", "T": "Tenor", "B": "Bass"]
         let beat = n.beat == n.beat.rounded() ? String(Int(n.beat)) : String(n.beat)
         let menu = NSMenu()
         menu.autoenablesItems = false
-        let head = menu.addItem(withTitle: "\(names[n.part] ?? n.part), bar \(n.bar), beat \(beat)" + (n.word.isEmpty ? "" : " “\(n.word)”"), action: nil, keyEquivalent: "")
+        let head = menu.addItem(withTitle: "\(p.partName(n.part)), bar \(n.bar), beat \(beat)" + (n.word.isEmpty ? "" : " “\(n.word)”"), action: nil, keyEquivalent: "")
         head.isEnabled = false
         func item(_ title: String, _ on: Bool = false, _ act: @escaping () -> Void) {
             let i = ClosureItem(title: title, act: act)
@@ -642,11 +660,15 @@ struct ScoreRep: NSViewRepresentable {
 
 struct OtherParts: View {
     @ObservedObject var p: Player
+    var rows: [(String, Int32)] {
+        let stems: [(String, Int32)] = p.soloStem ? [("A2", 32), ("S", 1), ("A", 2), ("T", 4), ("B", 8)]
+            : p.twoAltos ? [("S", 1), ("A", 2), ("A2", 32), ("T", 4), ("B", 8)] : [("S", 1), ("A", 2), ("T", 4), ("B", 8)]
+        return stems.map { (p.partName($0.0), $0.1) }
+    }
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Check all parts you want to hear:").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-            ForEach(p.twoAltos ? [("Soprano", Int32(1)), ("Alto 1", 2), ("Alto 2", 32), ("Tenor", 4), ("Bass", 8)]
-                                : [("Soprano", Int32(1)), ("Alto", 2), ("Tenor", 4), ("Bass", 8)], id: \.0) { name, bit in
+            ForEach(rows, id: \.0) { name, bit in
                 Toggle(name, isOn: Binding(get: { p.otherVoices & bit != 0 }, set: { _ in p.toggleOther(bit) })).toggleStyle(.checkbox)
             }
         }.padding(.leading, 20)
@@ -697,7 +719,7 @@ struct Controls: View {
                 Divider()
                 heading("Hear")
                 Picker("", selection: $p.mode) {
-                    ForEach(Mode.allCases.filter { $0 != .alto2 || p.twoAltos }) { Text($0.label(twoAltos: p.twoAltos)).tag($0) }
+                    ForEach(p.modes) { Text($0.label(p)).tag($0) }
                 }.pickerStyle(.radioGroup).labelsHidden()
                 if p.mode == .other { OtherParts(p: p) }
                 Toggle("Instruments / click", isOn: $p.instruments).toggleStyle(.checkbox).help("c")
@@ -799,6 +821,18 @@ struct RootView: View {
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
+        if menu.title == "Recent Songs" {
+            menu.removeAllItems()
+            let map = "player map.json"
+            for path in UserDefaults.standard.stringArray(forKey: "recentFolders") ?? [] where
+                FileManager.default.fileExists(atPath: (path as NSString).appendingPathComponent(map)) {
+                let it = ClosureItem(title: (path as NSString).lastPathComponent) { [weak self] in self?.player.open(folder: URL(fileURLWithPath: path)) }
+                it.state = path == player.folder?.path ? .on : .off
+                menu.addItem(it)
+            }
+            if menu.items.isEmpty { menu.addItem(withTitle: "No Recent Songs", action: nil, keyEquivalent: "").isEnabled = false }
+            return
+        }
         for it in menu.items where it.tag >= 100 {
             it.state = (it.tag >= 200 ? Int32(it.tag - 200) == player.instMethod : Int32(it.tag - 100) == player.voiceMethod) ? .on : .off
         }
@@ -867,7 +901,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let app = NSMenuItem(); main.addItem(app)
         let am = NSMenu(); am.addItem(withTitle: "Quit Rehearsal Player", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q"); app.submenu = am
         let file = NSMenuItem(); main.addItem(file)
-        let fm = NSMenu(title: "File"); fm.addItem(withTitle: "Open Song Folder…", action: #selector(openFolder), keyEquivalent: "o"); file.submenu = fm
+        let fm = NSMenu(title: "File"); fm.addItem(withTitle: "Open Song Folder…", action: #selector(openFolder), keyEquivalent: "o")
+        let rm = NSMenu(title: "Recent Songs"); rm.delegate = self
+        rm.addItem(withTitle: "No Recent Songs", action: nil, keyEquivalent: "").isEnabled = false
+        fm.addItem(withTitle: "Recent Songs", action: nil, keyEquivalent: "").submenu = rm
+        file.submenu = fm
         let view = NSMenuItem(); main.addItem(view)
         let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2"); view.submenu = vm
         let st = NSMenuItem(); main.addItem(st)

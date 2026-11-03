@@ -29,6 +29,8 @@ void engine_set_instruments(int on);
 // What the voice files are. Part-predominant (0): a file has its part loudest with the others bleeding through, so voices not
 // heard are off and those heard are boosted. Isolated (1): one voice per file, so those heard are at 0 dB and the others at -18 dB.
 void engine_set_isolated(int isolated);
+// the sixth stem is a soloist, at 0 dB and centred, with the second stem left at a lone alto's pan; or else a second alto part
+void engine_set_sixth_solo(int solo);
 // the whole mix, in dB: -3 until set
 void engine_set_master_db(double db);
 void engine_seek(double source_seconds);

@@ -162,6 +162,14 @@ def staves(page):
         out.append({'samples': samples, 'x0': float(xa.min()), 'x1': float(xa.max()),
                     'space': float(np.mean(np.diff(ys)))})
     out.sort(key=lambda s: np.interp(W / 2, *s['samples'][0]))
+    # ledger lines above a staff can make a second chain one line off the real one: keep the longer
+    i = 0
+    while i + 1 < len(out):
+        a, b = out[i], out[i + 1]
+        if abs(np.interp(W / 2, *a['samples'][0]) - np.interp(W / 2, *b['samples'][0])) < 2.5 * a['space']:
+            del out[i if a['x1'] - a['x0'] < b['x1'] - b['x0'] else i + 1]
+        else:
+            i += 1
     return out
 
 

@@ -36,7 +36,8 @@ const float FEATURE_DB[6] = {0, 6, 3, 1.5f, 0.75f, 0};
 const float BEHIND_DB = -18;
 std::atomic<bool> g_isolated{false};
 std::atomic<bool> g_instruments{true};
-std::atomic<int> g_stems{STEM_COUNT - 1};     // this song's: STEM_COUNT if it has a second alto part
+std::atomic<int> g_stems{STEM_COUNT - 1};     // this song's: STEM_COUNT if it has a sixth stem
+std::atomic<bool> g_sixth_solo{false};        // the sixth stem is a soloist, not a second alto part
 std::atomic<float> g_master_db{-3};
 
 float db(float d) { return std::pow(10.f, d / 20.f); }
@@ -856,10 +857,13 @@ std::vector<AudioDeviceID> output_devices() {
 // ------------------------------------------------------------------------------------------- API
 extern "C" {
 
+void engine_set_sixth_solo(int solo) { g_sixth_solo = solo != 0; }
+
 void engine_gains(int voices, float gains[STEM_COUNT][2]) {
     const float master = db(g_master_db.load(std::memory_order_relaxed));
     for (int s = 0; s < STEM_COUNT; s++) {
-        float g = db(TRIM_DB[s]);
+        const bool solo = g_sixth_solo.load(std::memory_order_relaxed);
+        float g = s == STEM_A2 && solo ? 1 : db(TRIM_DB[s]);
         const int all = g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? VOICES_ALL : VOICES_FOUR;
         const int heard = voices & all;
         if (s != STEM_I && heard != all) {
@@ -869,7 +873,7 @@ void engine_gains(int voices, float gains[STEM_COUNT][2]) {
         }
         if (s == STEM_I && !g_instruments.load(std::memory_order_relaxed)) g = 0;
         float l, r;
-        pan_gains(s == STEM_A && g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? PAN_KNOB_A1 : PAN_KNOB[s], l, r);
+        pan_gains(s == STEM_A2 && solo ? 0 : s == STEM_A && !solo && g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? PAN_KNOB_A1 : PAN_KNOB[s], l, r);
         gains[s][0] = g * l * master;
         gains[s][1] = g * r * master;
     }

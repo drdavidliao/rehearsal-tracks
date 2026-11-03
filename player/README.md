@@ -22,6 +22,12 @@ The app opens a song folder that has a `player map.json`. Make one with:
         --xml "....musicxml" --stems "S=...wav" "A=...wav" "T=...wav" "B=...wav" "I=...wav"
 
 A score with Alto 1 and Alto 2 parts takes their stems as `A=` and `A2=`, and the app then has both parts in place of one.
+
+A song that isn't SATB names its parts in the map, in `part_names`: `{"S": "Tenor 1", "A": "Tenor 2", "T": "Baritone", "B": "Bass", "A2": "Solo"}`. The
+Hear list and the Other checkboxes use those names. `"A2": "Solo"` makes the sixth stem a soloist, listed first. The keys stay `s a t b z` for the stems.
+
+A score that's a scan has no vector PDF to read, so `make_map_scan.py` takes the bars and heads from the pixels through scanproof's projects (SKILL.md 1.2),
+the times from the tempo marks and `--anchor BAR=SECONDS`, and shows the scan. Its header has the arguments. Dark is then the page filter.
 With no Piano part, as in an unaccompanied score, the time of bar 1 is fitted from each voice's attacks on its own stem.
 
 `--reader-pdf` is the vector score the bar and beat positions are read from, through `dorico_reader.py`. `--score` is
@@ -30,7 +36,7 @@ so this suits tracks rendered to the score's tempo. The script fits the time of 
 and prints the drift by section: look at that before trusting a new song. A song with a rit or a fermata that the
 MusicXML's tempo marks don't describe would need its beat times measured instead, except a rit to the end of the song: a
 rit, riten or rall mark bends the times from its bar on, by a smooth curve fitted to the stems' attacks and to where the sound
-ends. The script prints the curve; the fit assumes the rit runs to the last bar. So far only one song has been mapped.
+ends. The script prints the curve; the fit assumes the rit runs to the last bar. 
 
 ## Keys
 
@@ -51,7 +57,7 @@ ends. The script prints the curve; the fit assumes the rit runs to the last bar.
 | right-click a note | mute or transpose it |
 | ⌘F | hear without fixes |
 | ⌘2 | two pages side by side |
-| ⌘O | open a song folder |
+| ⌘O | open a song folder (File > Recent Songs has the last 12) |
 
 ## Dark mode
 
@@ -65,6 +71,7 @@ In `Sources/CEngine/engine.cpp`.
 
 - Trims: S 0, A -3, T -3, B 0 dB. Pan on Logic's knob scale (-64 to +63): S -45, A -15, T +15, B +45. Instruments 0 dB, centred.
 - With two alto parts: Alto 1 and Alto 2 both -3 dB, pans -20 and -10, either side of a lone alto's -15.
+- With a soloist in the sixth stem: the soloist 0 dB and centred; the other four as S, A, T, B above.
 - The Instruments / click checkbox, or `c`, takes the instrumental stem out of every mode, for a stem that's a click, say. It's remembered for each song.
 - The whole mix is -3 dB until the Volume box says otherwise. The setting is remembered.
 - The Source files switch says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.

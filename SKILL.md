@@ -389,6 +389,16 @@ Three things about where the errors were are worth knowing before you start:
   (`python3 -m scanproof question`). "B♭4 or C5 in bar 51?" makes the user
   find the bar. The pair of images shows the error at a glance.
 
+**A score whose systems change their number of staves, or a page with two kinds:** cut each system to its own image and give
+scanproof one project per run of the same staff count. On a TTBB phone scan with solo staves coming and going (98 bars, 5 to 7
+staves), six projects worked; the detector supplied four system-end barlines it could not see, all right on the overlays' numbers. Dump what `heads.read_staff` reads per bar before typing: it is
+most of an OMR for filled heads (it misses whole notes and reads ledger notes poorly), and typing against it is quicker.
+
+**A singer's stems are a second proof.** With a practice set in hand, pYIN each part's stem at each note. On that scan it found
+what scanproof cannot: an accidental carried through the bar typed as natural on a later beat (the print shows no sign there, and
+a head-position check is happy), in four bars, on every staff that had it. Low bass eighths read a semitone sharp from the scoop; look for
+patterns, not single notes. Where stem and print disagree in one part only, the print wins and the user hears about it.
+
 **Run it.** It works from the piece's folder, outside this repo:
 
 1. Write `proof.json`; its format is in `scanproof/project.py`. It gives:
@@ -2537,6 +2547,12 @@ they are grey where that part is not on the staff, like the notes and rests ther
 Tempo marks are everyone's and stay black. The display copy's staves are named after the
 parts on them for matching (above); give each a `<part-name-display>` with the printed
 name, or the first system's label reads "Tenor 1 Tenor 2a Tenor 2b".
+
+**One solo mp3, several solo staves.** A human set's single Solos mix with two solo staves and a small-group staff: make the open
+file's one part "Solo" (the staves' notes as chords and extra voices), name all three closed staves "Solo" with their printed names as
+`<part-name-display>`, and pass `--closed`, needed because the part counts then come out equal. Give the lyric sheet its own open file
+with the small group's lines left out, on one voice per part: its reader takes one voice's words. Anchor free-tempo bars and any rit from the
+accompaniment's attacks, and set a tempo mark for what the recording does there.
 
 **The all-parts video needs about 5 GB.** In an 8 GB workspace the Balanced video was
 killed for memory when it rendered beside a part video; the log said only "failed". Render
@@ -7956,6 +7972,8 @@ def main():
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
                     '(normal slurs, ties and words) to show instead of the file the audio came from')
+    ap.add_argument('--closed', action='store_true', help='--display is a closed score even though it has as many parts as the '
+                    'open file (three solo staves against one solo part)')
     ap.add_argument('--pulse', type=int, help='rest bars jump in these notes (8 = eighths, 16 = sixteenths); '
                     'default: per part, the coarsest value 95%% of its sung bars keep to')
     ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
@@ -8005,7 +8023,7 @@ def main():
         print(f'{k} tuplet group(s) had no bracket or number in the file; marked for the video')
 
     droot = read_xml(a.display) if a.display else None
-    closed = droot is not None and len(droot.findall('part')) != len(parts)
+    closed = droot is not None and (a.closed or len(droot.findall('part')) != len(parts))
     if droot is not None:
         k = mark_tuplets(droot)
         if k:

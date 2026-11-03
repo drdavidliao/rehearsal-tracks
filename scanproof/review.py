@@ -149,7 +149,7 @@ def zoom(prj, bar, name, path, x0=None, x1=None, scale=3, steps=(-7, 15)):
     return path
 
 
-def question(prj, bar, name, musicxml, path, bar_end=None, title=None):
+def question(prj, bar, name, musicxml, path, bar_end=None, title=None, scale=45):
     """A question for the user: the scan of bars `bar`..`bar_end` on staff `name` above,
     the same bars of `musicxml` rendered by Verovio below.  Ask about the transcription
     with this, not with note names in text: the user reads music, and a rendering shows
@@ -159,15 +159,18 @@ def question(prj, bar, name, musicxml, path, bar_end=None, title=None):
     import verovio
     crop, _, _ = scan_crop(prj, bar, name, bar_end=bar_end)
     tk = verovio.toolkit()
-    tk.setOptions({'pageWidth': 2100, 'adjustPageHeight': True, 'scale': 45, 'header': 'none',
+    tk.setOptions({'pageWidth': 2100, 'adjustPageHeight': True, 'scale': scale, 'header': 'none',
                    'footer': 'none', 'breaks': 'none'})
     tk.loadFile(prj.rel(musicxml) if not os.path.isabs(musicxml) else musicxml)
-    tk.select({'measureRange': f'{bar}-{bar_end or bar}'})
+    # Verovio counts measures from 1 in file order, so a pickup numbered 0 moves every bar on by one
+    src = open(prj.rel(musicxml) if not os.path.isabs(musicxml) else musicxml, encoding='utf-8').read()
+    k = 1 if 'implicit="yes"' in src[:src.find('</measure>')] else 0
+    tk.select({'measureRange': f'{bar + k}-{(bar_end or bar) + k}'})
     tk.redoLayout()
     png = cairosvg.svg2png(bytestring=tk.renderToSVG(1).encode(), background_color='white')
     render = Image.open(io.BytesIO(png)).convert('RGB')
     font = _font(28)
-    W = max(crop.width, render.width)
+    W = max(crop.width, render.width, 1500)
     head = 44
     out = Image.new('RGB', (W, head * 2 + crop.height + render.height + 20), 'white')
     d = ImageDraw.Draw(out)

@@ -2053,6 +2053,8 @@ def main():
     ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
     ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
                     '(normal slurs, ties and words) to show instead of the file the audio came from')
+    ap.add_argument('--closed', action='store_true', help='--display is a closed score even though it has as many parts as the '
+                    'open file (three solo staves against one solo part)')
     ap.add_argument('--pulse', type=int, help='rest bars jump in these notes (8 = eighths, 16 = sixteenths); '
                     'default: per part, the coarsest value 95%% of its sung bars keep to')
     ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
@@ -2102,7 +2104,7 @@ def main():
         print(f'{k} tuplet group(s) had no bracket or number in the file; marked for the video')
 
     droot = read_xml(a.display) if a.display else None
-    closed = droot is not None and len(droot.findall('part')) != len(parts)
+    closed = droot is not None and (a.closed or len(droot.findall('part')) != len(parts))
     if droot is not None:
         k = mark_tuplets(droot)
         if k:
