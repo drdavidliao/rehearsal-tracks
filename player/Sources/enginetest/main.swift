@@ -89,6 +89,56 @@ if let live = env["LIVE"] {
     FileManager.default.createFile(atPath: "\(outDir)/live.f32", contents: out.withUnsafeBufferPointer { Data(buffer: $0) })
     exit(0)
 }
+// STRESS=cycles: changes tempo, method and place over and over while playing, and says how much memory the process holds
+if let st = env["STRESS"], let cycles = Int(st) {
+    func footprint() -> Double {
+        var info = rusage_info_v4()
+        let r = withUnsafeMutablePointer(to: &info) { $0.withMemoryRebound(to: rusage_info_t?.self, capacity: 1) { proc_pid_rusage(getpid(), RUSAGE_INFO_V4, $0) } }
+        return r == 0 ? Double(info.ri_phys_footprint) / 1e9 : -1
+    }
+    func play(_ secs: Double) {
+        var buf = [Float](repeating: 0, count: 1024)
+        let end = Date().addingTimeInterval(secs)
+        while Date() < end {
+            buf.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 512) }
+            Thread.sleep(forTimeInterval: 0.0116)
+        }
+    }
+    engine_set_playing(1)
+    let speeds = [1.0, 0.8, 0.83333, 0.9, 1.1, 0.75, 1.25]
+    print("start", footprint())
+    for c in 1...cycles {
+        engine_set_speed(speeds[c % speeds.count])
+        play(0.4)
+        engine_set_methods(Int32(c % 5), Int32(c % 4))
+        play(0.4)
+        engine_seek(Double((c * 37) % 200))
+        play(0.4)
+        if c % 10 == 0 { print("cycle", c, "footprint GB", footprint()) }
+    }
+    engine_set_speed(1)
+    play(0.5)
+    engine_render_here()
+    engine_wait_render()
+    play(0.5)
+    engine_render_here()
+    engine_wait_render()
+    play(0.5)
+    print("settled at the song's own tempo, footprint GB", footprint(), "speed now", engine_speed())
+    play(14)
+    engine_set_speed(0.8)
+    play(1)
+    engine_wait_render()
+    engine_render_here()
+    engine_wait_render()
+    play(1)
+    engine_render_here()
+    engine_wait_render()
+    play(0.5)
+    print("settled at 0.8 with its whole render done, footprint GB", footprint(), "speed now", engine_speed(), "position", engine_position(), "playing", engine_is_playing())
+    play(14)     // time for vmmap to look from outside
+    exit(0)
+}
 // LOOP=start,end: plays for a while from just before the end and says where the playhead went
 if let lp = env["LOOP"] {
     let p = lp.split(separator: ",").map { Double($0)! }

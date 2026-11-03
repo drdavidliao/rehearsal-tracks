@@ -346,8 +346,15 @@ are ("the unaccompanied TTBB"), and examples use *Shenandoah*. Scores, stems,
 bench pages and mp3s belong in each song's own folder, outside this repo;
 `.gitignore` refuses them here as a backstop.
 
+## Rehearsal player
+
+`player/` is a Mac app for a director running a rehearsal: the lesson-marked score, clickable by the beat, in time with a
+song's stems, with part selection, tempo, looping and single-note fixes. `player/README.md` covers building and using it.
+On Windows or anything else, give `player/PORTING.md` to an AI coding assistant: it has what's needed to write your own version.
+
 ## Licence
 
 `LICENSE.txt` — the Unlicense, a public-domain dedication. It covers the tooling
 in this repository: the skill, the scripts and the `chorale` and `lesson` packages. It has no
-bearing on any published arrangement; no score content is included here.
+bearing on any published arrangement; no score content is included here. The Signalsmith libraries in
+`player/Sources/CEngine/third_party` keep their own MIT licences, and the built player links Rubber Band, which is GPL or commercial.

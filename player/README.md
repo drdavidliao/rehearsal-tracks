@@ -3,6 +3,8 @@
 A Mac app that shows a marked score and plays a song's separated stems in time with it. Click a beat to start there,
 choose a part, and choose a tempo. It opens on the right half of the screen, one page at a time.
 
+On another system, see [PORTING.md](PORTING.md): enough to have an AI coding assistant write your own version.
+
 ## Build
 
 Needs Xcode's tools and `brew install rubberband`.
