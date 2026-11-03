@@ -23,7 +23,9 @@ The app opens a song folder that has a `player map.json`. Make one with:
 what the app shows, with the same pages. `I` is the one instrumental stem. Times come from the MusicXML's tempo marks,
 so this suits tracks rendered to the score's tempo. The script fits the time of bar 1 from the piano's on-beat attacks
 and prints the drift by section: look at that before trusting a new song. A song with a rit or a fermata that the
-MusicXML's tempo marks don't describe would need its beat times measured instead. So far only one song has been mapped.
+MusicXML's tempo marks don't describe would need its beat times measured instead, except a rit to the end of the song: a
+rit, riten or rall mark bends the times from its bar on, by a smooth curve fitted to the stems' attacks and to where the sound
+ends. The script prints the curve; the fit assumes the rit runs to the last bar. So far only one song has been mapped.
 
 ## Keys
 
@@ -37,6 +39,8 @@ MusicXML's tempo marks don't describe would need its beat times measured instead
 | ← → | a bar back or on (with Shift, a beat) |
 | ↑ ↓ | tempo up or down by 1 |
 | m s a t b o | Balanced, Soprano, Alto, Tenor, Bass only, Other |
+| v / i | next stretch method for the voices / instruments |
+| l | loop on or off |
 | right-click a note | mute or transpose it |
 | ⌘F | hear without fixes |
 | ⌘2 | two pages side by side |
@@ -57,6 +61,12 @@ In `Sources/CEngine/engine.cpp`.
 The menu at the top right chooses the Core Audio output device. The choice is remembered. If that device is
 unplugged, sound goes to the system output until it's chosen again.
 
+## Looping
+
+The Loop boxes take a start and end bar, or a rehearsal letter (to the end of that letter); Return turns the loop on. Green
+lines mark it. Reaching the end by playing goes back to the start. A click past the end plays on, and a click before the
+start plays into the loop.
+
 ## Correcting a note
 
 Right-click a note on a voice's staff to mute it or move it up or down by semitones. Tied notes count as one, and only
@@ -71,9 +81,17 @@ another tempo the corrected voice's stem is rendered again, so its waveform chan
 
 ## Tempo
 
-The song's own tempo plays the files themselves. Any other tempo is a Rubber Band R3 offline render of every stem
-(`OptionProcessOffline | OptionEngineFiner | OptionChannelsTogether`), which studies each whole stem first. Playback
-carries on at the old tempo until the render is ready, then moves over at the same place in the music. The
+The song's own tempo plays the files themselves. Any other tempo is rendered, by the method chosen in the Stretch menu,
+separately for the voices and the instruments (`v` and `i` step through them during playback):
+
+- Rubber Band R3 with the channels apart (the default), or together, which the library says trades some fidelity for stereo focus.
+- Signalsmith Stretch, with its default blocks or short ones (50 ms, 15 ms).
+- PSOLA, for the voices only: for a stem with one line. Whole periods of the sound are repeated or dropped, not phase-adjusted.
+
+Nothing waits for a whole render. A new tempo or fix is rendered from a second ahead of the playhead, and playback moves to it
+there, with a short fade. A jump past what's rendered starts another render there. Behind that, the whole of each changed stem
+renders from its start, which is what's kept. The playhead stays on one render until it stops or jumps, so it never crosses a
+join between two. The
 stems used last are kept in `~/Library/Caches/Rehearsal Player`, up to 4 GB. Each stem has its own file per tempo and
 set of fixes, so a fix to one voice re-renders only that voice.
 

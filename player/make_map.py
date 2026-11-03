@@ -7,9 +7,10 @@
 Bars, beats and their x positions come from the vector PDF through dorico_reader.py; times come from the MusicXML's
 tempo marks. Without --offset, the time of bar 1 is measured: the fit of the on-beat piano attacks to the instrumental
 stem. Swung offbeats are left out of that fit, and it reports how far the stems drift from the score bar by bar.
+A rit mark in the MusicXML (rit, riten, rall) bends the times from its bar to the end of the song, fitted to the stems.
 Writes "player map.json" in the song folder, paths relative to it.
 """
-import argparse, json, os, subprocess, sys, xml.etree.ElementTree as ET
+import argparse, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
 from fractions import Fraction as F
 import numpy as np
 
@@ -139,6 +140,40 @@ def snap_notes(notes, env):
     return moved
 
 
+RIT = re.compile(r'^(rit|riten|rall|poco rit|molto rit)', re.I)
+
+
+def rit_bars(path):
+    """the bar index each rit-like mark is in"""
+    root = ET.parse(path).getroot()
+    out = set()
+    for part in root.findall('part'):
+        for mi, m in enumerate(part.findall('measure')):
+            if any(w.text and RIT.match(w.text.strip()) for w in m.iter('words')): out.add(mi)
+    return sorted(out)
+
+
+def fit_rit(events, t0, total, sound_end):
+    """A rit's beat length, as a smooth curve: the score's times, then a step to c times slower and a further slowing by a
+    at the end of its span. events: (seconds into the rit by the score, that stem's attacks). Attacks alone won't do, because
+    a soft consonant or a legato note has none. The last bar has to end where the sound does, give or take its reverb.
+    Returns (c, a, p) with the most attack strength under its notes."""
+    best = (-1, 1, 0, 1)
+    fr = SR / FINE
+    u = np.linspace(0, total, 1601)
+    for c in np.arange(1, 3.01, 0.05):
+        for a in np.arange(0, 8.01, 0.05):
+            for p in (0.5, 1, 2, 3):
+                t = t0 + np.concatenate([[0], np.cumsum((c + a * (u[:-1] / total) ** p) * (u[1] - u[0]))])
+                if not sound_end - 1.0 <= t[-1] <= sound_end + 0.2: continue
+                sc = 0
+                for e, fl in events:
+                    i = int(np.interp(e, u, t) * fr)
+                    if 3 <= i < len(fl) - 4: sc += fl[i - 3:i + 4].max()
+                if sc > best[0]: best = (sc, c, a, p)
+    return best[1:]
+
+
 def flux(path):
     a = np.frombuffer(subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-f', 'f32le', '-ac', '1', '-ar', str(SR), '-'],
                                      capture_output=True, check=True).stdout, dtype='f4')
@@ -202,6 +237,33 @@ def main():
     else:
         offset = a.offset
 
+    # a rit: the song's own beat from then on is measured from the stems, and score seconds are bent to fit
+    plain_secs = secs
+    anchors = []
+    rits = rit_bars(at(a.xml))
+    if rits:
+        vn, swing0 = read_voice_notes(at(a.xml), ['Soprano', 'Alto', 'Tenor', 'Bass'])
+        first = rits[0]
+        s0 = plain_secs(first, F(0))
+        ev = []
+        for name, ns in vn.items():
+            if name[0] not in stems: continue
+            e = np.log(fine_envelope(at(stems[name[0]])) + 1e-3)
+            fl = np.convolve(np.maximum(np.diff(e, prepend=e[0]), 0), np.ones(4), 'same')
+            for n in ns:
+                if n['start'][0] >= first: ev.append((plain_secs(n['start'][0], swung(n['start'][1], swing0)) - s0, fl))
+        sound_end = max(np.nonzero(fine_envelope(at(f)) > 1e-3)[0][-1] for f in stems.values()) * FINE / SR
+        c, a_, p_ = fit_rit(ev, offset + s0, total - s0, sound_end)
+        print(f'sound ends at {sound_end:.2f} s')
+        print(f'rit from bar {first + 1}: beat {c:.2f} times longer, then up to {a_:.1f} more by the end (power {p_}): about {tempo / c:.0f} bpm at the start')
+        u_ = np.linspace(0, total - s0, 801)
+        t_ = np.concatenate([[0], np.cumsum((c + a_ * (u_[:-1] / (total - s0)) ** p_) * (u_[1] - u_[0]))])
+        anchors = [(float(s0 + x), float(s0 + y + offset)) for x, y in zip(u_, t_)]
+    def secs(bar_i, q):
+        s_ = plain_secs(bar_i, q)
+        if not anchors or s_ <= anchors[0][0]: return s_
+        return float(np.interp(s_, [x for x, _ in anchors], [y for _, y in anchors])) - offset
+
     bars = []
     systems = {}
     for b, x in zip(r.bars, xbars):
@@ -251,7 +313,7 @@ def main():
                               midi=n['midi'], word=n['word'], start=round(n['start_t'], 4), end=round(n['end_t'], 4), heads=heads))
         print(f"{name}: {len(vnotes[name])} notes, {moved} starts snapped to the stem, {lost} heads not found")
     m = dict(notes=notes, score=a.score, stems=stems, offset=round(offset, 4), page_height=float(r.pms[0].H), pages=npages,
-             tempo=float(next((t_ for b in xbars for _, t_ in b['tempos']), 120.0)), music_end=round(offset + total, 4),
+             tempo=float(next((t_ for b in xbars for _, t_ in b['tempos']), 120.0)), music_end=round(offset + secs(len(xbars) - 1, xbars[-1]['quarters']), 4),
              systems=list(systems.values()), bars=bars)
     with open(at('player map.json'), 'w') as f:
         json.dump(m, f, indent=0)

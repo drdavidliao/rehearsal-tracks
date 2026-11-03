@@ -30,11 +30,20 @@ void engine_seek(double source_seconds);
 double engine_position(void);
 double engine_duration(void);
 
-// speed 1 = the files themselves. Playback carries on at the old tempo until the new one is ready, then moves over.
+// speed 1 = the files themselves. Playback carries on at the old tempo for a moment, then moves over.
 void engine_set_speed(double speed);
 double engine_speed(void);
-// 0..1 while a render is running, -1 when idle
+// 0..1 while whole renders are running in the background, -1 when idle. Playback doesn't wait for them.
 double engine_render_progress(void);
+// asked to play, and the audio here isn't rendered yet
+int engine_waiting(void);
+// starts a render at the playhead if none is near. For when the mixer has gone somewhere by itself, as a loop does.
+void engine_render_here(void);
+// on reaching end by playing, goes back to start: both in seconds of the original audio. A negative start is no loop.
+void engine_set_loop(double start, double end);
+// how another tempo is made, for the four voices and for the instruments
+enum { METHOD_R3_TOGETHER = 0, METHOD_R3_APART, METHOD_SIGNALSMITH, METHOD_SIGNALSMITH_SHORT, METHOD_PSOLA };
+void engine_set_methods(int voices, int instruments);
 
 // The notes to correct, replacing any before: per fix a stem, its span in seconds of the original audio, and either mute
 // or semitones. Like a tempo change, playback carries on as it was until the corrected audio is ready.

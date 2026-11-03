@@ -25,7 +25,62 @@ enum Mode: Int32, CaseIterable, Identifiable {
 // a position within this of a beat counts as on it: the engine works in whole samples
 let eps = 0.002
 
+let stretchNames = ["Rubber Band R3, channels together", "Rubber Band R3, channels apart", "Signalsmith Stretch", "Signalsmith Stretch, short blocks", "PSOLA (one voice)"]
+
 final class Player: ObservableObject {
+    @Published var voiceMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "voiceMethod") as? Int ?? 1)
+    @Published var instMethod: Int32 = Int32(UserDefaults.standard.object(forKey: "instMethod") as? Int ?? 1)
+    @Published var waiting = false
+    @Published var loopOn = false { didSet { applyLoop() } }
+    @Published var loopFrom = "" 
+    @Published var loopTo = ""
+    /// the loop's bars, once both boxes make sense
+    var loopBars: (Bar, Bar)? {
+        guard let m = map else { return nil }
+        func bar(_ s: String, end: Bool) -> Bar? {
+            let t = s.trimmingCharacters(in: .whitespaces)
+            if let n = Int(t) { return m.bars.first { $0.num == n } }
+            // a letter: from its first bar, or to the last bar before the next letter
+            guard let i = m.bars.firstIndex(where: { $0.letter == t.uppercased() }) else { return nil }
+            if !end { return m.bars[i] }
+            let next = m.bars[(i + 1)...].firstIndex { $0.letter != nil }
+            return next.map { m.bars[$0 - 1] } ?? m.bars.last
+        }
+        guard let a = bar(loopFrom, end: false), let b = bar(loopTo.isEmpty ? loopFrom : loopTo, end: true), a.num <= b.num else { return nil }
+        return (a, b)
+    }
+
+    func applyLoop() {
+        guard loopOn, let (a, b) = loopBars else { engine_set_loop(-1, 0); score?.refresh(); return }
+        engine_set_loop(a.beat_t[0], b.end_t)
+        // into the loop if the playhead is elsewhere
+        let t = engine_position()
+        if t < a.beat_t[0] - eps || t >= b.end_t { seek(a.beat_t[0]) }
+        score?.refresh()
+    }
+
+    /// from the boxes: on if they make sense, a beep if not
+    func commitLoop() {
+        if loopBars != nil { loopOn = true; applyLoop() } else { NSSound.beep(); loopOn = false }
+    }
+    @Published var toast: String?
+    var toastWork: DispatchWorkItem?
+
+    func setMethods(voices: Int32? = nil, instruments: Int32? = nil) {
+        if let v = voices { voiceMethod = v; UserDefaults.standard.set(Int(v), forKey: "voiceMethod") }
+        if let i = instruments { instMethod = i; UserDefaults.standard.set(Int(i), forKey: "instMethod") }
+        engine_set_methods(voiceMethod, instMethod)
+        let at = abs(bpm - (map?.tempo ?? bpm)) < 0.01 ? " (heard away from the song's own tempo)" : ""
+        say((voices != nil ? "Voices: " + stretchNames[Int(voiceMethod)] : "Instruments: " + stretchNames[Int(instMethod)]) + at)
+    }
+
+    func say(_ s: String) {
+        toast = s
+        toastWork?.cancel()
+        let w = DispatchWorkItem { [weak self] in self?.toast = nil }
+        toastWork = w
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3, execute: w)
+    }
     @Published var map: SongMap?
     @Published var songName = ""
     @Published var error: String?
@@ -83,6 +138,7 @@ final class Player: ObservableObject {
             songName = folder.lastPathComponent
             self.folder = folder
             bypass = false
+            loopOn = false
             fixes = (try? JSONDecoder().decode([NoteFix].self, from: Data(contentsOf: fixesFile))) ?? []
             sendFixes()
             bpm = m.tempo; heardBpm = m.tempo; lastStart = m.bars[0].beat_t[0]
@@ -214,6 +270,10 @@ final class Player: ObservableObject {
         if deviceCheck % 60 == 0 { listDevices() }
         let p = engine_is_playing() != 0
         if p != playing { playing = p }
+        let wt = engine_waiting() != 0
+        // the mixer has got to audio nobody asked to have rendered: a loop's start, most likely
+        if wt && !waiting { engine_render_here() }
+        if wt != waiting { waiting = wt }
         let pr = engine_render_progress()
         if abs(pr - progress) > 0.005 || (pr < 0) != (progress < 0) { progress = pr }
         let heard = engine_speed() * (map?.tempo ?? 120)
@@ -246,6 +306,9 @@ final class Player: ObservableObject {
         guard let c = e.charactersIgnoringModifiers, c.count == 1 else { return false }
         if c.first!.isNumber { typed += c; return true }
         if let md = Mode.allCases.first(where: { $0.key == c }) { mode = md; return true }
+        if c == "l" { if loopBars != nil { loopOn.toggle() } else { NSSound.beep() }; return true }
+        if c == "v" { setMethods(voices: (voiceMethod + 1) % Int32(stretchNames.count)); return true }
+        if c == "i" { setMethods(instruments: (instMethod + 1) % 4); return true }
         if c.first!.isUppercase, map!.bars.contains(where: { $0.letter == c }) { go(letter: c); return true }
         return false
     }
@@ -393,6 +456,7 @@ final class Overlay: NSView {
     override func draw(_ dirty: NSRect) {
         guard let c = canvas else { return }
         drawFixes(c)
+        drawLoop(c)
         if let h = hover, let r = c.rect(x: h.x, bar: h.bar), c.pdf.visiblePages.contains(where: { c.pdf.document?.index(for: $0) == h.bar.page }) {
             NSColor.systemBlue.withAlphaComponent(0.25).setFill()
             NSRect(x: r.minX - 1, y: r.minY, width: 2, height: r.height).fill()
@@ -406,6 +470,16 @@ final class Overlay: NSView {
 }
 
 extension Overlay {
+    /// green lines at the loop's ends
+    func drawLoop(_ c: ScoreCanvas) {
+        guard let p = c.player, p.loopOn, let (a, b) = p.loopBars else { return }
+        NSColor.systemGreen.withAlphaComponent(0.8).setFill()
+        for (x, bar) in [(a.xa + 2, a), (b.xb - 2, b)] {
+            guard let page = c.pdf.document?.page(at: bar.page), c.pdf.visiblePages.contains(page), let r = c.rect(x: x, bar: bar) else { continue }
+            NSRect(x: r.minX - 1.5, y: r.minY, width: 3, height: r.height).fill()
+        }
+    }
+
     /// a ring on each corrected note's heads, grey while they're bypassed: ✕ muted, or the semitones
     func drawFixes(_ c: ScoreCanvas) {
         guard let p = c.player, let m = p.map, !p.fixes.isEmpty, let doc = c.pdf.document else { return }
@@ -463,6 +537,7 @@ struct Controls: View {
     @FocusState var editing: Bool
     @FocusState var editingBar: Bool
     @FocusState var editingVol: Bool
+    @FocusState var editingBar2: Bool
     // back to the score's keys (space, arrows and so on) once a box has been used
     func partsRow(slider: Bool) -> some View {
         HStack(spacing: 6) {
@@ -490,7 +565,7 @@ struct Controls: View {
         let s = zip(["S", "A", "T", "B"], [Int32(1), 2, 4, 8]).filter { p.otherVoices & $0.1 != 0 }.map(\.0).joined(separator: "+")
         return (s.isEmpty ? "None" : s) + " ▾"
     }
-    func leave() { editing = false; editingBar = false; editingVol = false; NSApp.keyWindow?.makeFirstResponder(nil) }
+    func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
     func volString(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -516,6 +591,16 @@ struct Controls: View {
                     ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
                 }.labelsHidden().controlSize(.small).frame(width: 125).help("Audio output")
             }
+            HStack(spacing: 6) {
+                Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
+                Text("bar").fixedSize()
+                TextField("", text: $p.loopFrom).frame(width: 40).focused($editingBar2).multilineTextAlignment(.trailing)
+                    .onSubmit { p.commitLoop(); leave() }
+                Text("to").fixedSize()
+                TextField("", text: $p.loopTo).frame(width: 40).focused($editingBar2).multilineTextAlignment(.trailing)
+                    .onSubmit { p.commitLoop(); leave() }
+                Spacer()
+            }
             // on a narrow window the volume slider gives way: the box does its job
             ViewThatFits(in: .horizontal) { partsRow(slider: true); partsRow(slider: false) }
                 // on the row, not the button: it stays open as parts are checked
@@ -530,6 +615,7 @@ struct Controls: View {
 
 struct RootView: View {
     @ObservedObject var p: Player
+    func note<V: View>(_ v: V) -> some View { v.padding(5).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6)) }
     var body: some View {
         VStack(spacing: 0) {
             Controls(p: p)
@@ -541,19 +627,28 @@ struct RootView: View {
             }
             ScoreRep(player: p).frame(maxHeight: p.map == nil ? 0 : .infinity).opacity(p.map == nil ? 0 : 1)
                 .overlay(alignment: .topTrailing) {
-                    if p.progress >= 0 {
-                        HStack(spacing: 8) {
-                            ProgressView(value: p.progress).frame(width: 70).controlSize(.small)
-                            Text(abs(p.bpm - p.heardBpm) < 0.5 ? "Applying your fixes at ♩ = \(Int(p.bpm))" : "♩ = \(Int(p.bpm)) coming; hearing \(Int(p.heardBpm.rounded()))").font(.caption)
+                    VStack(alignment: .trailing, spacing: 4) {
+                        if let t = p.toast { note(Text(t).font(.caption)) }
+                        if p.waiting { note(Text("Getting the audio ready…").font(.caption)) }
+                        else if p.progress >= 0 {
+                            // playback doesn't wait for this: it only matters for jumping around at once
+                            note(HStack(spacing: 6) {
+                                ProgressView(value: p.progress).frame(width: 50).controlSize(.mini)
+                                Text("rendering the rest").font(.caption2)
+                            }.foregroundStyle(.secondary))
                         }
-                        .padding(6).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6)).padding(6)
-                    }
+                    }.padding(6)
                 }
         }
     }
 }
 
-final class AppDelegate: NSObject, NSApplicationDelegate {
+final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
+    func menuNeedsUpdate(_ menu: NSMenu) {
+        for it in menu.items where it.tag >= 100 {
+            it.state = (it.tag >= 200 ? Int32(it.tag - 200) == player.instMethod : Int32(it.tag - 100) == player.voiceMethod) ? .on : .off
+        }
+    }
     let player = Player()
     var window: NSWindow!
     var timer: Timer?
@@ -578,6 +673,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return self.player.key(e) ? nil : e
         }
         if let v = UserDefaults.standard.object(forKey: "volume") as? Double { player.setVolume(v) }
+        engine_set_methods(player.voiceMethod, player.instMethod)
         let args = CommandLine.arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if let a = args.first { player.open(folder: URL(fileURLWithPath: a)) }
         else if let last = UserDefaults.standard.string(forKey: "lastFolder") { player.open(folder: URL(fileURLWithPath: last)) }
@@ -618,6 +714,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let fm = NSMenu(title: "File"); fm.addItem(withTitle: "Open Song Folder…", action: #selector(openFolder), keyEquivalent: "o"); file.submenu = fm
         let view = NSMenuItem(); main.addItem(view)
         let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2"); view.submenu = vm
+        let st = NSMenuItem(); main.addItem(st)
+        let sm = NSMenu(title: "Stretch")
+        sm.delegate = self
+        let vh = sm.addItem(withTitle: "Voices (v cycles)", action: nil, keyEquivalent: ""); vh.isEnabled = false
+        for (i, n) in stretchNames.enumerated() {
+            let it = ClosureItem(title: n) { [weak self] in self?.player.setMethods(voices: Int32(i)) }; it.tag = 100 + i; sm.addItem(it)
+        }
+        sm.addItem(.separator())
+        let ih = sm.addItem(withTitle: "Instruments (i cycles)", action: nil, keyEquivalent: ""); ih.isEnabled = false
+        for (i, n) in stretchNames.dropLast().enumerated() {
+            let it = ClosureItem(title: n) { [weak self] in self?.player.setMethods(instruments: Int32(i)) }; it.tag = 200 + i; sm.addItem(it)
+        }
+        st.submenu = sm
         let fix = NSMenuItem(); main.addItem(fix)
         let xm = NSMenu(title: "Fixes")
         xm.addItem(withTitle: "Hear Without Fixes", action: #selector(toggleBypass(_:)), keyEquivalent: "f")

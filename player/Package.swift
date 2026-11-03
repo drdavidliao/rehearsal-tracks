@@ -7,7 +7,8 @@ let package = Package(
     platforms: [.macOS(.v13)],
     targets: [
         .target(name: "CEngine",
-                cxxSettings: [.unsafeFlags(["-I\(rb)/include", "-O3"])],
+                exclude: ["third_party"],
+                cxxSettings: [.unsafeFlags(["-I\(rb)/include", "-ISources/CEngine/third_party", "-O3"])],
                 linkerSettings: [.unsafeFlags(["\(rb)/lib/librubberband.a", "\(sr)/lib/libsamplerate.a"]),
                                  .linkedFramework("Accelerate"), .linkedFramework("AudioToolbox"), .linkedFramework("CoreAudio")]),
         .executableTarget(name: "RehearsalPlayer", dependencies: ["CEngine"]),
