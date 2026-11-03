@@ -13,6 +13,7 @@ struct Note: Codable { let id, part: String; let bar: Int; let beat: Double; let
 struct NoteFix: Codable { let id, part: String; var start, end: Double; var mute: Bool; var semitones: Int }
 struct SongMap: Codable {
     let notes: [Note]?
+    let score_dark: String?
     let score: String; let stems: [String: String]; let offset: Double; let page_height: Double; let pages: Int
     let tempo: Double; let music_end: Double; let systems: [Sys]; let bars: [Bar]
 }
@@ -118,6 +119,7 @@ final class Player: ObservableObject {
     var folder: URL?
     let volumeRange = -40.0...6.0
     var pdf: PDFDocument?
+    var pdfDark: PDFDocument?
     var lastStart = 0.0
     var tempoWork: DispatchWorkItem?
     var started = false
@@ -143,6 +145,7 @@ final class Player: ObservableObject {
             }
             pdf = PDFDocument(url: folder.appendingPathComponent(m.score))
             guard pdf != nil else { error = "Couldn't open \(m.score)."; return }
+            pdfDark = m.score_dark.flatMap { PDFDocument(url: folder.appendingPathComponent($0)) }
             map = m
             songName = folder.lastPathComponent
             self.folder = folder
@@ -361,12 +364,24 @@ final class ScoreCanvas: NSView {
         }
     }
 
-    /// Dark is a filter on the page's view, not the PDF: white goes to a soft dark grey and black to a soft white. The hue turns
-    /// back after the inversion, so the colored marks stay near their own colors. The line and rings are drawn above, unfiltered.
+    /// Dark is the song's dark copy of the score (dark_score.py), in the same pages at the same places. Without one, it's a filter
+    /// on the page's view: white goes to a soft dark grey and black to a soft white, with the hue turned back after the inversion.
     func applyDark() {
         let dark = player?.darkScore ?? false
+        let wanted = dark ? (player?.pdfDark ?? player?.pdf) : player?.pdf
+        if pdf.document !== wanted {
+            let at = pdf.currentPage.flatMap { pdf.document?.index(for: $0) } ?? 0
+            pdf.document = wanted
+            if let page = wanted?.page(at: at) { pdf.go(to: page) }
+            pdf.autoScales = true
+        }
         pdf.wantsLayer = true
         pdf.layerUsesCoreImageFilters = true
+        if dark, player?.pdfDark != nil {
+            pdf.contentFilters = []
+            pdf.backgroundColor = NSColor(srgbRed: 0.09, green: 0.09, blue: 0.095, alpha: 1)
+            return
+        }
         guard dark, let invert = CIFilter(name: "CIColorInvert"), let hue = CIFilter(name: "CIHueAdjust"), let soft = CIFilter(name: "CIColorMatrix") else {
             pdf.contentFilters = []
             pdf.backgroundColor = .underPageBackgroundColor
@@ -383,7 +398,7 @@ final class ScoreCanvas: NSView {
         pdf.backgroundColor = .white       // the surround, filtered along with the page
     }
 
-    func reload() { pdf.document = player?.pdf; applyDark(); lastPage = -1; setTwoPages(player?.twoPages ?? false); refresh() }
+    func reload() { pdf.document = nil; applyDark(); lastPage = -1; setTwoPages(player?.twoPages ?? false); refresh() }
     func setTwoPages(_ on: Bool) { pdf.displayMode = on ? .twoUp : .singlePage; pdf.autoScales = true }
 
     func refresh() {

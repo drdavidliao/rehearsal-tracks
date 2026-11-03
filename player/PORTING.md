@@ -36,6 +36,9 @@ in time with the audio, moving smoothly between beats' x positions. While playin
 early so the next page's first bar can be read. Take the audio device's output latency off the position, or the line runs ahead
 of the sound.
 
+**Dark mode.** Radio buttons for Light and Dark. Inverting the whole page with a filter works, but a vector PDF can be recolored element by
+element for less glare: see `dark_score.py`, which makes a dark copy of the score with warm notes and a cooler, dimmer everything else.
+
 **Going somewhere.** Clicking goes to the nearest beat on the nearest system; double-clicking also plays. The first click on the
 app from another window must also count as a click, since the director is often in Zoom. A Bar box takes a number or a rehearsal
 letter. Keys: space plays and stops; digits and Return go to a bar; Return alone goes back to the last start; a capital letter goes to

@@ -16,6 +16,8 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..'))
 import dorico_reader as dr
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import dark_score
 
 SR, HOP = 44100, 441
 FINE = 220
@@ -312,7 +314,11 @@ def main():
             notes.append(dict(id=f"{name[0]}{bi + 1}.{float(q):g}", part=name[0], bar=bi + 1, beat=round(float(q / beat_len(r.bars[bi]['meter'])) + 1, 2),
                               midi=n['midi'], word=n['word'], start=round(n['start_t'], 4), end=round(n['end_t'], 4), heads=heads))
         print(f"{name}: {len(vnotes[name])} notes, {moved} starts snapped to the stem, {lost} heads not found")
-    m = dict(notes=notes, score=a.score, stems=stems, offset=round(offset, 4), page_height=float(r.pms[0].H), pages=npages,
+    # the dark mode's copy of the score, with notes and everything else in their own colors
+    stem, ext = os.path.splitext(a.score)
+    score_dark = f'{stem} (dark){ext}'
+    print('dark copy:', dark_score.make(at(a.score), at(score_dark)))
+    m = dict(notes=notes, score=a.score, score_dark=score_dark, stems=stems, offset=round(offset, 4), page_height=float(r.pms[0].H), pages=npages,
              tempo=float(next((t_ for b in xbars for _, t_ in b['tempos']), 120.0)), music_end=round(offset + secs(len(xbars) - 1, xbars[-1]['quarters']), 4),
              systems=list(systems.values()), bars=bars)
     with open(at('player map.json'), 'w') as f:

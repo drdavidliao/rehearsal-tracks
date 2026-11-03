@@ -49,6 +49,12 @@ ends. The script prints the curve; the fit assumes the rit runs to the last bar.
 | ⌘2 | two pages side by side |
 | ⌘O | open a song folder |
 
+## Dark mode
+
+Light and Dark in the sidebar, or `d`. `make_map.py` also writes a dark copy of the score through `dark_score.py` (it needs `pypdf`),
+drawn element by element: notes and rests with their stems, beams, flags, dots and accidentals are warm, and staves, clefs, time
+signatures, slurs and words are cool. The colors are at the top of that file. For a song without a dark copy, Dark is a filter on the page.
+
 ## The mix
 
 In `Sources/CEngine/engine.cpp`.
