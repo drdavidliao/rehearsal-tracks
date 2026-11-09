@@ -1847,10 +1847,18 @@ def closed_display(droot, src_names, src_notes, sung):
                 if ly.get('print-object') != 'no':
                     text_of.setdefault(n['id'], ''.join(x.text or '' for x in ly.findall('text')).strip())
     for (j, mi, rel), txt in hidden.items():
-        if (j, mi, rel) in groups:
+        # a word this staff prints at that moment is the other part's (the basses' "doo" below the
+        # staff while the baritones' words are printed between the staves): the parts that read
+        # none of this staff's words there still read theirs on another staff
+        covered = set()
+        for _, hid in groups.get((j, mi, rel), []):
+            covered |= readers.get(hid, set())
+        sp = [i for i in staff_parts[j] if i in sung and (i, mi, rel) in syls and i not in covered]
+        if not sp:
             continue
-        sp = [i for i in staff_parts[j] if i in sung and (i, mi, rel) in syls]
-        for (j2, mi2, rel2), lst in groups.items():
+        # the nearest staff first: the print sets the shared words beside this staff, and a soloist
+        # two staves up singing the same word at that moment is not where the part reads it
+        for (j2, mi2, rel2), lst in sorted(groups.items(), key=lambda g: abs(g[0][0] - j)):
             if j2 != j and mi2 == mi and rel2 == rel:
                 hit = [(num, hid) for num, hid in lst if text_of.get(_base(hid)) == txt]
                 if hit:
@@ -1863,6 +1871,15 @@ def closed_display(droot, src_names, src_notes, sung):
                     pick = [h for h in hit if facing(h)] or hit
                     readers.setdefault(pick[-1][1], set()).update(sp)
                     break
+    # every syllable a part starts in the open score has a printed word it reads
+    at_of = {n['id']: (n['mi'], n['rel']) for ns_ in dnotes for n in ns_}
+    read = {(i,) + at_of[_base(hid)] for hid, ps in readers.items() for i in ps}
+    nums = [m.get('number') for m in dparts[0].findall('measure')]
+    lost = sorted(k for k in syls if k[0] in sung and any(k[0] in staff_parts[j] for j in staff_parts) and k not in read)
+    print('check, words read: ' + ('every syllable a part sings lights a printed word' if not lost else
+          f'{len(lost)} syllable(s) a part sings light no printed word: ' +
+          ', '.join(f'{src_names[i]} bar {nums[mi]} beat {float(rel) + 1:g} "{syl_text[(i, mi, rel)]}"'
+                    for i, mi, rel in lost[:20])))
     return dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts
 
 
