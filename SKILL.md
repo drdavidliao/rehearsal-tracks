@@ -399,6 +399,15 @@ what scanproof cannot: an accidental carried through the bar typed as natural on
 a head-position check is happy), in four bars, on every staff that had it. Low bass eighths read a semitone sharp from the scoop; look for
 patterns, not single notes. Where stem and print disagree in one part only, the print wins and the user hears about it.
 
+**Look at notehead sizes, not only positions.** Small (cue-size) heads mean something: on that TTBB scan,
+every bass "split" into octaves printed the lower octave small, an "if you prefer" note, with the upper note the
+one sung (and in places the one the baritones sing too). The transcription had typed them as full-size chord
+notes, so the open file, the videos and the player's map all treated the optional low note as the part. scanproof's
+pitch check passes them, since the pitches are right. Measure them: threshold the crop, open with a 5×5 square to
+drop staff lines, stems and ledger lines, and compare each blob's area with the full-size heads beside it (full
+heads about 20 px wide at 300 dpi; cue heads 11–15). Look at a zoom of every split, because a ledger line through a
+head or a curled page makes one size misread. Hollow heads need a look by eye. Mark them `<type size="cue">`.
+
 **Run it.** It works from the piece's folder, outside this repo:
 
 1. Write `proof.json`; its format is in `scanproof/project.py`. It gives:
@@ -3226,6 +3235,41 @@ main director says, so the plan always covers every letter.
   "why" tag and a split label are kept below the words of the system above, and an
   "everyone" badge with no room there joins the letter's row (after the part badges, or
   before the boxed letter at the page edge). Look at every page.
+
+## Step 12 — Memorization cards for a repetitive part
+
+For a part that is mostly one rhythm on "doot doo", memorizing by the words doesn't help. What the director asked
+for, after trying tonic/subdominant/dominant "route maps" (a path bouncing between functions; useful for seeing
+the harmony, too much to read in time), is one landscape US Letter page in simplified notation, read in time while
+singing. The first one (a TTBB bass part) was built by a script in that song's `_build/` folder (song-specific row
+lists; not general code yet). The rules it ended with:
+
+- **Plain bars: stemless heads, one per new pitch, packed.** A bar is only as wide as its heads: no hidden filler
+  reserving the width of the notes left out. A bar that repeats the previous bar's pitch still gets its head, so
+  every bar is visible. Each bar gets its barline and its own small number.
+- **Everything else is written out in rhythm**, with its syllables: words, any other rhythm, held notes, an extra
+  note. Include a bar whose rhythm is easy to get wrong on autopilot even if it is "plain-ish" (a dotted figure in
+  an intro of long notes). Also write out the plain bar that sits in the same column as a written-out variant: the
+  director said the matching rests make the variant's extra note obvious.
+- **Extra notes** (a "doo" added on beat 4) are orange with a soft halo. **Optional printed octaves** are cue-size
+  heads under the sung note, as the print has them (see 1.2 on reading sizes).
+- **Bar order, no cross-references.** "26–33: same as 10–17" was unreadable in time; draw every bar where it
+  comes. The only exception kept was an immediate repeat ("1 more time").
+- **Verse passes stacked in shared columns.** Lay each pass of the same blocks out together (one part per pass in
+  a single Verovio layout, so measures share widths), then print each staff as its own line in bar order. Looking
+  straight down shows the same musical job in every pass. A pass that skips a block leaves blank space there (no
+  staff lines, no barlines), not empty measures. Never join different passes with a brace or barline.
+- **Narrow gaps between four-bar phrases**, the same columns on every line; a phrase after a gap opens with its
+  own barline. A bridge starts a new line.
+- **Shade the motifs**: each recurring motif and the bridge its own pale colour behind the staff. Match motifs by
+  pitch name, so a bar with only the low octave still counts.
+- **Align excerpts on one line by their staff lines**, not their boxes (labels above push a box down). The intro
+  goes alongside the title block, not under it.
+- Page number, as always.
+
+Verovio details that bit: its SVG is `overflow="visible"`, so cropping one staff out of a shared layout needs
+`overflow="hidden"` and the inner `definition-scale` sized to the whole system; self-closing `<g .../>` must be
+skipped when matching group nesting; `size="cue"` on `<type>` draws cue heads.
 
 ## Scripts
 
