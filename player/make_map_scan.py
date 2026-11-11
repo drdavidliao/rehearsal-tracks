@@ -3,8 +3,13 @@
 tempo marks and hand-measured anchors (see README.md here).
 
     python3 player/make_map_scan.py "song folder" --score scan.pdf --xml open.musicxml --systems systems.json
-        --proofs proofA proofB ... --stems "S=...wav" ... "I=...mp3" "A2=...wav" --part-stems "Tenor 1=S" "Tenor 2=A" "Baritone=T" "Bass=B" "Solo=A2"
+        --proofs proofA proofB ... --stems "T1=...wav" "T2=...wav" "Bar=...wav" "B=...wav" "Solo=...wav" "I=...mp3"
+        --part-stems "Solo=Solo" "Tenor 1=T1" "Tenor 2=T2" "Baritone=Bar" "Bass=B"
         --staff "Tenor 1=TT" "Tenor 2=TT" "Baritone=BB" "Bass=BB" "Solo=S,S2,S3" --anchor 0=1.05 --anchor 9=19.05 --swing 0.62 --tempo 156
+
+--stems names each stem by any key, I being the instrumental one (leave it out for none). --part-stems says which stem sings
+each MusicXML part, top to bottom as in the score; the map's voices follow that order, and two parts on one stem are one
+voice, named for both.
 
 systems.json: for each system image a scanproof project names, {"file": "s01a.png", "page": 0, "sys": 0, "y0": 0}: its PDF page counted
 from 0, its index on the page, and the row of the page image it was cut from. Without a vector PDF there is no dark copy: the app's
@@ -158,8 +163,13 @@ def main():
             notes.append(dict(id=f'{stem}.{numbers[bi]}.{float(q):g}', part=stem, bar=numbers[bi], beat=round(float(q) + 1, 2), midi=n['midi'],
                               word=n['word'], start=round(n['start_t'], 4), end=round(n['end_t'], 4), heads=heads))
         print(f'{name}: {len(vnotes[name])} notes, {moved} starts snapped to the stem, {lost} heads not found')
-    m = dict(notes=notes, score=a.score, stems=stems, offset=round(starts[0][0], 4), page_height=sizes[0][1], pages=len(sizes), tempo=a.tempo,
-             music_end=round(total, 4), systems=list(sysd.values()), bars=bars, part_names={v: k for k, v in stem_of.items()})
+    voices = []
+    for part, stem in stem_of.items():
+        v = next((v for v in voices if v['key'] == stem), None)
+        if v: v['name'] += ' and ' + part
+        else: voices.append(dict(key=stem, name=part))
+    m = dict(voices=voices, notes=notes, score=a.score, stems=stems, offset=round(starts[0][0], 4), page_height=sizes[0][1], pages=len(sizes),
+             tempo=a.tempo, music_end=round(total, 4), systems=list(sysd.values()), bars=bars)
     with open(at('player map.json'), 'w') as f:
         json.dump(m, f, indent=0)
     print('wrote player map.json:', len(bars), 'bars, letters', [b['letter'] for b in bars if b['letter']], 'music ends', m['music_end'])

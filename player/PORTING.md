@@ -23,9 +23,9 @@ passage, and repair wrong notes in the audio. It replaces a DAW and a tablet for
 
 A song folder holding:
 
-- **Stems:** one audio file for each of Soprano, Alto, Tenor and Bass, and one for the instruments. All the same sample rate and
-  length, and all stereo. Ours came from a stem separator run on four rehearsal tracks, and the app uses one of the four
-  instrumental stems.
+- **Stems:** one audio file for each voice part, from one to eight of them (Soprano, Alto, Tenor and Bass, say, or a soloist and
+  Tenor 1, Tenor 2a, Tenor 2b, Baritone and Bass), and one for the instruments unless the song has none. All the same sample rate
+  and all stereo. Ours came from a stem separator run on rehearsal tracks, and the app uses one of the instrumental stems.
 - **A score PDF**, what's shown on screen.
 - **`player map.json`**, which says where every bar, beat and note is on the page and in the audio. See below.
 
@@ -45,15 +45,24 @@ letter. Keys: space plays and stops; digits and Return go to a bar; Return alone
 that rehearsal letter; arrows move by a bar, with Shift by a beat; up and down change the tempo. Keys must not fire while a box
 is being typed in.
 
-**The mix.** Each voice has a trim and a pan, and the instruments stay on, centred, at 0 dB:
+**The mix.** Each voice has a trim and a pan, and the instruments stay on, centred, at 0 dB. The pans and trims come from the
+song's parts, top to bottom:
+
+- A soloist is centred at 0 dB.
+- The other parts are sections, spread evenly from -45 (the highest) to +45 on Logic's knob (-64 to +63). The outer two are at
+  0 dB and any between them at -3 dB.
+- A section split in two (Tenor 2a and 2b, Bass a and b, Alto 1 and 2, Soprano 1 and 2) sits 5 either side of where the section would.
+  Tenor 1 and Tenor 2, or Baritone and Bass, are sections of their own.
 
 | | Soprano | Alto | Tenor | Bass |
 |---|---|---|---|---|
 | Trim | 0 dB | -3 dB | -3 dB | 0 dB |
-| Pan (Logic's knob, -64 to +63) | -45 | -15 | +15 | +45 |
+| Pan | -45 | -15 | +15 | +45 |
 
-Radio buttons choose Balanced, Soprano only, Alto only, Tenor only, Bass only, or Other. Other shows a list of checkboxes, "Check
-all parts you want to hear:". The voices heard get a boost on top of their trim, and the others are off:
+With Alto 1 and Alto 2 they pan at -20 and -10; three sections pan at -45, 0 and +45; two at -45 and +45.
+
+Radio buttons choose Balanced, each part "only" (soloists first), or Other. Other shows a list of checkboxes, "Check all parts you
+want to hear:". The voices heard get a boost on top of their trim, and the others are off:
 
 | Voices heard | Boost |
 |---|---|
@@ -61,7 +70,8 @@ all parts you want to hear:". The voices heard get a boost on top of their trim,
 | 1 | +6 dB |
 | 2 | +3 dB |
 | 3 | +1.5 dB |
-| 4 | none: this is Balanced, and checking the fourth selects it |
+| 4 | +0.75 dB, and half again for each more |
+| all | none: this is Balanced, and checking the last selects it |
 
 That table is for part-predominant files, where each file has its part loudest and the others bleeding through. A switch, remembered
 for each song, says "Source files: 1 purely isolated voice per audio file / part-predominant files". With isolated files, the voices heard
@@ -109,6 +119,7 @@ changes. Apply fixes to the stem before stretching it.
 ```json
 {
   "score": "the PDF to show", "pages": 12, "page_height": 842, "tempo": 120, "offset": 1.025, "music_end": 219.96,
+  "voices": [{"key": "S", "name": "Soprano"}, {"key": "A", "name": "Alto"}, {"key": "T", "name": "Tenor"}, {"key": "B", "name": "Bass"}],
   "stems": {"S": "file.wav", "A": "file.wav", "T": "file.wav", "B": "file.wav", "I": "file.wav"},
   "systems": [{"page": 0, "sys": 0, "top": 174.8, "bottom": 437.0}],
   "bars": [{"num": 5, "page": 0, "sys": 0, "xa": 452.6, "xb": 551.6, "letter": "A",
@@ -118,11 +129,19 @@ changes. Apply fixes to the stem before stretching it.
 }
 ```
 
+`voices` lists the voice stems top to bottom as in the score; a note's `part` is its voice's `key`. A voice may also say
+`"section"`, for two parts that are halves of one where the names don't show it, `"solo": true` (a name starting "Solo" is a
+soloist anyway), and `"trim"` in dB, added to its own, for a stem exported louder or softer than the rest. `I` is the instrumental stem.
+
 `player fixes.json`, kept beside it, is a list of `{"id", "part", "start", "end", "mute", "semitones"}`.
 
-`make_map.py` writes the map from a vector PDF exported by Dorico, using `../dorico_reader.py`, and a MusicXML file. It's Python
-and shouldn't care what system it runs on, though we've only run it on a Mac. If your score isn't a Dorico PDF, you need
-another way to get bar and note positions, such as a notation program's export, or clicking through the score once to mark bars.
+`player tags.json`, also beside it, is a list of the song's tags as strings. Finding songs by tag is optional: search for folders holding a map, and give each its parent folders' names as tags too.
+
+`make_map.py` writes the map from a vector PDF and a MusicXML file: a Dorico export through `../dorico_reader.py`, any other
+through `vector_reader.py`, which needs only the staff lines, the barlines and the noteheads (by music-font glyph, or by size where
+they're drawn as paths). It's Python and shouldn't care what system it runs on, though we've only run it on a Mac. A score that's
+a scan has no positions to read: `make_map_scan.py` gets them from the pixels, and another way is clicking through the score once
+to mark bars.
 
 ## What went wrong here
 

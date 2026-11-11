@@ -1,19 +1,32 @@
 // Offline checks of the player's engine: writes raw float stereo of the mix so the numbers can be measured.
-//   enginetest <S> <A> <T> <B> <I> <cache dir> <out dir> <speed>
+//   enginetest <cache dir> <out dir> <speed> <instrumental stem, or - for none> <voice stem>...
+// PANS and TRIMS in the environment, comma-separated, one per voice: the app's pans and trims for the song. Without them four
+// voices take SATB's (-45 -15 15 45; 0 -3 -3 0), and any other number is centred at 0 dB.
+// FIXES in the environment, space-separated: stem:start:end:semitones, or m for the semitones to mute.
 import CEngine
 import Foundation
 
 let a = CommandLine.arguments
-let paths = Array(a[1...5])
-// A2=path in the environment: a second alto part
-let a2 = ProcessInfo.processInfo.environment["A2"].map { strdup($0)! }
-let cstrs = paths.map { strdup($0) }
+let outDir = a[2], speed = Double(a[3])!
+let voicePaths = Array(a[5...])
+let nv = voicePaths.count
+let cstrs = voicePaths.map { strdup($0) } + [a[4] == "-" ? nil : strdup(a[4])]
 defer { cstrs.forEach { free($0) } }
-var ptrs = cstrs.map { UnsafePointer<CChar>($0) as UnsafePointer<CChar>? }
-ptrs.append(a2.map { UnsafePointer<CChar>($0) })
-guard engine_load(&ptrs, a[6]) != 0 else { print("load failed"); exit(1) }
-let outDir = a[7], speed = Double(a[8])!
-print("rate", engine_sample_rate(), "duration", engine_duration())
+var ptrs = cstrs.map { $0.map { UnsafePointer<CChar>($0) } }
+guard engine_load(&ptrs, Int32(nv), a[1]) != 0 else { print("load failed"); exit(1) }
+let env = ProcessInfo.processInfo.environment
+func list(_ k: String) -> [Float]? { env[k].map { $0.split(separator: ",").map { Float($0)! } } }
+var pans = list("PANS") ?? (nv == 4 ? [-45, -15, 15, 45] : Array(repeating: 0, count: nv))
+var trims = list("TRIMS") ?? (nv == 4 ? [0, -3, -3, 0] : Array(repeating: 0, count: nv))
+engine_set_voice_mix(&pans, &trims)
+let all = Int32((1 << nv) - 1)
+print("rate", engine_sample_rate(), "duration", engine_duration(), "voices", engine_voice_count())
+
+func gains(_ m: Int32) -> [Float] {
+    var g = [Float](repeating: 0, count: Int(STEM_MAX) * 2)
+    g.withUnsafeMutableBufferPointer { b in b.baseAddress!.withMemoryRebound(to: (Float, Float).self, capacity: Int(STEM_MAX)) { engine_gains(m, $0) } }
+    return Array(g.prefix((nv + 1) * 2))
+}
 
 func render(_ name: String, voices: Int32, seconds: Double, startAt: Double) {
     engine_set_voices(voices)
@@ -31,24 +44,16 @@ func render(_ name: String, voices: Int32, seconds: Double, startAt: Double) {
     FileManager.default.createFile(atPath: "\(outDir)/\(name).f32", contents: buf.withUnsafeBufferPointer { Data(buffer: $0) })
 }
 
-if ProcessInfo.processInfo.environment["ISOLATED"] != nil { engine_set_isolated(1) }
-// SOLO in the environment: the A2 stem is a soloist
-if ProcessInfo.processInfo.environment["SOLO"] != nil { engine_set_sixth_solo(1) }
-let names = ["balanced", "S", "A", "T", "B"], masks: [Int32] = [15, 1, 2, 4, 8]
-for m in [15, 1, 2, 4, 8, 3, 5, 12, 7, 14, 0] + (a2 != nil ? [47, 32, 34, 39, 46] : []) {
-    var t: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-    withUnsafeMutablePointer(to: &t) {
-        $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(Int32(m), $0) }
-    }
-    print("voices", m, "gains L/R S A T B I A2:", t)
+if env["ISOLATED"] != nil { engine_set_isolated(1) }
+// every combination of voices for up to five, else all, none and each alone
+let masks: [Int32] = nv <= 5 ? Array(0...all).reversed() : [all, 0] + (0..<nv).map { Int32(1 << $0) }
+for m in masks {
+    print("voices", String(m, radix: 2), "gains L/R, voices then instruments:", gains(m).map { String(format: "%.4f", $0) }.joined(separator: " "))
 }
 engine_set_master_db(-9)
-var v: (Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float, Float) = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-withUnsafeMutablePointer(to: &v) { $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(15, $0) } }
-print("balanced at -9 dB: instruments", v.8, "soprano left", v.0)
+print("balanced at -9 dB: instruments", gains(all)[nv * 2], "first voice left", gains(all)[0])
 engine_set_instruments(0)
-withUnsafeMutablePointer(to: &v) { $0.withMemoryRebound(to: (Float, Float).self, capacity: 6) { engine_gains(15, $0) } }
-print("instruments off: instruments", v.8, v.9, "soprano left", v.0)
+print("instruments off: instruments", gains(all)[nv * 2], gains(all)[nv * 2 + 1], "first voice left", gains(all)[0])
 engine_set_instruments(1)
 engine_set_master_db(-3)
 if speed != 1 {
@@ -60,8 +65,7 @@ if speed != 1 {
     f.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 1024) }
     print("render or load took", Date().timeIntervalSince(t0), "s; speed now", engine_speed())
 }
-// any further arguments are fixes, stem:start:end:semitones, or m for the semitones to mute
-let fixes = a.dropFirst(9).map { $0.split(separator: ":").map(String.init) }
+let fixes = (env["FIXES"] ?? "").split(separator: " ").map { $0.split(separator: ":").map(String.init) }
 if !fixes.isEmpty {
     var st = fixes.map { Int32($0[0])! }, s0 = fixes.map { Double($0[1])! }, s1 = fixes.map { Double($0[2])! }
     var mu = fixes.map { Int32($0[3] == "m" ? 1 : 0) }, se = fixes.map { Double($0[3]) ?? 0 }
@@ -72,14 +76,13 @@ if !fixes.isEmpty {
     f.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 1024) }
     print("fixes took", Date().timeIntervalSince(t0), "s")
 }
-let env = ProcessInfo.processInfo.environment
 if let v = env["VOICE"].flatMap({ Int32($0) }), let i = env["INST"].flatMap({ Int32($0) }) { engine_set_methods(v, i) }
 // LIVE=start,seconds: go there at once, as the app would, and play for that long at 4 times real time without waiting for
 // the render; the audio goes to live.f32 at the song's original times
 if let live = env["LIVE"] {
     let p = live.split(separator: ",").map { Double($0)! }
     let t0 = Date()
-    engine_set_voices(15)
+    engine_set_voices(all)
     engine_seek(p[0])
     engine_set_playing(1)
     let block = 512, rate = Double(engine_sample_rate())
@@ -153,7 +156,7 @@ if let st = env["STRESS"], let cycles = Int(st) {
 if let lt = env["LOOPTEMPO"] {
     let p = lt.split(separator: ",").map { Double($0)! }
     engine_set_loop(p[0], p[1])
-    engine_set_voices(15)
+    engine_set_voices(all)
     engine_seek(p[2])
     engine_set_playing(1)
     var buf = [Float](repeating: 0, count: 1024)
@@ -199,7 +202,7 @@ if let lt = env["LOOPTEMPO"] {
 if let lp = env["LOOP"] {
     let p = lp.split(separator: ",").map { Double($0)! }
     engine_set_loop(p[0], p[1])
-    engine_set_voices(15)
+    engine_set_voices(all)
     engine_seek(p[1] - 0.5)
     engine_set_playing(1)
     var buf = [Float](repeating: 0, count: 1024), last = 0.0, wraps = [Double]()
@@ -219,4 +222,5 @@ engine_wait_render()
 var flushed = [Float](repeating: 0, count: 2048)
 flushed.withUnsafeMutableBufferPointer { engine_mix($0.baseAddress, 1024) }
 let D = engine_duration()
-for m in 0..<5 { render("\(names[m])", voices: masks[m], seconds: D, startAt: 0) }
+render("balanced", voices: all, seconds: D, startAt: 0)
+for i in 0..<nv { render("voice\(i)", voices: Int32(1 << i), seconds: D, startAt: 0) }

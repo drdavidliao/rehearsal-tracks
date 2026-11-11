@@ -5,37 +5,6 @@ import CEngine
 import PDFKit
 import SwiftUI
 
-struct Bar: Codable { let num, page, sys: Int; let xa, xb: Double; let letter: String?; let beat_x, beat_t: [Double]; let end_t: Double }
-struct Sys: Codable { let page, sys: Int; let top, bottom: Double }
-struct NoteHead: Codable { let page: Int; let x, y: Double }
-struct Note: Codable { let id, part: String; let bar: Int; let beat: Double; let midi: Int; let word: String; let start, end: Double; let heads: [NoteHead] }
-/// a correction, kept in the song folder. Its times start as the note's and can be nudged.
-struct NoteFix: Codable { let id, part: String; var start, end: Double; var mute: Bool; var semitones: Int }
-struct SongMap: Codable {
-    let notes: [Note]?
-    let score_dark: String?
-    let score: String; let stems: [String: String]; let offset: Double; let page_height: Double; let pages: Int
-    let tempo: Double; let music_end: Double; let systems: [Sys]; let bars: [Bar]
-    /// what to call the stems' parts, for a song that isn't SATB: "S": "Tenor 1" and so on. "A2": "Solo" makes the sixth stem a soloist.
-    let part_names: [String: String]?
-}
-enum Mode: Int32, CaseIterable, Identifiable {
-    case balanced = 0, soprano, alto, alto2, tenor, bass, other
-    var id: Int32 { rawValue }
-    func label(_ p: Player) -> String {
-        switch self {
-        case .balanced: return "Balanced"
-        case .other: return "Other"
-        case .soprano: return p.partName("S") + " only"
-        case .alto: return p.partName("A") + " only"
-        case .alto2: return p.partName("A2") + " only"
-        case .tenor: return p.partName("T") + " only"
-        case .bass: return p.partName("B") + " only"
-        }
-    }
-    var key: String { ["m", "s", "a", "z", "t", "b", "o"][Int(rawValue)] }
-}
-
 // a position within this of a beat counts as on it: the engine works in whole samples
 let eps = 0.002
 
@@ -63,14 +32,14 @@ final class Player: ObservableObject {
         guard let m = map else { return nil }
         func bar(_ s: String, end: Bool) -> Bar? {
             let t = s.trimmingCharacters(in: .whitespaces)
-            if let n = Int(t) { return m.bars.first { $0.num == n } }
+            if let b = typedBar(t) { return b }
             // a letter: from its first bar, or to the last bar before the next letter
             guard let i = m.bars.firstIndex(where: { $0.letter == t.uppercased() }) else { return nil }
             if !end { return m.bars[i] }
             let next = m.bars[(i + 1)...].firstIndex { $0.letter != nil }
             return next.map { m.bars[$0 - 1] } ?? m.bars.last
         }
-        guard let a = bar(loopFrom, end: false), let b = bar(loopTo.isEmpty ? loopFrom : loopTo, end: true), a.num <= b.num else { return nil }
+        guard let a = bar(loopFrom, end: false), let b = bar(loopTo.isEmpty ? loopFrom : loopTo, end: true), a.beat_t[0] < b.end_t else { return nil }
         return (a, b)
     }
 
@@ -108,7 +77,7 @@ final class Player: ObservableObject {
     @Published var map: SongMap?
     @Published var songName = ""
     @Published var error: String?
-    @Published var mode = Mode.balanced {
+    @Published var mode = Hear.balanced {
         didSet {
             applyVoices()
         }
@@ -138,15 +107,27 @@ final class Player: ObservableObject {
         }
         return out
     }
-    /// the song has a sixth stem: a second alto part, or a soloist
-    var twoAltos: Bool { map?.stems["A2"] != nil }
-    var soloStem: Bool { map?.part_names?["A2"] == "Solo" }
-    var modes: [Mode] { soloStem ? [.balanced, .alto2, .soprano, .alto, .tenor, .bass, .other] : Mode.allCases.filter { $0 != .alto2 || twoAltos } }
-    func partName(_ stem: String) -> String {
-        if let n = map?.part_names?[stem] { return n }
-        return ["S": "Soprano", "A": twoAltos ? "Alto 1" : "Alto", "A2": "Alto 2", "T": "Tenor", "B": "Bass"][stem] ?? stem
+    /// the song's voice stems in score order, with their pans, trims and keys
+    @Published var voices: [Voice] = []
+    /// the voices as the Hear list and the Other checkboxes show them: soloists first
+    var listed: [Int] { voices.indices.filter { voices[$0].solo } + voices.indices.filter { !voices[$0].solo } }
+    var modes: [Hear] { [.balanced] + listed.map { .only($0) } + (voices.count > 1 ? [.other] : []) }
+    func label(_ h: Hear) -> String {
+        switch h {
+        case .balanced: return "Balanced"
+        case .other: return "Other"
+        case .only(let i): return voices[i].name + " only"
+        }
     }
-    var allVoices: Int32 { twoAltos ? 47 : 15 }
+    func hotkey(_ h: Hear) -> String {
+        switch h {
+        case .balanced: return "m"
+        case .other: return "o"
+        case .only(let i): return voices[i].hotkey
+        }
+    }
+    func partName(_ key: String) -> String { voices.first { $0.key == key }?.name ?? key }
+    var allVoices: Int32 { Int32((1 << voices.count) - 1) }
     /// what "Other" has checked, the voices as bits of a mask; none is the instruments alone
     @Published var otherVoices: Int32 = 0
     @Published var playing = false
@@ -175,16 +156,19 @@ final class Player: ObservableObject {
         do {
             let data = try Data(contentsOf: folder.appendingPathComponent("player map.json"))
             let m = try JSONDecoder().decode(SongMap.self, from: data)
-            let order = ["S", "A", "T", "B", "I"]
-            var paths = order.map { folder.appendingPathComponent(m.stems[$0] ?? "").path }
-            if let a2 = m.stems["A2"] { paths.append(folder.appendingPathComponent(a2).path) }
-            let cstrs = paths.map { strdup($0) }
+            let vs = Voice.from(m)
+            guard (1...Int(MAX_VOICES)).contains(vs.count), vs.allSatisfy({ m.stems[$0.key] != nil }) else {
+                error = "player map.json names \(vs.count) voice stems; the player takes 1 to \(MAX_VOICES)."; return
+            }
+            let cstrs = vs.map { strdup(folder.appendingPathComponent(m.stems[$0.key]!).path) }
+                + [m.stems["I"].map { strdup(folder.appendingPathComponent($0).path) } ?? nil]
             defer { cstrs.forEach { free($0) } }
-            var ptrs = cstrs.map { UnsafePointer<CChar>($0) as UnsafePointer<CChar>? }
-            if m.stems["A2"] == nil { ptrs.append(nil) }
+            var ptrs = cstrs.map { $0.map { UnsafePointer<CChar>($0) } }
             let cache = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0].appendingPathComponent("Rehearsal Player").path
             engine_set_playing(0)
-            guard engine_load(&ptrs, cache) != 0 else { error = "Couldn't read the stems named in player map.json."; return }
+            guard engine_load(&ptrs, Int32(vs.count), cache) != 0 else { error = "Couldn't read the stems named in player map.json."; return }
+            var pans = vs.map(\.pan), trims = vs.map(\.trim)
+            engine_set_voice_mix(&pans, &trims)
             if !started {
                 started = engine_start_output() != 0
                 if !started { error = "Couldn't open the audio output." }
@@ -195,11 +179,10 @@ final class Player: ObservableObject {
             guard pdf != nil else { error = "Couldn't open \(m.score)."; return }
             pdfDark = m.score_dark.flatMap { PDFDocument(url: folder.appendingPathComponent($0)) }
             map = m
-            engine_set_sixth_solo(soloStem ? 1 : 0)
-            if !twoAltos {
-                if mode == .alto2 { mode = .balanced }
-                otherVoices &= 15
-            }
+            voices = vs
+            otherVoices &= allVoices
+            if case .only(let i) = mode, i >= vs.count { mode = .balanced }
+            if mode == .other && vs.count < 2 { mode = .balanced }
             applyVoices()     // the engine starts each song with all its voices
             songName = folder.lastPathComponent
             self.folder = folder
@@ -233,6 +216,10 @@ final class Player: ObservableObject {
     }
     func go(bar n: Int) { if let b = map?.bars.first(where: { $0.num == n }) { seek(b.beat_t[0]) } }
     func go(letter: String) { if let b = map?.bars.first(where: { $0.letter == letter }) { seek(b.beat_t[0]) } }
+    func typedBar(_ s: String) -> Bar? { map?.bar(typed: s) }
+    /// whether any bar is played more than once
+    var hasRepeats: Bool { map.map { Set($0.bars.map(\.num)).count < $0.bars.count } ?? false }
+    func pass(_ i: Int) -> Int { map?.pass(i) ?? 0 }
     func step(bars d: Int) {
         guard let m = map, let i = bar(at: engine_position()) else { return }
         seek(m.bars[min(max(i + d, 0), m.bars.count - 1)].beat_t[0])
@@ -265,9 +252,11 @@ final class Player: ObservableObject {
 
     func sendFixes() {
         let on = bypass ? [] : fixes
-        var st = on.map { Int32(["S", "A", "T", "B", "I", "A2"].firstIndex(of: $0.part) ?? 0) }, s0 = on.map(\.start), s1 = on.map(\.end)
-        var mu = on.map { Int32($0.mute ? 1 : 0) }, se = on.map { Double($0.semitones) }
-        engine_set_fixes(Int32(on.count), &st, &s0, &s1, &mu, &se)
+        // a fix on a part no longer among the stems goes to none of them
+        let known = on.filter { f in voices.contains { $0.key == f.part } }
+        var st = known.map { f in Int32(voices.firstIndex { $0.key == f.part }!) }, s0 = known.map(\.start), s1 = known.map(\.end)
+        var mu = known.map { Int32($0.mute ? 1 : 0) }, se = known.map { Double($0.semitones) }
+        engine_set_fixes(Int32(known.count), &st, &s0, &s1, &mu, &se)
     }
 
     func changeFix(_ n: Note, _ edit: (inout NoteFix) -> Void) {
@@ -291,7 +280,11 @@ final class Player: ObservableObject {
     }
 
     func applyVoices() {
-        engine_set_voices(mode == .other ? otherVoices : [allVoices, 1, 2, 32, 4, 8, 0][Int(mode.rawValue)])
+        switch mode {
+        case .balanced: engine_set_voices(allVoices)
+        case .only(let i): engine_set_voices(Int32(1 << i))
+        case .other: engine_set_voices(otherVoices)
+        }
     }
 
     func toggleOther(_ bit: Int32) {
@@ -331,7 +324,7 @@ final class Player: ObservableObject {
     /// a bar number or a rehearsal letter, as typed in the Bar box; false if there's no such place
     func go(typed s: String) -> Bool {
         let t = s.trimmingCharacters(in: .whitespaces)
-        if let n = Int(t), map?.bars.contains(where: { $0.num == n }) == true { go(bar: n); return true }
+        if let b = typedBar(t) { seek(b.beat_t[0]); return true }
         if map?.bars.contains(where: { $0.letter == t.uppercased() }) == true { go(letter: t.uppercased()); return true }
         return false
     }
@@ -353,7 +346,8 @@ final class Player: ObservableObject {
         let b = m.bars[i]
         let beat = (b.beat_t.lastIndex(where: { $0 <= engine_position() + eps }) ?? 0) + 1
         let lab = m.bars[...i].last(where: { $0.letter != nil })?.letter
-        let s = "Bar \(b.num), beat \(beat)" + (lab.map { "  ·  \($0)" } ?? "")
+        let again = pass(i)
+        let s = "Bar \(b.num)" + (again > 0 ? " (\(again == 1 ? "2nd" : again == 2 ? "3rd" : "\(again + 1)th") time)" : "") + ", beat \(beat)" + (lab.map { "  ·  \($0)" } ?? "")
         if s != where_ { where_ = s }
         score?.refresh()
     }
@@ -364,7 +358,7 @@ final class Player: ObservableObject {
         switch e.keyCode {
         case 49: toggle(); return true
         case 36, 76:
-            if let n = Int(typed) { go(bar: n); typed = "" } else { seek(lastStart) }
+            if typed.isEmpty { seek(lastStart) } else { if let b = typedBar(typed) { seek(b.beat_t[0]) }; typed = "" }
             return true
         case 53: typed = ""; return true
         case 51: if !typed.isEmpty { typed.removeLast() }; return true
@@ -376,7 +370,8 @@ final class Player: ObservableObject {
         }
         guard let c = e.charactersIgnoringModifiers, c.count == 1 else { return false }
         if c.first!.isNumber { typed += c; return true }
-        if let md = Mode.allCases.first(where: { $0.key == c }), md != .alto2 || twoAltos { mode = md; return true }
+        if c == "'", !typed.isEmpty { typed += c; return true }       // 17' then Return: bar 17's second time
+        if let md = modes.first(where: { hotkey($0) == c }) { mode = md; return true }
         if c == "c" { instruments.toggle(); return true }
         if c == "l" { if loopBars != nil { loopOn.toggle() } else { NSSound.beep() }; return true }
         if c == "d" { darkScore.toggle(); return true }
@@ -511,8 +506,15 @@ final class ScoreCanvas: NSView {
         let systems = m.systems.filter { $0.page == idx }
         guard let s = systems.min(by: { dist(y, $0) < dist(y, $1) }) else { return nil }
         var best: (Double, Double, Bar)?
+        // a bar in a repeat is here once for each time it's played: the time nearest the playhead
+        let now = engine_position()
+        func better(_ x: Double, _ t: Double) -> Bool {
+            guard let (bx, bt, _) = best else { return true }
+            let d = abs(x - q.x), bd = abs(bx - q.x)
+            return abs(d - bd) < 0.01 ? abs(t - now) < abs(bt - now) : d < bd
+        }
         for b in m.bars where b.page == idx && b.sys == s.sys {
-            for (x, t) in zip(b.beat_x, b.beat_t) where best == nil || abs(x - q.x) < abs(best!.0 - q.x) { best = (x, t, b) }
+            for (x, t) in zip(b.beat_x, b.beat_t) where better(x, t) { best = (x, t, b) }
         }
         return best.map { ($0.0, $0.1, $0.2) }
     }
@@ -660,11 +662,7 @@ struct ScoreRep: NSViewRepresentable {
 
 struct OtherParts: View {
     @ObservedObject var p: Player
-    var rows: [(String, Int32)] {
-        let stems: [(String, Int32)] = p.soloStem ? [("A2", 32), ("S", 1), ("A", 2), ("T", 4), ("B", 8)]
-            : p.twoAltos ? [("S", 1), ("A", 2), ("A2", 32), ("T", 4), ("B", 8)] : [("S", 1), ("A", 2), ("T", 4), ("B", 8)]
-        return stems.map { (p.partName($0.0), $0.1) }
-    }
+    var rows: [(String, Int32)] { p.listed.map { (p.voices[$0].name, Int32(1 << $0)) } }
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Check all parts you want to hear:").font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
@@ -704,6 +702,10 @@ struct Controls: View {
                         .onSubmit {
                             if p.go(typed: barText) { barText = ""; leave() } else { NSSound.beep() }
                         }
+                        .help("A bar number or a rehearsal letter. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
+                }
+                if p.hasRepeats {
+                    Text("' or b for 2nd time in a repeat: 17' or 17b").font(.caption).foregroundStyle(.secondary).fixedSize()
                 }
                 Divider()
                 HStack(spacing: 6) {
@@ -719,7 +721,7 @@ struct Controls: View {
                 Divider()
                 heading("Hear")
                 Picker("", selection: $p.mode) {
-                    ForEach(p.modes) { Text($0.label(p)).tag($0) }
+                    ForEach(p.modes, id: \.self) { Text(p.label($0)).tag($0) }
                 }.pickerStyle(.radioGroup).labelsHidden()
                 if p.mode == .other { OtherParts(p: p) }
                 Toggle("Instruments / click", isOn: $p.instruments).toggleStyle(.checkbox).help("c")
@@ -732,6 +734,7 @@ struct Controls: View {
                     Text("to").fixedSize()
                     TextField("", text: $p.loopTo).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
                         .onSubmit { p.commitLoop(); leave() }
+                        .help("Bar numbers or letters. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
                 }
                 if !p.sections.isEmpty {
                     Divider()

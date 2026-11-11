@@ -155,7 +155,8 @@ Set up the rehearsal player for the Shenandoah folder.
 ```
 
 That is `player/README.md`: build the Mac app and write the folder's `player map.json`. The score
-is clickable by the beat, with a choice of parts, tempo, a loop and single-note fixes. On Windows
+is clickable by the beat, with a choice of parts, tempo, a loop and single-note fixes. Where the folder
+has a human-sung set (Matthew Curtis) sung natively in the correct octave, the map uses those tracks in preference to Cantai output. His name may not be in the filenames: look for `(Part) Predominant`, `Accompaniment Track` and `Balanced Voices`. On Windows
 or anything else:
 
 ```

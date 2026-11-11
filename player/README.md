@@ -19,37 +19,59 @@ on its own. Rubber Band is GPL or commercial: keep that in mind before giving th
 The app opens a song folder that has a `player map.json`. Make one with:
 
     python3 player/make_map.py "song folder" --reader-pdf "... Full score copy.pdf" --score "... (lesson marks).pdf" \
-        --xml "....musicxml" --stems "S=...wav" "A=...wav" "T=...wav" "B=...wav" "I=...wav"
+        --xml "....musicxml" --stems "Tenor 1=...wav" "Tenor 2a=...wav" "Tenor 2b=...wav" "Baritone=...wav" "Bass=...wav" "I=...wav"
 
-A score with Alto 1 and Alto 2 parts takes their stems as `A=` and `A2=`, and the app then has both parts in place of one.
-
-A song that isn't SATB names its parts in the map, in `part_names`: `{"S": "Tenor 1", "A": "Tenor 2", "T": "Baritone", "B": "Bass", "A2": "Solo"}`. The
-Hear list and the Other checkboxes use those names. `"A2": "Solo"` makes the sixth stem a soloist, listed first. The keys stay `s a t b z` for the stems.
+Each voice stem is named by its MusicXML part, from one to eight of them; `I` is the instrumental stem, left out for a song
+without one. The letters `S A A2 T B` still name Soprano, Alto (or Alto 1), Alto 2, Tenor and Bass. The map lists the voices top
+to bottom in `voices`, and the Hear list and the Other checkboxes use their names, soloists first. A part whose name starts with
+"Solo" is a soloist. A map made before `voices`, with stems `S A T B` and an optional `A2` named in `part_names`, plays as before.
 
 A score that's a scan has no vector PDF to read, so `make_map_scan.py` takes the bars and heads from the pixels through scanproof's projects (SKILL.md 1.2),
 the times from the tempo marks and `--anchor BAR=SECONDS`, and shows the scan. Its header has the arguments. Dark is then the page filter.
+`--part-stems` there says which stem sings each part, so two parts on one stem make one voice.
 With no Piano part, as in an unaccompanied score, the time of bar 1 is fitted from each voice's attacks on its own stem.
 
-`--reader-pdf` is the vector score the bar and beat positions are read from, through `dorico_reader.py`. `--score` is
-what the app shows, with the same pages. `I` is the one instrumental stem. Times come from the MusicXML's tempo marks,
-so this suits tracks rendered to the score's tempo. The script fits the time of bar 1 from the piano's on-beat attacks
-and prints the drift by section: look at that before trusting a new song. A song with a rit or a fermata that the
-MusicXML's tempo marks don't describe would need its beat times measured instead, except a rit to the end of the song: a
-rit, riten or rall mark bends the times from its bar on, by a smooth curve fitted to the stems' attacks and to where the sound
-ends. The script prints the curve; the fit assumes the rit runs to the last bar. 
+`--reader-pdf` is the vector score the bar and beat positions are read from, and `--score` is what the app shows, with the same
+pages. A Dorico export (Bravura glyphs) is read through `dorico_reader.py`. Any other vector PDF (Sibelius, Finale, MuseScore,
+LilyPond, or Verovio's paths) is read through `vector_reader.py` when `--staff` says which staff each part is on, by a label that parts on one
+staff share:
+
+    --staff "Tenor 1=TT" "Tenor 2=TT" Baritone=BB Bass=BB --layout "4=TT,BB,P,P"
+
+`--layout` labels a system's staves by how many it has (by default, the labels in order); a label no part has, like `P`, is passed
+over. Where systems with the same number of staves differ, `--names "Solo=S" "T=TT" "B=BB"` labels each staff by the name printed
+at its left, first match winning. The reader finds staves and barlines from the lines, and noteheads from the music font or, with
+none, from filled shapes of a notehead's size; it matches them to the MusicXML's notes bar by bar, and at each onset a part
+takes the head nearest its pitch. It prints any bar where the heads and the onsets don't match. A bar's number is the MusicXML's,
+so a pickup is bar 0.
+
+A song whose only print is a scan can show an engraving instead: `../xml2ly.py` writes a LilyPond file from the MusicXML, with the
+scan's systems and pages if given its scanproof project, and `lilypond` makes the PDF for `--reader-pdf` and `--score`.
+
+`I` is the one instrumental stem. `--trim "Bass=-3.68"` takes a stem down (or up) on top of the voice's own trim, for a stem
+exported louder than the others. Times come from the MusicXML's tempo marks, so this suits tracks rendered to the score's tempo;
+a repeat is played as written (with first and second endings), and the map lists its bars again for each time through, so the
+cursor follows; a repeated bar's notes are timed on its first time through, so a note fix there applies only then. The script fits the
+time of bar 1 from the piano's on-beat attacks and prints the drift by section: look at that before trusting a new song. A rit,
+riten or rall mark bends the times from its bar on, by a smooth curve fitted to the stems' attacks and to where the sound ends;
+the fit assumes the rit runs to the last bar. Where the stems stray from the written tempo in other ways (held fermatas, a
+slower intro, tempo marks that don't match the playback), `--warp` fits an offset for every bar from the voices' attacks, letting
+it change little from bar to bar and fall less readily than rise, and prints them.
 
 ## Keys
 
 | Key | Does |
 | --- | --- |
 | Space | play or stop |
-| click / double-click | go to that beat / go there and play |
-| digits, Return | go to that bar (the Bar box does the same and also takes a letter) |
+| click / double-click | go to that beat / go there and play (in a repeat, the time through nearest the playhead) |
+| digits, Return | go to that bar (the Bar box does the same and also takes a letter); `17'` or, in the boxes, `17b` is bar 17's second time through a repeat |
 | Return | back to where you last started |
 | capital letter | go to that rehearsal letter |
 | ← → | a bar back or on (with Shift, a beat) |
 | ↑ ↓ | tempo up or down by 1 |
-| m s a t b o | Balanced, Soprano, Alto, Tenor, Bass only, Other (with two alto parts, `a` is Alto 1 and `z` Alto 2) |
+| m, o | Balanced, Other |
+| s a t b | each section only, top to bottom, the lowest always `b` (two sections are `s b`, three `s a b`; past four, `e f g h` follow) |
+| z x y w | soloists only, then the second half of a divided section (Alto 2, Tenor 2b, Bass b) |
 | v / i | next stretch method for the voices / instruments |
 | l | loop on or off |
 | c | instruments (or click) on or off |
@@ -67,20 +89,23 @@ signatures, slurs and words are cool. The colors are at the top of that file. Fo
 
 ## The mix
 
-In `Sources/CEngine/engine.cpp`.
+In `Sources/CEngine/engine.cpp`, with each voice's pan and trim worked out in `Sources/RehearsalPlayer/Model.swift`.
 
-- Trims: S 0, A -3, T -3, B 0 dB. Pan on Logic's knob scale (-64 to +63): S -45, A -15, T +15, B +45. Instruments 0 dB, centred.
-- With two alto parts: Alto 1 and Alto 2 both -3 dB, pans -20 and -10, either side of a lone alto's -15.
-- With a soloist in the sixth stem: the soloist 0 dB and centred; the other four as S, A, T, B above.
+- Sections, top to bottom, pan evenly from -45 to +45 on Logic's knob scale (-64 to +63). The outer two are at 0 dB and any between
+  at -3 dB. SATB is S -45, A -15, T +15, B +45 with trims 0, -3, -3, 0; three sections pan -45, 0, +45; two, -45 and +45.
+- A section split in two sits 5 either side of the section's place, with its trim: Alto 1 and Alto 2 in SATB at -20 and -10, or
+  Tenor 2a and 2b in a TTBB at -20 and -10. The names decide: a trailing a or b (Tenor 2a, Bass b), or Soprano or Alto 1 and 2. Tenor 1 and
+  Tenor 2, and Baritone and Bass, are sections of their own. A map can say `"section"` for a voice where the names don't show it.
+- A soloist is 0 dB and centred. Instruments 0 dB, centred.
 - The Instruments / click checkbox, or `c`, takes the instrumental stem out of every mode, for a stem that's a click, say. It's remembered for each song.
 - The whole mix is -3 dB until the Volume box says otherwise. The setting is remembered.
 - The Source files switch says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.
 - With part-predominant files (each has its part loudest and the others bleeding through):
   - "Only": that voice +6 dB on top of its trim, keeping its pan; the other voices off; instruments on.
-  - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB, four of five +0.75 dB.
+  - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB, four +0.75 dB, halving again for each more.
 - With purely isolated files (one voice per file), for "only" and for "Other": the voices heard at 0 dB in place of their trims,
   the others at -18 dB, all keeping their pans.
-- In "Other", none checked is the instruments alone, and checking all four is Balanced, with either kind of file. Gains are worked
+- In "Other", none checked is the instruments alone, and checking them all is Balanced, with either kind of file. Gains are worked
   out from the voices each audio block, so no boost is left behind.
 - A stereo stem pans as a balance with a constant-power law, unity at centre.
 - Past 0.9 the output rounds off smoothly towards 1 so a boosted part can't hard-clip. Below that the samples are untouched.
@@ -128,4 +153,7 @@ join between two. The
 stems used last are kept in `~/Library/Caches/Rehearsal Player`, up to 4 GB. Each stem has its own file per tempo and
 set of fixes, so a fix to one voice re-renders only that voice.
 
-`enginetest` writes the mix of every mode to raw float files, for measuring against the stems.
+`enginetest <cache> <out> <speed> <instruments or -> <voice stems...>` prints the gains of every combination of voices and writes
+the mix of Balanced and each voice alone to raw float files, for measuring against the stems. `PANS` and `TRIMS` in the
+environment, comma-separated, give the song's pans and trims (four voices default to SATB's), and `FIXES` takes `stem:start:end:semitones`
+(or `m` to mute), space-separated.

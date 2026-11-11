@@ -27,17 +27,17 @@ using RubberBand::RubberBandStretcher;
 namespace {
 
 // ------------------------------------------------------------------------------------------- the mix, as specified
-const float TRIM_DB[STEM_COUNT] = {0, -3, -3, 0, 0, -3};
-const float PAN_KNOB[STEM_COUNT] = {-45, -15, 15, 45, 0, -10};    // Logic's pan knob, -64 to +63
-const float PAN_KNOB_A1 = -20;      // the first alto, where there's a second: the two sit either side of a lone alto's place
-// the boost each heard voice gets, by how many are heard
-const float FEATURE_DB[6] = {0, 6, 3, 1.5f, 0.75f, 0};
+// each voice's pan (Logic's knob, -64 to +63) and trim, from the app, which works them out from the song's parts
+std::atomic<float> g_pan[MAX_VOICES], g_trim[MAX_VOICES];
+// the boost each heard voice gets when some but not all are heard: one 6 dB, two 3, three 1.5, and so on
+float feature_db(int heard) { return heard < 1 ? 0 : 6.f / float(1 << (heard - 1)); }
 // files with one voice each: what's heard is at 0 dB and the other voices stay faintly there
 const float BEHIND_DB = -18;
 std::atomic<bool> g_isolated{false};
 std::atomic<bool> g_instruments{true};
-std::atomic<int> g_stems{STEM_COUNT - 1};     // this song's: STEM_COUNT if it has a sixth stem
-std::atomic<bool> g_sixth_solo{false};        // the sixth stem is a soloist, not a second alto part
+std::atomic<int> g_stems{0};      // this song's: its voices and its instrumental stem
+std::atomic<int> g_nvoices{0};
+std::atomic<int> g_inst{-1};      // the instrumental stem's number, or -1 for none
 std::atomic<float> g_master_db{-3};
 
 float db(float d) { return std::pow(10.f, d / 20.f); }
@@ -73,13 +73,13 @@ using TrackP = std::shared_ptr<Track>;
 struct Take {
     double speed = 1;
     int64_t frames = 0;
-    int stems = STEM_COUNT - 1;
+    int stems = 0;
     double swap_at = -1;    // in seconds of the original audio: the mixer moves to this take there, or at once if negative
     bool after_turn = false;     // and only once the loop has gone back to its start: swap_at is that far into the next time round
-    TrackP full[STEM_COUNT], ahead[STEM_COUNT];
+    TrackP full[STEM_MAX], ahead[STEM_MAX];
     bool same_as(const Take &o) const {
         if (speed != o.speed) return false;
-        for (int i = 0; i < STEM_COUNT; i++) if (full[i] != o.full[i] || ahead[i] != o.ahead[i]) return false;
+        for (int i = 0; i < STEM_MAX; i++) if (full[i] != o.full[i] || ahead[i] != o.ahead[i]) return false;
         return true;
     }
 };
@@ -95,10 +95,10 @@ std::atomic<bool> g_waiting{false};    // the playhead has reached audio that is
 std::atomic<int64_t> g_pos{0};        // frames into the current take
 std::atomic<double> g_cur_speed{1};
 std::atomic<bool> g_playing{false};
-std::atomic<int> g_voices{VOICES_ALL};
+std::atomic<int> g_voices{0};
 std::atomic<int> g_swapped{0};
 float g_env = 0;                       // 0..1, moved by the mixer: a seek or swap happens at 0, so nothing clicks
-float g_gain[STEM_COUNT][2];
+float g_gain[STEM_MAX][2];
 bool g_gain_set = false;
 const float ENV_STEP = 1.f / 256;
 const float GAIN_SMOOTH = 0.004f;
@@ -147,7 +147,7 @@ bool read_file(const char *path, std::vector<float> &out, int &rate, int64_t &fr
 }
 
 // ------------------------------------------------------------------------------------------- corrections and tempos
-std::string g_cache_root, g_paths[STEM_COUNT];
+std::string g_cache_root, g_paths[STEM_MAX];
 std::mutex g_req_mutex;
 std::atomic<double> g_want{1};
 std::atomic<uint64_t> g_gen{0};
@@ -159,8 +159,8 @@ std::atomic<int> g_full_active{0};
 std::mutex g_fix_mutex;
 std::vector<Fix> g_fixes;
 // the worker's: each stem as loaded, and with its corrections
-Stem g_base[STEM_COUNT], g_source[STEM_COUNT];
-uint64_t g_source_key[STEM_COUNT];
+Stem g_base[STEM_MAX], g_source[STEM_MAX];
+uint64_t g_source_key[STEM_MAX];
 
 uint64_t stem_key(int i, const std::vector<Fix> &fixes) {
     uint64_t h = 1469598103934665603ULL;
@@ -569,10 +569,10 @@ std::vector<Take *> g_all_takes;   // the worker's: every take the mixer may hol
 void cancel_unused(Take *dead, const Take *keep) {
     auto used = [&](const TrackP &t) {
         if (!keep) return false;
-        for (int i = 0; i < STEM_COUNT; i++) if (keep->full[i] == t || keep->ahead[i] == t) return true;
+        for (int i = 0; i < STEM_MAX; i++) if (keep->full[i] == t || keep->ahead[i] == t) return true;
         return false;
     };
-    for (int i = 0; i < STEM_COUNT; i++) {
+    for (int i = 0; i < STEM_MAX; i++) {
         if (dead->full[i] && !used(dead->full[i])) dead->full[i]->cancel = true;
         if (dead->ahead[i] && !used(dead->ahead[i])) dead->ahead[i]->cancel = true;
     }
@@ -616,11 +616,11 @@ void plan_job(double speed, uint64_t gen) {
     t->speed = speed;
     t->frames = std::llround(double(g_frames) / speed);
     bool changed = false;
-    uint64_t keys[STEM_COUNT];
-    int methods[STEM_COUNT];
+    uint64_t keys[STEM_MAX];
+    int methods[STEM_MAX];
     t->stems = g_stems.load();
     for (int i = 0; i < t->stems; i++) {
-        methods[i] = (i == STEM_I ? g_method_inst : g_method_voices).load();
+        methods[i] = (i == g_inst.load() ? g_method_inst : g_method_voices).load();
         keys[i] = g_source_key[i];
         if (speed != 1.0) {
             uint64_t sp = uint64_t(std::llround(speed * 100000)) * 1099511628211ULL + uint64_t(methods[i]) * 16777619ULL + 3;
@@ -711,7 +711,7 @@ void request_job(double speed) {
 
 // ------------------------------------------------------------------------------------------- output
 // the mixer's: what each stem is being played from
-const Track *g_sel[STEM_COUNT];
+const Track *g_sel[STEM_MAX];
 Take *g_sel_take = nullptr;
 
 void choose_tracks(Take *t, int64_t pos) {
@@ -725,7 +725,7 @@ void choose_tracks(Take *t, int64_t pos) {
 void mix_block(float *out, int frames) {
     Take *t = g_current.load(std::memory_order_acquire);
     if (!t) { std::fill(out, out + frames * 2, 0.f); return; }
-    float target[STEM_COUNT][2];
+    float target[STEM_MAX][2];
     engine_gains(g_voices.load(std::memory_order_relaxed), target);
     if (!g_gain_set) { memcpy(g_gain, target, sizeof g_gain); g_gain_set = true; }
     int64_t pos = g_pos.load(std::memory_order_relaxed);
@@ -857,35 +857,45 @@ std::vector<AudioDeviceID> output_devices() {
 // ------------------------------------------------------------------------------------------- API
 extern "C" {
 
-void engine_set_sixth_solo(int solo) { g_sixth_solo = solo != 0; }
+void engine_set_voice_mix(const float *pan_knob, const float *trim_db) {
+    for (int i = 0; i < g_nvoices.load(); i++) { g_pan[i] = pan_knob[i]; g_trim[i] = trim_db[i]; }
+}
 
-void engine_gains(int voices, float gains[STEM_COUNT][2]) {
+int engine_voice_count(void) { return g_nvoices.load(); }
+
+void engine_gains(int voices, float gains[STEM_MAX][2]) {
     const float master = db(g_master_db.load(std::memory_order_relaxed));
-    for (int s = 0; s < STEM_COUNT; s++) {
-        const bool solo = g_sixth_solo.load(std::memory_order_relaxed);
-        float g = s == STEM_A2 && solo ? 1 : db(TRIM_DB[s]);
-        const int all = g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? VOICES_ALL : VOICES_FOUR;
-        const int heard = voices & all;
-        if (s != STEM_I && heard != all) {
+    const int nv = g_nvoices.load(std::memory_order_relaxed), inst = g_inst.load(std::memory_order_relaxed);
+    const int all = (1 << nv) - 1, heard = voices & all;
+    for (int s = 0; s < STEM_MAX; s++) {
+        gains[s][0] = gains[s][1] = 0;
+        if (s == inst) {
+            const float g = g_instruments.load(std::memory_order_relaxed) ? master : 0;
+            gains[s][0] = gains[s][1] = g;
+            continue;
+        }
+        if (s >= nv) continue;
+        float g = db(g_trim[s].load(std::memory_order_relaxed));
+        if (heard != all) {
             const bool on = voices >> s & 1;
             if (g_isolated.load(std::memory_order_relaxed)) g = !heard ? 0 : on ? 1 : db(BEHIND_DB);
-            else g = on ? g * db(FEATURE_DB[std::popcount(unsigned(heard))]) : 0;
+            else g = on ? g * db(feature_db(std::popcount(unsigned(heard)))) : 0;
         }
-        if (s == STEM_I && !g_instruments.load(std::memory_order_relaxed)) g = 0;
         float l, r;
-        pan_gains(s == STEM_A2 && solo ? 0 : s == STEM_A && !solo && g_stems.load(std::memory_order_relaxed) == STEM_COUNT ? PAN_KNOB_A1 : PAN_KNOB[s], l, r);
+        pan_gains(g_pan[s].load(std::memory_order_relaxed), l, r);
         gains[s][0] = g * l * master;
         gains[s][1] = g * r * master;
     }
 }
 
-int engine_load(const char *const *paths, const char *cache_dir) {
+int engine_load(const char *const *paths, int voices, const char *cache_dir) {
     engine_wait_render();
-    std::vector<float> loaded[STEM_COUNT];
+    if (voices < 1 || voices > MAX_VOICES) { fprintf(stderr, "%d voices: from 1 to %d can be played\n", voices, MAX_VOICES); return 0; }
+    std::vector<float> loaded[STEM_MAX];
     std::atomic<int> ok{1};
     std::vector<std::thread> th;
-    int rates[STEM_COUNT]; int64_t lens[STEM_COUNT];
-    const int stems = paths[STEM_A2] ? STEM_COUNT : STEM_COUNT - 1;
+    int rates[STEM_MAX]; int64_t lens[STEM_MAX];
+    const int stems = paths[voices] ? voices + 1 : voices;
     for (int i = 0; i < stems; i++)
         th.emplace_back([&, i] { if (!read_file(paths[i], loaded[i], rates[i], lens[i])) ok = 0; });
     for (auto &x : th) x.join();
@@ -901,7 +911,10 @@ int engine_load(const char *const *paths, const char *cache_dir) {
     t->frames = len0;
     t->stems = stems;
     g_stems = stems;
-    g_voices = stems == STEM_COUNT ? VOICES_ALL : VOICES_FOUR;
+    g_nvoices = voices;
+    g_inst = stems > voices ? voices : -1;
+    g_voices = (1 << voices) - 1;
+    for (int i = 0; i < MAX_VOICES; i++) { g_pan[i] = 0; g_trim[i] = 0; }
     g_cache_root = cache_dir;
     { std::lock_guard<std::mutex> lk(g_fix_mutex); g_fixes.clear(); }
     { std::lock_guard<std::mutex> lk(g_marks_mutex); g_marks.clear(); }
@@ -980,7 +993,7 @@ void engine_set_playing(int p) {
     g_playing.store(p != 0);
 }
 int engine_is_playing(void) { return g_playing.load(); }
-void engine_set_voices(int v) { g_voices.store(v & VOICES_ALL); }
+void engine_set_voices(int v) { g_voices.store(v & ((1 << g_nvoices.load()) - 1)); }
 void engine_set_instruments(int on) { g_instruments.store(on != 0); }
 void engine_set_isolated(int isolated) { g_isolated.store(isolated != 0); }
 void engine_set_master_db(double d) { g_master_db.store(float(d)); }

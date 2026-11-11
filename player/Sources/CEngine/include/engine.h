@@ -1,4 +1,4 @@
-// The player's audio: five or six stems in memory, mixed by mode; another tempo is a Rubber Band R3 offline render of every stem.
+// The player's audio: a song's voice stems and its instrumental stem in memory, mixed by mode; another tempo is a render of every stem.
 #ifndef ENGINE_H
 #define ENGINE_H
 #include <stdint.h>
@@ -6,13 +6,14 @@
 extern "C" {
 #endif
 
-// STEM_A2 is a second alto part, for a song that has one: STEM_A is then the first
-enum { STEM_S = 0, STEM_A, STEM_T, STEM_B, STEM_I, STEM_A2, STEM_COUNT };
-// which voices are heard: a mask of these. All of the song's voices is the balanced mix, none is the instruments alone.
-enum { VOICE_S = 1, VOICE_A = 2, VOICE_T = 4, VOICE_B = 8, VOICE_A2 = 32, VOICES_FOUR = 15, VOICES_ALL = 47 };
+// Stems are numbered as loaded: the voices 0 to voices-1, then the instrumental stem, if the song has one.
+enum { MAX_VOICES = 8, STEM_MAX = MAX_VOICES + 1 };
 
-// paths in stem order, STEM_COUNT of them, with a null one for STEM_A2 where the song has no second alto part; false on a file that can't be read or stems of different rate or length
-int engine_load(const char *const *paths, const char *cache_dir);
+// voices+1 paths: the voice stems, then the instrumental stem (null for none); false on a file that can't be read or stems of different rate
+int engine_load(const char *const *paths, int voices, const char *cache_dir);
+int engine_voice_count(void);
+// for each voice, its pan on Logic's knob (-64 to +63) and its trim in dB. All centred at 0 dB until set.
+void engine_set_voice_mix(const float *pan_knob, const float *trim_db);
 int engine_start_output(void);
 // output devices: count, then each one's Core Audio UID and name. Listing also refreshes what the index means.
 int engine_device_count(void);
@@ -23,14 +24,13 @@ void engine_stop_output(void);
 
 void engine_set_playing(int playing);
 int engine_is_playing(void);
+// which voices are heard: bit i is voice i. All of them is the balanced mix, none is the instruments alone.
 void engine_set_voices(int voices);
 // the instrumental stem (a click, in an unaccompanied song) heard or not, whatever the voices are doing: on until set
 void engine_set_instruments(int on);
 // What the voice files are. Part-predominant (0): a file has its part loudest with the others bleeding through, so voices not
 // heard are off and those heard are boosted. Isolated (1): one voice per file, so those heard are at 0 dB and the others at -18 dB.
 void engine_set_isolated(int isolated);
-// the sixth stem is a soloist, at 0 dB and centred, with the second stem left at a lone alto's pan; or else a second alto part
-void engine_set_sixth_solo(int solo);
 // the whole mix, in dB: -3 until set
 void engine_set_master_db(double db);
 void engine_seek(double source_seconds);
@@ -49,7 +49,7 @@ int engine_waiting(void);
 void engine_render_here(void);
 // on reaching end by playing, goes back to start: both in seconds of the original audio. A negative start is no loop.
 void engine_set_loop(double start, double end);
-// how another tempo is made, for the four voices and for the instruments
+// how another tempo is made, for the voices and for the instruments
 enum { METHOD_R3_TOGETHER = 0, METHOD_R3_APART, METHOD_SIGNALSMITH, METHOD_SIGNALSMITH_SHORT, METHOD_PSOLA };
 void engine_set_methods(int voices, int instruments);
 
@@ -58,7 +58,7 @@ void engine_set_methods(int voices, int instruments);
 void engine_set_fixes(int count, const int *stems, const double *starts, const double *ends, const int *mutes, const double *semitones);
 
 // left and right gains per stem for a mask of voices, master included (linear)
-void engine_gains(int voices, float gains[STEM_COUNT][2]);
+void engine_gains(int voices, float gains[STEM_MAX][2]);
 // the mixer the output uses, for tests: renders frames*2 samples and advances the position
 void engine_mix(float *out, int frames);
 // blocks until no render is running or waiting
