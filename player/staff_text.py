@@ -140,7 +140,7 @@ def build(path, out):
             for t in toks:
                 ev = token(t); total += ev['dur']
                 p = share(ev['pitches'], len(parts[st]))[i]
-                key_ = p and (p[0], p[2])
+                key_ = p and (p[0], p[1] or '', p[2])       # a tie joins the same pitch, accidental and all
                 xml.append(note_xml(p, ev, key_ in tie_open if p else False, ev['lyric']))
                 tie_open = {key_} if (p and ev['tie']) else set()
             if total != length: raise ValueError(f'bar {b} staff {st}: {total} quarters, the meter has {length}')
