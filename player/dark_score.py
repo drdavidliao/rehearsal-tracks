@@ -180,9 +180,12 @@ def recolor(page, writer):
             else: fill = new
             out.append(new)
             continue
-        elif op in (b'g', b'G') and len(args) == 1:
+        # one value is a grey: g/G, or sc/scn in a DeviceGray space (Sibelius's /CSpg). Left alone, it stays black on the
+        # dark page, and once a note's colour has set RGB it is an error that viewers skip
+        elif (op in (b'g', b'G') or (op in (b'sc', b'scn', b'SC', b'SCN') and isinstance(args[0], (int, float)))) \
+                and len(args) == 1:
             v = float(args[0])
-            new = rgb_op(OTHER if v < 0.01 else flipped((v, v, v)), op == b'G')
+            new = rgb_op(OTHER if v < 0.01 else flipped((v, v, v)), op in (b'G', b'SC', b'SCN'))
             if new[1] == b'RG': stroke = new
             else: fill = new
             out.append(new)
