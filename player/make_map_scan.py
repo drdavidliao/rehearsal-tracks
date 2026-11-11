@@ -34,6 +34,9 @@ def main():
     ap.add_argument('--stems', nargs='+', required=True); ap.add_argument('--part-stems', nargs='+', required=True)
     ap.add_argument('--staff', nargs='+', required=True); ap.add_argument('--anchor', action='append', default=[])
     ap.add_argument('--swing', type=float, default=0.5); ap.add_argument('--tempo', type=float, required=True)
+    ap.add_argument('--warp', action='store_true', help="time the bars from the voices' stems, as make_map.py --warp does")
+    ap.add_argument('--warp-beat', action='store_true'); ap.add_argument('--guide'); ap.add_argument('--pin', nargs='+', default=[])
+    ap.add_argument('--offset', type=float, default=0.0, help='with --warp: roughly where bar 1 starts in the stems')
     a = ap.parse_args()
     at = lambda f: os.path.join(a.folder, f)
     stems = dict(s.split('=', 1) for s in a.stems)
@@ -54,7 +57,7 @@ def main():
             if at_ >= q: break
             out += float(at_ - pos) * 60 / cur; pos = at_; cur = tp
         return out + float(q - pos) * 60 / cur
-    t = None
+    t = 0.0 if a.warp else None
     for i, b in enumerate(xbars):
         if i in anchors: t = anchors[i]
         starts.append((t, tempo))
@@ -65,6 +68,17 @@ def main():
     index = {n: i for i, n in enumerate(numbers)}
     def secs(i, q):
         return starts[i][0] + piece(i, q)
+    if a.warp:
+        # human-sung stems stray from the written tempo: the score's seconds are bent to the voices' attacks (and a pitch
+        # guide's times, and pins) by make_map.fit_warp
+        plain = secs
+        vs_ = [(p_, at(stems[stem_of[p_]])) for p_ in stem_of if p_ in staves_of]
+        warp_anchors = mm.fit_warp(at(a.xml), xbars, plain, total, vs_, a.offset, a.warp_beat,
+                                   at(a.guide) if a.guide else None, a.pin)
+        wx, wy = [x for x, _ in warp_anchors], [y for _, y in warp_anchors]
+        def secs(i, q):
+            return float(np.interp(plain(i, q), wx, wy))
+        total = secs(len(xbars) - 1, xbars[-1]['quarters'])
     def swung(i, q):
         whole = q.numerator // q.denominator
         return float(whole) + a.swing if q - whole == F(1, 2) and starts[i][1] >= 140 else float(q)
@@ -168,7 +182,7 @@ def main():
         v = next((v for v in voices if v['key'] == stem), None)
         if v: v['name'] += ' and ' + part
         else: voices.append(dict(key=stem, name=part))
-    m = dict(voices=voices, notes=notes, score=a.score, stems=stems, offset=round(starts[0][0], 4), page_height=sizes[0][1], pages=len(sizes),
+    m = dict(voices=voices, notes=notes, score=a.score, stems=stems, offset=round(secs(0, F(0)), 4), page_height=sizes[0][1], pages=len(sizes),
              tempo=a.tempo, music_end=round(total, 4), systems=list(sysd.values()), bars=bars)
     with open(at('player map.json'), 'w') as f:
         json.dump(m, f, indent=0)

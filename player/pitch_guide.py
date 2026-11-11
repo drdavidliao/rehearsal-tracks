@@ -40,7 +40,8 @@ def f0_of(path):
 def pitches(folder, m):
     parts = [k for k in m['stems'] if k != 'I']
     paths = [os.path.join(folder, m['stems'][k]) for k in parts]
-    with ProcessPoolExecutor(8) as ex:
+    # one process per core; PITCH_WORKERS sets fewer, for anyone who wants cores kept free
+    with ProcessPoolExecutor(int(os.environ.get("PITCH_WORKERS") or os.cpu_count() or 1)) as ex:
         return dict(zip(parts, ex.map(f0_of, paths)))
 
 

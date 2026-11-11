@@ -254,6 +254,70 @@ def best_offset(d, secs, lo, hi, step=0.005):
     return best[1]
 
 
+def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, guide_path=None, pins=()):
+    """where the stems' tempo strays from the written one: an offset for each bar (or beat), chosen together so that the
+    voices' attacks land on their stems' attacks and the offset changes little from piece to piece (a hold can jump it; a
+    repeated figure, which fits as well a beat either way, can't), and followed between piece starts. voice_stems: (part,
+    stem path). Returns the anchors (score seconds, stem seconds)."""
+    vn_, _ = read_voice_notes(xml, [n_ for n_, _ in voice_stems])
+    refs = []
+    for n_, path in voice_stems:
+        d = flux(path); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
+        refs.append((d, [nt['start'] for nt in vn_.get(n_, [])]))
+    # the pieces an offset is fitted for: bars, or with --warp-beat beats, for singing that bends the time inside a bar
+    if beat:
+        mts_ = xml_meters(xml)
+        segs = [(i, k * beat_len(mts_[i])) for i in range(len(xbars))
+                for k in range(max(1, int(xbars[i]['quarters'] / beat_len(mts_[i]))))]
+    else:
+        segs = [(i, F(0)) for i in range(len(xbars))]
+    seg_t = [plain_secs(i, q) for i, q in segs]
+    nb = len(segs)
+    nums_, mts_p = xml_numbers(xml), xml_meters(xml)
+    guide = []
+    for ln in (open(guide_path).read().split() if guide_path else []):
+        pos_, sec_ = ln.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
+        bi = nums_.index(int(bar_)); s_ = plain_secs(bi, (int(beat_) - 1) * beat_len(mts_p[bi]))
+        j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
+        if abs(seg_t[j] - s_) < 1e-6: guide.append((j, float(sec_) - s_))
+    # the offsets tried: with a guide, as far as it goes either way
+    lo_, hi_ = (min(o for _, o in guide) - 1, max(o for _, o in guide) + 1) if guide else (offset - 2.0, offset + 6.0)
+    grid = np.arange(lo_, hi_, 0.02)
+    S = np.zeros((nb, len(grid)))
+    for d, on in refs:
+        for i, q in on:
+            s_ = plain_secs(i, q)
+            j = max(0, bisect.bisect_right(seg_t, s_ + 1e-6) - 1)
+            idx = ((s_ + grid) * SR / HOP).astype(int)
+            ok = (idx >= 0) & (idx < len(d) - 1)
+            S[j, ok] += d[idx[ok]] + d[idx[ok] + 1]
+    # measured times the fit must pass through, where slow legato singing gives it too few attacks to find its way
+    for t_ in pins:
+        pos_, sec_ = t_.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
+        s_ = plain_secs(nums_.index(int(bar_)), (int(beat_) - 1) * beat_len(mts_p[nums_.index(int(bar_))]))
+        j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
+        assert abs(seg_t[j] - s_) < 1e-6, f'--pin {t_}: not the start of a {"beat" if beat else "bar"}'
+        S[j, np.abs(grid - (float(sec_) - s_)) > 0.011] -= 1e6
+    # a guide: rough times for the pieces, from following the sung pitch, which a song sung freely needs; attacks alone
+    # can lock a beat or a bar out and fit as well there. The fit keeps within 0.35 s of it
+    for j, o in guide: S[j, np.abs(grid - o) > 0.35] -= 1e6
+    # score given up per second of change: holds and slower playing push the audio later, so the offset falling
+    # costs three times as much as it rising
+    diff = grid[None, :] - grid[:, None]            # from k (row) to j (column)
+    step = np.where(diff >= 0, 15.0 * diff, -45.0 * diff)
+    V = S[0].copy(); back = np.zeros((nb, len(grid)), int)
+    for i in range(1, nb):
+        T = V[:, None] - step               # from k to j
+        back[i] = T.argmax(0); V = T.max(0) + S[i]
+    k = int(V.argmax()); offs = [0.0] * nb
+    for i in range(nb - 1, -1, -1):
+        offs[i] = float(grid[k]); k = back[i][k]
+    print('warp: offset by', 'beat' if beat else 'bar', 's:', ' '.join(f'{o:.2f}' for o in offs))
+    anchors = [(-1.0, -1.0 + offs[0])] + [(seg_t[j], seg_t[j] + offs[j]) for j in range(nb)] + \
+              [(total + 30, total + 30 + offs[-1])]
+    return anchors
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('folder'); ap.add_argument('--reader-pdf', required=True); ap.add_argument('--score', required=True)
@@ -357,62 +421,8 @@ def main():
         # where the stems' tempo strays from the written one: an offset for each bar, chosen together so that the voices'
         # attacks land on their stems' attacks and the offset changes little from bar to bar (a hold can jump it; a
         # repeated figure, which fits as well a beat either way, can't), and followed between bar starts
-        vn_, _ = read_voice_notes(at(a.xml), VOICES)
-        refs = []
-        for n_ in VOICES:
-            d = flux(at(stems[STEM_OF[n_]])); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
-            refs.append((d, [nt['start'] for nt in vn_.get(n_, [])]))
-        # the pieces an offset is fitted for: bars, or with --warp-beat beats, for singing that bends the time inside a bar
-        if a.warp_beat:
-            mts_ = xml_meters(at(a.xml))
-            segs = [(i, k * beat_len(mts_[i])) for i in range(len(xbars))
-                    for k in range(max(1, int(xbars[i]['quarters'] / beat_len(mts_[i]))))]
-        else:
-            segs = [(i, F(0)) for i in range(len(xbars))]
-        seg_t = [plain_secs(i, q) for i, q in segs]
-        nb = len(segs)
-        nums_, mts_p = xml_numbers(at(a.xml)), xml_meters(at(a.xml))
-        guide = []
-        for ln in (open(at(a.guide)).read().split() if a.guide else []):
-            pos_, sec_ = ln.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
-            bi = nums_.index(int(bar_)); s_ = plain_secs(bi, (int(beat_) - 1) * beat_len(mts_p[bi]))
-            j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
-            if abs(seg_t[j] - s_) < 1e-6: guide.append((j, float(sec_) - s_))
-        # the offsets tried: with a guide, as far as it goes either way
-        lo_, hi_ = (min(o for _, o in guide) - 1, max(o for _, o in guide) + 1) if guide else (offset - 2.0, offset + 6.0)
-        grid = np.arange(lo_, hi_, 0.02)
-        S = np.zeros((nb, len(grid)))
-        for d, on in refs:
-            for i, q in on:
-                s_ = plain_secs(i, q)
-                j = max(0, bisect.bisect_right(seg_t, s_ + 1e-6) - 1)
-                idx = ((s_ + grid) * SR / HOP).astype(int)
-                ok = (idx >= 0) & (idx < len(d) - 1)
-                S[j, ok] += d[idx[ok]] + d[idx[ok] + 1]
-        # measured times the fit must pass through, where slow legato singing gives it too few attacks to find its way
-        for t_ in a.pin:
-            pos_, sec_ = t_.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
-            s_ = plain_secs(nums_.index(int(bar_)), (int(beat_) - 1) * beat_len(mts_p[nums_.index(int(bar_))]))
-            j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
-            assert abs(seg_t[j] - s_) < 1e-6, f'--pin {t_}: not the start of a {"beat" if a.warp_beat else "bar"}'
-            S[j, np.abs(grid - (float(sec_) - s_)) > 0.011] -= 1e6
-        # a guide: rough times for the pieces, from following the sung pitch, which a song sung freely needs; attacks alone
-        # can lock a beat or a bar out and fit as well there. The fit keeps within 0.35 s of it
-        for j, o in guide: S[j, np.abs(grid - o) > 0.35] -= 1e6
-        # score given up per second of change: holds and slower playing push the audio later, so the offset falling
-        # costs three times as much as it rising
-        diff = grid[None, :] - grid[:, None]            # from k (row) to j (column)
-        step = np.where(diff >= 0, 15.0 * diff, -45.0 * diff)
-        V = S[0].copy(); back = np.zeros((nb, len(grid)), int)
-        for i in range(1, nb):
-            T = V[:, None] - step               # from k to j
-            back[i] = T.argmax(0); V = T.max(0) + S[i]
-        k = int(V.argmax()); offs = [0.0] * nb
-        for i in range(nb - 1, -1, -1):
-            offs[i] = float(grid[k]); k = back[i][k]
-        print('warp: offset by', 'beat' if a.warp_beat else 'bar', 's:', ' '.join(f'{o:.2f}' for o in offs))
-        anchors = [(-1.0, -1.0 + offs[0])] + [(seg_t[j], seg_t[j] + offs[j]) for j in range(nb)] + \
-                  [(total + 30, total + 30 + offs[-1])]
+        anchors = fit_warp(at(a.xml), xbars, plain_secs, total, [(n_, at(stems[STEM_OF[n_]])) for n_ in VOICES], offset,
+                           a.warp_beat, at(a.guide) if a.guide else None, a.pin)
         if a.anchor:
             # measured by hand, for a slowing the fit can't follow: bar numbers as printed, beats counted from 1
             nums, mts = xml_numbers(at(a.xml)), xml_meters(at(a.xml))
