@@ -14,6 +14,8 @@ Needs Xcode's tools and `brew install rubberband`.
 This makes `player/build/Rehearsal Player.app`. Rubber Band and libsamplerate are linked statically, so the app runs
 on its own. Rubber Band is GPL or commercial: keep that in mind before giving the app to anyone.
 
+The icon is `AppIcon.icns`, drawn by `make_icon.py`.
+
 ## A song
 
 The app opens a song folder that has a `player map.json`. Make one with:
@@ -80,6 +82,15 @@ it change little from bar to bar and fall less readily than rise, and prints the
 | ⌘F | hear without fixes |
 | ⌘2 | two pages side by side |
 | ⌘O | open a song folder (File > Recent Songs has the last 12) |
+| ⇧⌘O | find a song by its tags |
+
+## Finding a song
+
+File > Find Songs lists every folder on this Mac with a `player map.json`, through Spotlight, so a new song appears by itself. Click tags in the cloud to narrow the list: a song must have all the
+tags chosen, and a tag that would leave nothing is dimmed. Double-click a song to open it, or click one to tag it. The Tags box in the sidebar tags the open song.
+
+A song's folders are its first tags: `Choir/2026 Fall/Song` gives Choir and 2026 Fall, and `Band/Band 2026 Fall/Song` gives Band and 2026 Fall. These can't be removed. Tags you add are in
+`player tags.json` in the song folder, so they sync with it and survive a new map.
 
 ## Dark mode
 

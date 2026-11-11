@@ -199,6 +199,7 @@ final class Player: ObservableObject {
             UserDefaults.standard.set(folder.path, forKey: "lastFolder")
             let recent = UserDefaults.standard.stringArray(forKey: "recentFolders") ?? []
             UserDefaults.standard.set(Array(([folder.path] + recent.filter { $0 != folder.path }).prefix(12)), forKey: "recentFolders")
+            SongLibrary.shared.add(folder.path)
             score?.reload()
         } catch {
             self.error = "\(folder.lastPathComponent) has no usable player map.json. (\(error.localizedDescription))"
@@ -778,6 +779,11 @@ struct Controls: View {
                     Text("1 purely isolated voice\nper audio file").tag(true)
                     Text("part-predominant files").tag(false)
                 }.pickerStyle(.radioGroup).labelsHidden()
+                if let f = p.folder?.path {
+                    Divider()
+                    heading("Tags")
+                    TagEditor(path: f, leaveAfter: true).id(f)
+                }
             }
             .padding(.horizontal, 10).padding(.top, 34).padding(.bottom, 10)     // the top clears the window's buttons
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -828,7 +834,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             menu.removeAllItems()
             let map = "player map.json"
             for path in UserDefaults.standard.stringArray(forKey: "recentFolders") ?? [] where
-                FileManager.default.fileExists(atPath: (path as NSString).appendingPathComponent(map)) {
+                !SongLibrary.isScratch(path) && FileManager.default.fileExists(atPath: (path as NSString).appendingPathComponent(map)) {
                 let it = ClosureItem(title: (path as NSString).lastPathComponent) { [weak self] in self?.player.open(folder: URL(fileURLWithPath: path)) }
                 it.state = path == player.folder?.path ? .on : .off
                 menu.addItem(it)
@@ -842,6 +848,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
     let player = Player()
     var window: NSWindow!
+    var findWindow: NSWindow?
     var timer: Timer?
 
     func applicationDidFinishLaunching(_ n: Notification) {
@@ -860,8 +867,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         window.contentView = NSHostingView(rootView: RootView(p: player))
         window.makeKeyAndOrderFront(nil)
         buildMenu()
+        SongLibrary.shared.start()
         NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] e in
-            guard let self else { return e }
+            guard let self, e.window === self.window else { return e }     // the score's keys are for its own window
             if self.window.firstResponder is NSText { return e }     // typing a tempo
             return self.player.key(e) ? nil : e
         }
@@ -883,6 +891,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         o.canChooseDirectories = true; o.canChooseFiles = false
         o.message = "Choose a song folder that has a player map.json"
         if o.runModal() == .OK, let u = o.url { player.open(folder: u) }
+    }
+    @objc func findSongs() {
+        SongLibrary.shared.refresh()
+        if findWindow == nil {
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 560, height: 620), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            w.title = "Find Songs"
+            w.isReleasedWhenClosed = false
+            w.contentView = NSHostingView(rootView: FindSongs(p: player) { [weak w] in w?.orderOut(nil) })
+            w.center()
+            w.setFrameAutosaveName("find songs")
+            findWindow = w
+        }
+        findWindow?.makeKeyAndOrderFront(nil)
     }
     @objc func toggleBypass(_ item: NSMenuItem) {
         player.bypass.toggle()
@@ -908,6 +929,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         let rm = NSMenu(title: "Recent Songs"); rm.delegate = self
         rm.addItem(withTitle: "No Recent Songs", action: nil, keyEquivalent: "").isEnabled = false
         fm.addItem(withTitle: "Recent Songs", action: nil, keyEquivalent: "").submenu = rm
+        fm.addItem(withTitle: "Find Songs…", action: #selector(findSongs), keyEquivalent: "O")
         file.submenu = fm
         let view = NSMenuItem(); main.addItem(view)
         let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2"); view.submenu = vm

@@ -3266,7 +3266,8 @@ lists; not general code yet). The rules it ended with:
   pitch name, so a bar with only the low octave still counts.
 - **Align excerpts on one line by their staff lines**, not their boxes (labels above push a box down). The intro
   goes alongside the title block, not under it.
-- Page number, as always.
+- Page number, as always, and a version line at the foot ("Version: Mon 9 Nov 2026, 3:18 PM", the time it was
+  built), so singers can tell which printout is current.
 
 Verovio details that bit: its SVG is `overflow="visible"`, so cropping one staff out of a shared layout needs
 `overflow="hidden"` and the inner `definition-scale` sized to the whole system; self-closing `<g .../>` must be
