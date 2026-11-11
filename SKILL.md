@@ -3262,7 +3262,8 @@ lists; not general code yet). The rules it ended with:
   staff lines, no barlines), not empty measures. Never join different passes with a brace or barline.
 - **Narrow gaps between four-bar phrases**, the same columns on every line; a phrase after a gap opens with its
   own barline. A bridge starts a new line.
-- **Shade the motifs**: each recurring motif and the bridge its own pale colour behind the staff. Match motifs by
+- **Shade the motifs**: each recurring motif and the bridge its own pale colour, exactly over the staff's height
+  (a box that runs past the outer lines has edges that read as extra staff lines). Match motifs by
   pitch name, so a bar with only the low octave still counts.
 - **Align excerpts on one line by their staff lines**, not their boxes (labels above push a box down). The intro
   goes alongside the title block, not under it.
