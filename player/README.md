@@ -58,7 +58,16 @@ time of bar 1 from the piano's on-beat attacks and prints the drift by section: 
 riten or rall mark bends the times from its bar on, by a smooth curve fitted to the stems' attacks and to where the sound ends;
 the fit assumes the rit runs to the last bar. Where the stems stray from the written tempo in other ways (held fermatas, a
 slower intro, tempo marks that don't match the playback), `--warp` fits an offset for every bar from the voices' attacks, letting
-it change little from bar to bar and fall less readily than rise, and prints them.
+it change little from bar to bar and fall less readily than rise, and prints them; `--warp-beat` fits every beat instead, for
+singing that bends the time inside a bar, and `--pin BAR.BEAT=SECONDS` fixes a measured time the fit must pass through.
+
+Human-sung tracks are sung freely, and on slow legato singing an attack fit can lock a beat or several bars out and still look
+right. `pitch_guide.py FOLDER XML check` says how many of the map's notes the stems actually sing at the written pitch (any
+octave): over 0.9 is right, far less is not. For such a song, make the map once, then
+`pitch_guide.py FOLDER XML guide GUIDE.txt` times every beat by matching each part's written pitches to its stem, and
+`--warp --warp-beat --guide GUIDE.txt` keeps the attack fit within 0.35 s of it (`--from BAR` limits the guide to where it's
+needed). Separated stems come from mp3s whose accompaniment track may start earlier than the singing (1.000 s in
+Matthew Curtis's sets): measure it by cross-correlating the accompaniment with a Predominant mix before using it as `I`.
 
 ## Keys
 

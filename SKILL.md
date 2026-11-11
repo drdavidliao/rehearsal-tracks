@@ -156,7 +156,7 @@ Set up the rehearsal player for the Shenandoah folder.
 
 That is `player/README.md`: build the Mac app and write the folder's `player map.json`. The score
 is clickable by the beat, with a choice of parts, tempo, a loop and single-note fixes. Where the folder
-has a human-sung set (Matthew Curtis) sung natively in the correct octave, the map uses those tracks in preference to Cantai output. His name may not be in the filenames: look for `(Part) Predominant`, `Accompaniment Track` and `Balanced Voices`. On Windows
+has a human-sung set (Matthew Curtis) sung natively in the correct octave, the map uses those tracks in preference to Cantai output. His name may not be in the filenames: look for `(Part) Predominant`, `Accompaniment Track` and `Balanced Voices`. A set may be renamed between copies (Work of Christmas's "Bass 1 Predominant" is byte for byte its "(Baritone) Predominant"), so compare checksums before calling a part missing. Run `player/pitch_guide.py FOLDER XML check` on every map made from human-sung stems: they're sung freely, and an attack fit can be bars out on slow legato singing while every attack-based check looks fine; the README says how to time such a song by its pitches. On Windows
 or anything else:
 
 ```
@@ -3266,6 +3266,14 @@ lists; not general code yet). The rules it ended with:
   pitch name, so a bar with only the low octave still counts.
 - **Align excerpts on one line by their staff lines**, not their boxes (labels above push a box down). The intro
   goes alongside the title block, not under it.
+- Chord symbols above the staff, from the score's `<harmony>`, each directly over the head where its chord starts. A
+  new chord gets its own head even on the same pitch, so no symbol floats over empty space. In Verovio the heads'
+  `<duration>` must match their `<type>` (a packed head of duration 1 at 2 divisions is an eighth, not a 16th), or
+  harmony timestamps land beside the heads; and a long symbol needs hidden spacer rests after its head, or Verovio
+  pushes the next symbol right, off its head. They widen packed bars, so scale the shared layout to the page width
+  after adding them.
+- Where the part's note differs from the piano's left hand by more than an octave, a faint grey cue-size copy of
+  the piano's note beside it, marked "Piano differs".
 - Page number, as always, and a version line at the foot ("Version: Mon 9 Nov 2026, 3:18 PM", the time it was
   built), so singers can tell which printout is current.
 

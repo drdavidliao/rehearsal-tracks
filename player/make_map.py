@@ -14,7 +14,7 @@ that fit, and it reports how far the stems drift from the score bar by bar.
 A rit mark in the MusicXML (rit, riten, rall) bends the times from its bar to the end of the song, fitted to the stems.
 Writes "player map.json" in the song folder, paths relative to it.
 """
-import argparse, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
+import argparse, bisect, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
 from fractions import Fraction as F
 import numpy as np
 
@@ -263,6 +263,9 @@ def main():
     ap.add_argument('--staff', nargs='+', help='for a score not from Dorico: "Part=label" per part, parts sharing a staff sharing a label')
     ap.add_argument('--layout', nargs='+', help='"n=label,label,..." for a system of n staves (default: the labels in order)')
     ap.add_argument('--warp', action='store_true', help='fit the time every 4 bars, for stems whose tempo strays from the written one')
+    ap.add_argument('--warp-beat', action='store_true', help='with --warp: fit every beat, not every bar, for singing freer than a bar at a time')
+    ap.add_argument('--guide', help='with --warp: a file of "bar.beat=seconds" lines, rough times the fit keeps within 0.35 s of')
+    ap.add_argument('--pin', nargs='+', default=[], help='with --warp: "bar.beat=seconds" measured times the fit must pass through')
     ap.add_argument('--anchor', nargs='+', default=[], help='"bar.beat=seconds": measured times; from the first of them on, the times follow these')
     ap.add_argument('--trim', nargs='+', default=[], help='"Part=dB": a stem louder or softer than the others were made, as the mixes trim it')
     ap.add_argument('--names', nargs='+', help='"pattern=label": a staff whose printed name matches takes the label, first match winning')
@@ -359,14 +362,43 @@ def main():
         for n_ in VOICES:
             d = flux(at(stems[STEM_OF[n_]])); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
             refs.append((d, [nt['start'] for nt in vn_.get(n_, [])]))
-        grid = offset + np.arange(-2.0, 6.0, 0.02)
-        nb = len(xbars)
+        # the pieces an offset is fitted for: bars, or with --warp-beat beats, for singing that bends the time inside a bar
+        if a.warp_beat:
+            mts_ = xml_meters(at(a.xml))
+            segs = [(i, k * beat_len(mts_[i])) for i in range(len(xbars))
+                    for k in range(max(1, int(xbars[i]['quarters'] / beat_len(mts_[i]))))]
+        else:
+            segs = [(i, F(0)) for i in range(len(xbars))]
+        seg_t = [plain_secs(i, q) for i, q in segs]
+        nb = len(segs)
+        nums_, mts_p = xml_numbers(at(a.xml)), xml_meters(at(a.xml))
+        guide = []
+        for ln in (open(at(a.guide)).read().split() if a.guide else []):
+            pos_, sec_ = ln.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
+            bi = nums_.index(int(bar_)); s_ = plain_secs(bi, (int(beat_) - 1) * beat_len(mts_p[bi]))
+            j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
+            if abs(seg_t[j] - s_) < 1e-6: guide.append((j, float(sec_) - s_))
+        # the offsets tried: with a guide, as far as it goes either way
+        lo_, hi_ = (min(o for _, o in guide) - 1, max(o for _, o in guide) + 1) if guide else (offset - 2.0, offset + 6.0)
+        grid = np.arange(lo_, hi_, 0.02)
         S = np.zeros((nb, len(grid)))
         for d, on in refs:
             for i, q in on:
-                idx = ((plain_secs(i, q) + grid) * SR / HOP).astype(int)
+                s_ = plain_secs(i, q)
+                j = max(0, bisect.bisect_right(seg_t, s_ + 1e-6) - 1)
+                idx = ((s_ + grid) * SR / HOP).astype(int)
                 ok = (idx >= 0) & (idx < len(d) - 1)
-                S[i, ok] += d[idx[ok]] + d[idx[ok] + 1]
+                S[j, ok] += d[idx[ok]] + d[idx[ok] + 1]
+        # measured times the fit must pass through, where slow legato singing gives it too few attacks to find its way
+        for t_ in a.pin:
+            pos_, sec_ = t_.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
+            s_ = plain_secs(nums_.index(int(bar_)), (int(beat_) - 1) * beat_len(mts_p[nums_.index(int(bar_))]))
+            j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
+            assert abs(seg_t[j] - s_) < 1e-6, f'--pin {t_}: not the start of a {"beat" if a.warp_beat else "bar"}'
+            S[j, np.abs(grid - (float(sec_) - s_)) > 0.011] -= 1e6
+        # a guide: rough times for the pieces, from following the sung pitch, which a song sung freely needs; attacks alone
+        # can lock a beat or a bar out and fit as well there. The fit keeps within 0.35 s of it
+        for j, o in guide: S[j, np.abs(grid - o) > 0.35] -= 1e6
         # score given up per second of change: holds and slower playing push the audio later, so the offset falling
         # costs three times as much as it rising
         diff = grid[None, :] - grid[:, None]            # from k (row) to j (column)
@@ -378,8 +410,8 @@ def main():
         k = int(V.argmax()); offs = [0.0] * nb
         for i in range(nb - 1, -1, -1):
             offs[i] = float(grid[k]); k = back[i][k]
-        print('warp: offset by bar, s:', ' '.join(f'{o:.2f}' for o in offs))
-        anchors = [(-1.0, -1.0 + offs[0])] + [(plain_secs(i, F(0)), plain_secs(i, F(0)) + offs[i]) for i in range(nb)] + \
+        print('warp: offset by', 'beat' if a.warp_beat else 'bar', 's:', ' '.join(f'{o:.2f}' for o in offs))
+        anchors = [(-1.0, -1.0 + offs[0])] + [(seg_t[j], seg_t[j] + offs[j]) for j in range(nb)] + \
                   [(total + 30, total + 30 + offs[-1])]
         if a.anchor:
             # measured by hand, for a slowing the fit can't follow: bar numbers as printed, beats counted from 1
