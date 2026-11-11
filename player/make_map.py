@@ -14,7 +14,7 @@ that fit, and it reports how far the stems drift from the score bar by bar.
 A rit mark in the MusicXML (rit, riten, rall) bends the times from its bar to the end of the song, fitted to the stems.
 Writes "player map.json" in the song folder, paths relative to it.
 """
-import argparse, bisect, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
+import argparse, bisect, copy, json, os, re, subprocess, sys, xml.etree.ElementTree as ET
 from fractions import Fraction as F
 import numpy as np
 
@@ -101,6 +101,109 @@ def xml_repeats(path):
                 out[i] = (s0, int(r.get('times') or 2), (ending1 - 1) if ending1 is not None and ending1 > s0 else i)
                 s0 = i + 1; ending1 = None
     return out
+
+
+def play_order(path):
+    """the bar indices in the order they're sung: repeats with their endings, and a D.S. or D.C. (al Coda, al Fine). The
+    marks are MusicXML's: repeat and ending barlines, and sound segno, coda, tocoda, dalsegno, dacapo and fine, or where a
+    direction has no sound, a segno or coda sign and the words "D.S.", "D.C.", "To Coda" and "Fine". After the jump back,
+    repeats aren't taken, a "To Coda" goes to the coda, and an ending that leads back to its repeat is passed over."""
+    parts = ET.parse(path).getroot().findall('part')
+    ms = [p.findall('measure') for p in parts]
+    n = len(ms[0])
+    marks = [dict(forward=False, backward=0, ending=None, ending_end=False) for _ in range(n)]
+    for i in range(n):
+        mk = marks[i]
+        for p in ms:
+            if i >= len(p): continue
+            m = p[i]
+            for bl in m.findall('barline'):
+                r = bl.find('repeat')
+                if r is not None and r.get('direction') == 'forward': mk['forward'] = True
+                if r is not None and r.get('direction') == 'backward': mk['backward'] = int(r.get('times') or 2)
+                e = bl.find('ending')
+                if e is not None and e.get('type') == 'start':
+                    mk['ending'] = {int(x) for x in re.findall(r'\d+', e.get('number') or '1')}
+                if e is not None and e.get('type') in ('stop', 'discontinue'): mk['ending_end'] = True
+            for d in m.iter('direction'):
+                s = d.find('sound')
+                s = s.attrib if s is not None else {}
+                words = ' '.join(w.text or '' for w in d.iter('words')).strip().lower()
+                if 'segno' in s or (not s and d.find('direction-type/segno') is not None): mk['segno'] = True
+                if 'coda' in s or (not s and d.find('direction-type/coda') is not None and 'coda' not in words): mk['coda'] = True
+                if 'tocoda' in s or (not s and re.search(r'\bto coda\b', words)): mk['tocoda'] = True
+                if 'dalsegno' in s or (not s and re.match(r'd\.\s*s\.|dal segno', words)): mk['ds'] = True
+                if 'dacapo' in s or (not s and re.match(r'd\.\s*c\.|da capo', words)): mk['dc'] = True
+                if 'fine' in s or (not s and words == 'fine'): mk['fine'] = True
+    segno = next((i for i in range(n) if marks[i].get('segno')), None)
+    coda = next((i for i in range(n) if marks[i].get('coda')), None)
+    def ending_last(i):
+        while i < n - 1 and not marks[i]['ending_end']: i += 1
+        return i
+    order, i, start, pass_, done, jumped = [], 0, 0, 1, {}, False
+    while i < n and len(order) < 20 * n:
+        mk = marks[i]
+        if mk['forward'] and start != i: start, pass_ = i, 1
+        if mk['ending'] is not None:
+            last = ending_last(i)
+            take = marks[last]['backward'] == 0 if jumped else pass_ in mk['ending']
+            if not take:
+                i = last + 1; continue
+        order.append(i)
+        if mk['backward'] and not jumped and done.get(i, 1) < mk['backward']:
+            done[i] = done.get(i, 1) + 1; pass_ += 1; i = start; continue
+        if mk['backward']: start, pass_ = i + 1, 1
+        if jumped and mk.get('fine'): break
+        if jumped and mk.get('tocoda') and coda is not None and coda > i:
+            i = coda; continue
+        if not jumped and (mk.get('ds') and segno is not None or mk.get('dc')):
+            jumped = True; i = segno if mk.get('ds') else 0; start, pass_ = i, 1; continue
+        i += 1
+    return order
+
+
+def unroll(path, out, order):
+    """the MusicXML with its bars in the sung order: each bar a copy, numbered by its place in the order (unique, as the
+    warp's guide and pins need), repeat and ending barlines dropped. A bar sung out of its written place starts with the
+    key, meter and tempo it had there, where those differ from what's in effect."""
+    tree = ET.parse(path); root = tree.getroot()
+    tempos = {}
+    for pi, part in enumerate(root.findall('part')):
+        ms = part.findall('measure')
+        # what's in effect at the start of each written bar
+        state, at = {}, []
+        for m in ms:
+            at.append(dict(state))
+            for a_ in m.findall('attributes'):
+                for tag in ('divisions', 'key', 'time'):
+                    if a_.find(tag) is not None: state[tag] = a_.find(tag)
+            if pi == 0:
+                for s in m.iter('sound'):
+                    if s.get('tempo'): state['tempo'] = s.get('tempo')
+        if pi == 0: tempos = {i: at[i].get('tempo') for i in range(len(ms))}
+        for m in list(part): part.remove(m)
+        cur = {}
+        for k, i in enumerate(order):
+            m = copy.deepcopy(ms[i]); m.set('number', str(k))
+            if k: m.attrib.pop('implicit', None)
+            for bl in m.findall('barline'): m.remove(bl)
+            if k and order[k - 1] != i - 1:
+                # a jump: carry in what this bar had where it's written
+                fix = [tag for tag in ('divisions', 'key', 'time') if tag in at[i] and
+                       (cur.get(tag) is None or ET.tostring(cur[tag]) != ET.tostring(at[i][tag]))]
+                if fix:
+                    a_ = ET.Element('attributes')
+                    for tag in fix: a_.append(copy.deepcopy(at[i][tag]))
+                    m.insert(0, a_)
+                if pi == 0 and tempos.get(i) and tempos[i] != cur.get('tempo'):
+                    d = ET.Element('direction'); ET.SubElement(d, 'sound', tempo=tempos[i]); m.insert(0, d)
+            for a_ in m.findall('attributes'):
+                for tag in ('divisions', 'key', 'time'):
+                    if a_.find(tag) is not None: cur[tag] = a_.find(tag)
+            for s in m.iter('sound'):
+                if s.get('tempo'): cur['tempo'] = s.get('tempo')
+            part.append(m)
+    tree.write(out, encoding='UTF-8', xml_declaration=True)
 
 
 def voice_stems(stems, parts):
@@ -254,16 +357,19 @@ def best_offset(d, secs, lo, hi, step=0.005):
     return best[1]
 
 
-def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, guide_path=None, pins=()):
+def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, guide_path=None, pins=(), labels=None, at_q=None):
     """where the stems' tempo strays from the written one: an offset for each bar (or beat), chosen together so that the
     voices' attacks land on their stems' attacks and the offset changes little from piece to piece (a hold can jump it; a
     repeated figure, which fits as well a beat either way, can't), and followed between piece starts. voice_stems: (part,
-    stem path). Returns the anchors (score seconds, stem seconds)."""
+    stem path). labels: each bar's name in the guide and pins (default its number); a guide line naming none of them is left
+    out. at_q(bar, q): where an attack written q quarters into a bar is played (swing), in quarters. Returns the anchors
+    (score seconds, stem seconds)."""
+    at_q = at_q or (lambda i, q: q)
     vn_, _ = read_voice_notes(xml, [n_ for n_, _ in voice_stems])
     refs = []
     for n_, path in voice_stems:
         d = flux(path); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
-        refs.append((d, [nt['start'] for nt in vn_.get(n_, [])]))
+        refs.append((d, [(nt['start'][0], at_q(*nt['start'])) for nt in vn_.get(n_, [])]))
     # the pieces an offset is fitted for: bars, or with --warp-beat beats, for singing that bends the time inside a bar
     if beat:
         mts_ = xml_meters(xml)
@@ -273,11 +379,12 @@ def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, gui
         segs = [(i, F(0)) for i in range(len(xbars))]
     seg_t = [plain_secs(i, q) for i, q in segs]
     nb = len(segs)
-    nums_, mts_p = xml_numbers(xml), xml_meters(xml)
+    nums_, mts_p = labels or [str(x) for x in xml_numbers(xml)], xml_meters(xml)
     guide = []
     for ln in (open(guide_path).read().split() if guide_path else []):
         pos_, sec_ = ln.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
-        bi = nums_.index(int(bar_)); s_ = plain_secs(bi, (int(beat_) - 1) * beat_len(mts_p[bi]))
+        if bar_ not in nums_: continue
+        bi = nums_.index(bar_); s_ = plain_secs(bi, (int(beat_) - 1) * beat_len(mts_p[bi]))
         j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
         if abs(seg_t[j] - s_) < 1e-6: guide.append((j, float(sec_) - s_))
     # the offsets tried: with a guide, as far as it goes either way
@@ -294,7 +401,8 @@ def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, gui
     # measured times the fit must pass through, where slow legato singing gives it too few attacks to find its way
     for t_ in pins:
         pos_, sec_ = t_.split('='); bar_, beat_ = (pos_.split('.') + ['1'])[:2]
-        s_ = plain_secs(nums_.index(int(bar_)), (int(beat_) - 1) * beat_len(mts_p[nums_.index(int(bar_))]))
+        assert bar_ in nums_, f'--pin {t_}: no bar {bar_}'
+        s_ = plain_secs(nums_.index(bar_), (int(beat_) - 1) * beat_len(mts_p[nums_.index(bar_)]))
         j = bisect.bisect_right(seg_t, s_ + 1e-6) - 1
         assert abs(seg_t[j] - s_) < 1e-6, f'--pin {t_}: not the start of a {"beat" if beat else "bar"}'
         S[j, np.abs(grid - (float(sec_) - s_)) > 0.011] -= 1e6
