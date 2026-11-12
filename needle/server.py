@@ -5,11 +5,13 @@
     server.py --cmd "python3 my_status.py" [--port]  the status is what that command prints, run on every request
     --host 0.0.0.0                                    also answer other devices on this network (a phone), not only this Mac
 
-It serves only the pages (*.html here) and /status, so the logs and files beside them stay private.
+It serves only the pages (*.html here) and /status, so the logs and files beside them stay private, and only to private
+addresses (this Mac, 192.168.x.x, 10.x.x.x, 172.16-31.x.x): a request from the internet, say through a forwarded port,
+is refused. It listens on IPv4 only, so the Mac's public IPv6 addresses don't reach it.
 
 The status format is in README.md. The server adds "now" (this machine's clock, HH:MM) if the status has none.
 """
-import argparse, datetime, http.server, json, os, shlex, socketserver, subprocess
+import argparse, datetime, http.server, ipaddress, json, os, shlex, socketserver, subprocess
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 
@@ -35,7 +37,11 @@ def main():
     class H(http.server.SimpleHTTPRequestHandler):
         def __init__(self, *args, **kw): super().__init__(*args, directory=HERE, **kw)
         def log_message(self, *args): pass
+        def do_HEAD(self): self.send_error(405)
         def do_GET(self):
+            # a request from the internet, say through a port forwarded on the router, keeps its public address
+            if not ipaddress.ip_address(self.client_address[0]).is_private:
+                self.send_error(403); return
             if not self.path.startswith('/status'):
                 page = self.path.split('?')[0].lstrip('/') or 'index.html'
                 if '/' in page or page.startswith('.') or not page.endswith('.html') or not os.path.isfile(os.path.join(HERE, page)):

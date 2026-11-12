@@ -20,7 +20,9 @@ The page also works as an OBS Browser Source pointed at the same address.
 To see it on a phone on the same Wi-Fi, add `--host 0.0.0.0`; the server prints the address to open, such as
 `http://192.168.1.162:8765/pace.html?from=19:00&until=21:00`. Anyone on that network can then open the pages and
 `/status` (song and section names, times); it serves nothing else from `needle/`, so the logs in `.rehearsal/` stay
-private. Without `--host` only this Mac can reach it.
+private. It answers only private addresses (192.168.x.x, 10.x.x.x, 172.16-31.x.x, this Mac): a request from the
+internet, even through a port forwarded on the router, is refused, and it listens on IPv4 only, so the Mac's public IPv6
+addresses don't reach it. Without `--host` only this Mac can reach it.
 
 ## Status
 
