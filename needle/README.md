@@ -72,3 +72,17 @@ been asked for in 10 minutes. Each status replays that day's log; `--at 19:40 --
 
 Talking, a break or warm-ups after a song is first played all count as rehearsal time, so they show up in the pace: a
 section sung straight through right after another finished gives a pace near 1× and widens the band.
+
+## Rehearsal pace: the schedule to keep
+
+`pace.html` on the same server is a fixed schedule instead of a forecast: the rehearsal's time, from a minute after it
+starts to a minute before it ends (for announcements), split over today's checked sections in rehearsal order by playing
+time at each song's own tempo. Give the start and end in the address:
+
+    http://localhost:8765/pace.html?from=19:00&until=21:00
+
+or to the status script (`rehearsal_status.py --from 19:00 --until 21:00`; the address wins). It shows the first section
+not yet done with the time it should be done by and the minutes left (or over), the one after, a timeline with a block
+per section at its scheduled time (done ones filled, a line at now), and each song's done-by time, or when it was done and
+how early or late. The deadlines move only if the checked sections change. "Done" is as above. The page counts down
+every second and fetches the status every 10 s.

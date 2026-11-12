@@ -241,7 +241,10 @@ def status(songs, events, now, guess):
     note = f'{secs_done} of {secs_all} sections done'
     if last and last[1] < now: note += ' · running past the estimate'
     if not songs: note = 'no song is tagged Today'
-    return dict(title='Rehearsal', refresh=10, note=note, needles=[needle])
+    # for pace.html: every checked section in rehearsal order, its playing time at the song's own tempo, and when it finished
+    pacing = [dict(song=s.name, section=s.secs[k][0], play=round(s.secs[k][3], 2), done=s.done.get(k))
+              for s in songs for k in s.marked]
+    return dict(title='Rehearsal', refresh=10, note=note, needles=[needle], pacing=dict(sections=pacing, now=now))
 
 
 def clock(s, first):
@@ -261,6 +264,8 @@ def main():
     ap.add_argument('--url', default=STATE_URL)
     ap.add_argument('--no-poll', action='store_true', help="don't start the poller (for a logged rehearsal)")
     ap.add_argument('--at', help='the status as at this time (HH:MM, or epoch seconds); later events are ignored')
+    ap.add_argument('--from', dest='start', help="the rehearsal's start, HH:MM, for pace.html (its ?from= wins)")
+    ap.add_argument('--until', help="the rehearsal's end, HH:MM, for pace.html (its ?until= wins)")
     ap.add_argument('--guess', type=float, default=3.0, help='wall-clock over playing time before anything has finished')
     a = ap.parse_args()
     if a.poll: return poll(a.log, a.url)
@@ -278,6 +283,8 @@ def main():
         except Exception as e: print(f'{f}: {e}', file=sys.stderr)
     s = status(songs, events, now, a.guess)
     if a.at: s['now'] = hm(now)
+    if a.start: s['pacing']['from'] = a.start
+    if a.until: s['pacing']['until'] = a.until
     print(json.dumps(s))
 
 

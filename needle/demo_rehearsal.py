@@ -64,4 +64,7 @@ with open(log, 'w') as f:
 out = subprocess.run([sys.executable, os.path.join(HERE, 'rehearsal_status.py'), '--no-poll', '--log', log, '--at', str(time.time()),
                       '--songs'] + [s['folder'] for s in songs], capture_output=True, text=True)
 s = json.loads(out.stdout); s.pop('now', None); s['note'] += ' · a made-up rehearsal'
+# for pace.html: a rehearsal from a minute before the demo's start to 45 minutes after
+hm = lambda t: time.strftime('%H:%M', time.localtime(t))
+s['pacing'].update({'from': hm(T0 - 60), 'until': hm(T0 + 45 * 60)})
 print(json.dumps(s))
