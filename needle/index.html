@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Progress</title>
+<style>
+:root{--bg:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--track:#efeee9;--band:#85B7EB;--done:#1D9E75}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;--track:#2c2c2a;--band:#185FA5;--done:#5DCAA5}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,system-ui,sans-serif}
+h1{font-size:16px;font-weight:500;margin:0 0 4px}.sub{color:var(--muted);font-size:12px;margin:0 0 8px}
+h2{font-size:14px;font-weight:500;margin:20px 0 0}
+svg{width:100%;max-width:420px;display:block;margin:0 auto}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td{padding:5px 4px;border-top:1px solid var(--track)}
+td.t{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.done{color:var(--done)}.st{color:var(--ink2)}
+.basis{color:var(--muted);font-size:12px;text-align:center;margin:2px 0 0}
+</style></head><body>
+<h1 id="title">Progress</h1><p class="sub" id="sub">loading…</p>
+<div id="needles"></div>
+<script>
+// The status (GET /status) is the server's; see README.md. Times are "HH:MM" on today's clock.
+let PERIOD = 20000, timer = null;
+const ns = 'http://www.w3.org/2000/svg', cx = 170, cy = 172;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const fmt = m => { const t = ((Math.round(m) % 1440) + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') };
+
+function dial(n, nowMin) {
+  // minutes since midnight; a time more than 12 hours before now is tomorrow's
+  const min = s => { if (!s || !s.includes(':')) return null; const [h, m] = s.split(':').map(Number); let v = h * 60 + m; if (v < nowMin - 720) v += 1440; return v };
+  const items = n.items || [], left = items.filter(x => !x.done);
+  const ts = [nowMin, min(n.estimate), ...(n.band || []).map(min), ...items.map(x => min(x.time))].filter(v => v != null);
+  let lo = Math.min(...ts), hi = Math.max(...ts);
+  const step = hi - lo > 240 ? 60 : hi - lo > 90 ? 30 : 15;
+  lo = Math.floor(lo / step) * step; hi = Math.max(Math.ceil(hi / step) * step, lo + 2 * step);
+  const span = hi - lo;
+  const ang = m => Math.PI - (Math.max(0, Math.min(span, m - lo)) / span) * Math.PI;
+  const pt = (m, r) => [cx + r * Math.cos(ang(m)), cy - r * Math.sin(ang(m))];
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '0 0 340 205'); svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `${n.label || 'Finish time'} dial`);
+  const el = (tag, a, t) => { const e = document.createElementNS(ns, tag); for (const k in a) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; svg.appendChild(e); return e };
+  const arc = (a, b, r1, r2, f) => {
+    const [x1, y1] = pt(a, r2), [x2, y2] = pt(b, r2), [x3, y3] = pt(b, r1), [x4, y4] = pt(a, r1);
+    el('path', {d: `M${x1} ${y1} A${r2} ${r2} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${r1} ${r1} 0 0 0 ${x4} ${y4}Z`, fill: f});
+  };
+  arc(lo, hi, 100, 130, css('--track'));
+  if (left.length && n.band && n.band.length === 2) arc(min(n.band[0]), min(n.band[1]), 100, 130, css('--band'));
+  for (let x = lo; x <= hi; x += step) {
+    const [x1, y1] = pt(x, 131), [x2, y2] = pt(x, 138), [lx, ly] = pt(x, 152);
+    el('line', {x1, y1, x2, y2, stroke: css('--muted')});
+    el('text', {x: lx, y: ly + 4, 'text-anchor': 'middle', 'font-size': 11, fill: css('--ink2')}, fmt(x));
+  }
+  const [nx, ny] = pt(nowMin, 132);
+  el('line', {x1: cx, y1: cy, x2: nx, y2: ny, stroke: css('--muted'), 'stroke-dasharray': '3 3'});
+  items.forEach(x => { const m = min(x.time); if (m != null) { const [px, py] = pt(m, 115); el('circle', {cx: px, cy: py, r: 4, fill: x.done ? css('--done') : css('--ink')}) } });
+  const target = left.length || !items.length ? n.estimate : items.map(x => x.time).filter(Boolean).sort((a, b) => min(a) - min(b)).pop();
+  if (target) {
+    const [tx, ty] = pt(min(target), 96);
+    el('line', {x1: cx, y1: cy, x2: tx, y2: ty, stroke: css('--ink'), 'stroke-width': 3, 'stroke-linecap': 'round'});
+  }
+  el('circle', {cx, cy, r: 7, fill: css('--ink')});
+  const finished = items.length && !left.length;
+  el('text', {x: 170, y: 150, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 500, fill: css('--ink')}, (finished ? 'done ' : '') + (target || '—'));
+  el('text', {x: 170, y: 198, 'text-anchor': 'middle', 'font-size': 11, fill: css('--ink2')}, (n.label || 'all done') + (finished ? '' : ', best guess'));
+  const box = document.createElement('section');
+  if (n.title) box.innerHTML = `<h2>${esc(n.title)}</h2>`;
+  box.appendChild(svg);
+  if (n.basis && !finished) box.insertAdjacentHTML('beforeend', `<p class="basis">band: ${esc(n.basis)}</p>`);
+  if (items.length) box.insertAdjacentHTML('beforeend', '<table>' + items.map(x =>
+    `<tr><td>${esc(x.name)}</td><td class="st ${x.done ? 'done' : ''}">${esc(x.done ? 'done' : (x.state || ''))}</td>` +
+    `<td class="t">${x.time ? (x.done ? '' : 'near ') + esc(x.time) : ''}</td></tr>`).join('') + '</table>');
+  return [box, items.length, items.length - left.length];
+}
+
+function draw(s) {
+  if (s.title) { document.getElementById('title').textContent = s.title; document.title = s.title }
+  const [h, m] = s.now.split(':').map(Number), nowMin = h * 60 + m;
+  const root = document.getElementById('needles'); root.innerHTML = '';
+  let all = 0, done = 0;
+  for (const n of s.needles || []) { const [box, a, d] = dial(n, nowMin); root.appendChild(box); all += a; done += d }
+  const hms = d => d.toTimeString().slice(0, 8), c = new Date();
+  document.getElementById('sub').textContent = (all ? `${done} of ${all} done · ` : '') +
+    `checked ${hms(c)} · next check ${hms(new Date(c.getTime() + PERIOD))} · dashed line: now` + (s.note ? ` · ${s.note}` : '');
+}
+
+async function tick() {
+  try {
+    const s = await (await fetch('/status', {cache: 'no-store'})).json();
+    if (s.refresh && s.refresh * 1000 !== PERIOD) { PERIOD = s.refresh * 1000; clearInterval(timer); timer = setInterval(tick, PERIOD) }
+    draw(s);
+  } catch (e) { document.getElementById('sub').textContent = 'server not answering' }
+}
+tick(); timer = setInterval(tick, PERIOD);
+</script></body></html>
