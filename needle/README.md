@@ -81,8 +81,9 @@ time at each song's own tempo. Give the start and end in the address:
 
     http://localhost:8765/pace.html?from=19:00&until=21:00
 
-or to the status script (`rehearsal_status.py --from 19:00 --until 21:00`; the address wins). It shows the first section
-not yet done with the time it should be done by and the minutes left (or over), the one after, a timeline with a block
-per section at its scheduled time (done ones filled, a line at now), and each song's done-by time, or when it was done and
-how early or late. The deadlines move only if the checked sections change. "Done" is as above. The page counts down
-every second and fetches the status every 10 s.
+or to the status script (`rehearsal_status.py --from 19:00 --until 21:00`; the address wins). It looks like a departure
+board, amber on black: a row per section with the time it's due, the one being rehearsed lit with the minutes left (red
+once over), the last one done with how early or late, the ones after with how soon they start (`&rows=8` sets how many
+rows), and under them a line with a stop per section at its due time, filled when done, and a mark at now. The deadlines
+move only if the checked sections change. "Done" is as above. The page counts down every second and fetches the status
+every 10 s.
