@@ -184,7 +184,7 @@ It shows the song, ▶ or ❚❚ and where the playhead is, who's heard (Tutti, 
 one playing filled in. Where is said as at rehearsal: "B", "1 after B", "2 before C", otherwise "B: 34"; with marks that
 are bar numbers, or before the first mark, "Bar 34". A repeat's later times say so.
 
-Chyron ▸ Note names card in the sidebar slides in a card of the British and North American names for whole to 32nd notes
+Chyron ▸ Note names in the sidebar slides in a card of the British and North American names for whole to 32nd notes
 (semibreve to demisemiquaver), each with its note drawn, for a London chorus with singers in North America.
 
 There are two looks:

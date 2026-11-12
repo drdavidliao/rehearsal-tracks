@@ -676,6 +676,30 @@ struct OtherParts: View {
     }
 }
 
+private struct Stretches: LayoutValueKey { static let defaultValue = false }
+extension View {
+    /// a row of FitColumn that takes the column's width instead of setting it: a slider, a menu, a rule, wrapping words
+    func stretches() -> some View { layoutValue(key: Stretches.self, value: true) }
+}
+
+/// rows top to bottom, the column as wide as its widest row that doesn't stretch, so the sidebar gives the score every point it can
+struct FitColumn: Layout {
+    var spacing: CGFloat = 10
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let w = subviews.filter { !$0[Stretches.self] }.map { $0.sizeThatFits(.unspecified).width }.max() ?? 0
+        let hs = subviews.map { $0.sizeThatFits(ProposedViewSize(width: w, height: nil)).height }
+        return CGSize(width: w, height: hs.reduce(0, +) + spacing * CGFloat(max(0, hs.count - 1)))
+    }
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var y = bounds.minY
+        let p = ProposedViewSize(width: bounds.width, height: nil)
+        for s in subviews {
+            s.place(at: CGPoint(x: bounds.minX, y: y), proposal: p)
+            y += s.sizeThatFits(p).height + spacing
+        }
+    }
+}
+
 /// the controls, down the left edge, so the score has the window's whole height
 struct Controls: View {
     @ObservedObject var p: Player
@@ -690,15 +714,16 @@ struct Controls: View {
     func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
     func volString(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
     func heading(_ t: String) -> some View { Text(t).font(.caption).foregroundStyle(.secondary) }
+    func rule() -> some View { Rectangle().fill(Color(nsColor: .separatorColor)).frame(height: 1).stretches() }
     var body: some View {
         ScrollView(.vertical, showsIndicators: false) {
-            VStack(alignment: .leading, spacing: 10) {
+            FitColumn {
                 HStack(spacing: 8) {
                     Button(action: p.toggle) { Image(systemName: p.playing ? "pause.fill" : "play.fill").frame(width: 22, height: 18) }
                         .keyboardShortcut(.none)
                     Text(p.typed.isEmpty ? p.where_ : "Go to bar \(p.typed)…")
                         .font(.system(size: 12, weight: .medium).monospacedDigit()).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                }
+                }.stretches()
                 HStack(spacing: 6) {
                     Text("Go to bar").fixedSize()
                     TextField("", text: $barText).frame(width: 44).focused($editingBar).multilineTextAlignment(.trailing)
@@ -708,9 +733,10 @@ struct Controls: View {
                         .help("A bar number or a rehearsal letter. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
                 }
                 if p.hasRepeats {
-                    Text("' or b for 2nd time in a repeat: 17' or 17b").font(.caption).foregroundStyle(.secondary).fixedSize()
+                    Text("' or b for 2nd time in a repeat: 17' or 17b").font(.caption).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true).stretches()
                 }
-                Divider()
+                rule()
                 HStack(spacing: 6) {
                     Text("Tempo ♩ =").fixedSize()
                     TextField("", text: $tempoText).frame(width: 44).focused($editing).multilineTextAlignment(.trailing)
@@ -720,15 +746,15 @@ struct Controls: View {
                 HStack(spacing: 6) {
                     Slider(value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange).controlSize(.small)
                     Button("Reset") { if let t = p.map?.tempo { p.setTempo(t) } }.controlSize(.small)
-                }
-                Divider()
+                }.stretches()
+                rule()
                 heading("Hear")
                 Picker("", selection: $p.mode) {
                     ForEach(p.modes, id: \.self) { Text(p.label($0)).tag($0) }
                 }.pickerStyle(.radioGroup).labelsHidden()
-                if p.mode == .other { OtherParts(p: p) }
+                if p.mode == .other { OtherParts(p: p).stretches() }
                 Toggle("Instruments / click", isOn: $p.instruments).toggleStyle(.checkbox).help("c")
-                Divider()
+                rule()
                 Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
                 HStack(spacing: 6) {
                     Text("bar").fixedSize()
@@ -740,17 +766,23 @@ struct Controls: View {
                         .help("Bar numbers or letters. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
                 }
                 if !p.sections.isEmpty {
-                    Divider()
+                    rule()
                     heading("Sections to rehearse")
-                    LazyVGrid(columns: Array(repeating: GridItem(.flexible(), alignment: .leading), count: 4), alignment: .leading, spacing: 4) {
-                        ForEach(p.sections.map(\.name), id: \.self) { name in
-                            Toggle(name, isOn: Binding(get: { p.markedSections.contains(name) }, set: { on in
-                                if on { p.markedSections.insert(name) } else { p.markedSections.remove(name) }
-                            })).toggleStyle(.checkbox).fixedSize()
+                    let names = p.sections.map(\.name)
+                    // four to a row, each column as wide as its widest name
+                    Grid(alignment: .leading, horizontalSpacing: 6, verticalSpacing: 4) {
+                        ForEach(Array(stride(from: 0, to: names.count, by: 4)), id: \.self) { i in
+                            GridRow {
+                                ForEach(names[i..<min(i + 4, names.count)], id: \.self) { name in
+                                    Toggle(name, isOn: Binding(get: { p.markedSections.contains(name) }, set: { on in
+                                        if on { p.markedSections.insert(name) } else { p.markedSections.remove(name) }
+                                    })).toggleStyle(.checkbox).fixedSize()
+                                }
+                            }
                         }
                     }
                 }
-                Divider()
+                rule()
                 HStack(spacing: 6) {
                     Text("Volume").fixedSize()
                     TextField("", text: $volText).frame(width: 44).focused($editingVol).multilineTextAlignment(.trailing)
@@ -763,38 +795,37 @@ struct Controls: View {
                         }
                     Text("dB").fixedSize()
                 }
-                Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).controlSize(.small)
+                Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).controlSize(.small).stretches()
                 heading("Output")
                 Picker("", selection: Binding(get: { p.deviceUID }, set: { p.setDevice($0) })) {
                     Text("System output").tag("")
                     ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
-                }.labelsHidden().controlSize(.small).help("Audio output")
-                Divider()
+                }.labelsHidden().controlSize(.small).help("Audio output").stretches()
+                rule()
                 heading("Chyron")
-                Toggle("Note names card 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
+                Toggle("Note names 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
                     .help("Shows the British and North American names for whole to 32nd notes on the chyron")
-                Divider()
+                rule()
                 heading("Score")
                 Picker("", selection: $p.darkScore) {
                     Text("Light").tag(false)
                     Text("Dark").tag(true)
                 }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden()
-                Divider()
+                rule()
                 heading("Source files")
                 Picker("", selection: $p.isolated) {
                     Text("1 purely isolated voice\nper audio file").tag(true)
                     Text("part-predominant files").tag(false)
                 }.pickerStyle(.radioGroup).labelsHidden()
                 if let f = p.folder?.path {
-                    Divider()
+                    rule()
                     heading("Tags")
-                    TagEditor(path: f, leaveAfter: true).id(f)
+                    TagEditor(path: f, leaveAfter: true).id(f).stretches()
                 }
             }
             .padding(.horizontal, 10).padding(.top, 34).padding(.bottom, 10)     // the top clears the window's buttons
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .frame(width: 208)
+        .fixedSize(horizontal: true, vertical: false)
         .onChange(of: p.bpm) { tempoText = String(Int($0)) }
         .onChange(of: p.volume) { if !editingVol { volText = volString($0) } }
         .onAppear { tempoText = String(Int(p.bpm)); volText = volString(p.volume) }
