@@ -1,6 +1,7 @@
 // A chyron for a video call: the player serves a page on this Mac that OBS shows as a Browser Source.
 //   http://localhost:8766/        the chyron (player/chyron.html, in the app's Resources), on a see-through background
-//   http://localhost:8766/state   what it shows, as JSON; /state?at=SECONDS as if the playhead were there
+//   http://localhost:8766/state   what it shows, as JSON; /state?at=SECONDS as if the playhead were there;
+//                                  &lead=MS for where it will be that many milliseconds from now
 // The port is the "chyronPort" default. Only this Mac can reach it.
 import AppKit
 import CEngine
@@ -48,9 +49,19 @@ extension Player {
     }
 
     /// what the chyron shows, and the plain facts under it
-    func chyronState(at: Double? = nil) -> [String: Any] {
+    /// The playhead `lead` seconds from now, so a chyron that reaches the viewer late (OBS adds its own delay) shows where
+    /// the music is when they see it: ahead by the lead times the speed while playing, and round to the loop's start when
+    /// that passes the loop's end. A moment given by `at` moves ahead as if playing, so the lead can be tried while stopped.
+    func ahead(_ t: Double, lead: Double, at given: Bool) -> Double {
+        guard lead > 0, given || engine_is_playing() != 0 else { return t }
+        var u = t + lead * engine_speed()
+        if loopOn, let (a, b) = loopBars, t < b.end_t, u >= b.end_t { u = a.beat_t[0] + (u - b.end_t) }
+        return u
+    }
+
+    func chyronState(at: Double? = nil, lead: Double = 0) -> [String: Any] {
         guard let m = map, error == nil else { return ["song": NSNull(), "started": playerStarted, "notes_card": notesCard] }
-        let t = at ?? engine_position()
+        let t = ahead(at ?? engine_position(), lead: lead, at: at != nil)
         let i = bar(at: t) ?? 0
         let b = m.bars[i]
         let beat = (b.beat_t.lastIndex(where: { $0 <= t + eps }) ?? 0) + 1
@@ -88,9 +99,9 @@ final class ChyronServer {
     static var port: UInt16 { UInt16(UserDefaults.standard.integer(forKey: "chyronPort")).nonZero ?? 8766 }
     static var address: String { "http://localhost:\(port)/" }
     let listener: NWListener
-    let state: (Double?) -> [String: Any]
+    let state: (Double?, Double) -> [String: Any]
 
-    init?(state: @escaping (Double?) -> [String: Any], failed: @escaping (String) -> Void) {
+    init?(state: @escaping (Double?, Double) -> [String: Any], failed: @escaping (String) -> Void) {
         self.state = state
         let params = NWParameters.tcp
         params.allowLocalEndpointReuse = true
@@ -127,8 +138,11 @@ final class ChyronServer {
         let (status, type, body): (String, String, Data)
         switch route {
         case "/state":
-            let at = URLComponents(string: path)?.queryItems?.first { $0.name == "at" }?.value.flatMap(Double.init)
-            let d = (try? JSONSerialization.data(withJSONObject: state(at), options: [.sortedKeys])) ?? Data("{}".utf8)
+            let items = URLComponents(string: path)?.queryItems ?? []
+            let at = items.first { $0.name == "at" }?.value.flatMap(Double.init)
+            // lead: milliseconds ahead of the playhead, for OBS's delay
+            let lead = (items.first { $0.name == "lead" }?.value.flatMap(Double.init) ?? 0) / 1000
+            let d = (try? JSONSerialization.data(withJSONObject: state(at, min(max(lead, 0), 2)), options: [.sortedKeys])) ?? Data("{}".utf8)
             (status, type, body) = ("200 OK", "application/json", d)
         case "/", "/index.html":
             // read on every request, so a changed chyron.html in the app shows at the next reload

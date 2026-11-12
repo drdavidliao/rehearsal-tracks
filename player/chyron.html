@@ -1,9 +1,9 @@
 <!doctype html>
-<!-- The player's chyron for OBS, served at http://localhost:8766/ (build.sh copies it into the app). It reads /state five
+<!-- The player's chyron for OBS, served at http://localhost:8766/ (build.sh copies it into the app). It reads /state ten
      times a second. Options: style=broadcast (else the plain panel), scale=1.5, and for each style:
        plain:     corner=bl|br|tl|tr, panel=0 (no dark panel)
        broadcast: layout=split|stack (title, lower third and sections apart, or all in the lower third), accent=2a7de1
-       either: bottom=13 (how far up, in % of the height, the bottom pieces sit: 13 clears Zoom's name tag; 5 outside Zoom)
+       either: lead=100 (ms ahead of the playhead, for OBS's delay; 0 for none), bottom=13 (how far up, in % of the height, the bottom pieces sit: 13 clears Zoom's name tag; 5 outside Zoom)
      bg=556 fills the background, for looking at it outside OBS -->
 <html><head><meta charset="utf-8"><title>Rehearsal chyron</title>
 <style>
@@ -394,14 +394,16 @@ document.fonts && document.fonts.ready.then(remeasure);
 addEventListener('resize', remeasure);
 
 const render = broadcast ? tv : plain;
+// how far ahead of the playhead to show, in ms, for the time OBS takes to put the page in the picture
+const LEAD = parseFloat(q.get('lead')) >= 0 ? parseFloat(q.get('lead')) : 100;
 let last = '';
 async function poll() {
   try {
-    const r = await fetch('/state', { cache: 'no-store' });
+    const r = await fetch('/state?lead=' + LEAD, { cache: 'no-store' });
     const t = await r.text();
     if (t !== last) { last = t; const s = JSON.parse(t); render(s); card(s); }
   } catch (e) { last = ''; render(null); card(null); }
-  setTimeout(poll, 200);
+  setTimeout(poll, 100);
 }
 poll();
 </script>

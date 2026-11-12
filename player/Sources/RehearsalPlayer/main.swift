@@ -888,7 +888,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         else { openFolder() }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.player.tick() }
         RunLoop.main.add(timer!, forMode: .common)
-        chyron = ChyronServer(state: { [weak self] in self?.player.chyronState(at: $0) ?? [:] }, failed: { [weak self] in self?.player.say($0) })
+        chyron = ChyronServer(state: { [weak self] in self?.player.chyronState(at: $0, lead: $1) ?? [:] }, failed: { [weak self] in self?.player.say($0) })
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }

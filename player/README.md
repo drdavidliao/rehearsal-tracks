@@ -197,12 +197,16 @@ The pieces along the bottom sit 13% of the height up, clear of the name Zoom dra
 reaches about 10% up a 16:9 tile); `&bottom=5` puts them in the usual safe area when the picture isn't going to Zoom.
 In your own Zoom tile the chyron reads backwards if Zoom mirrors your video for you; others see it the right way round.
 
+OBS puts the page in the picture a little late, so the chyron shows where the music will be 100 ms from now: while
+playing, the page asks for the playhead that far ahead (round to the start of a loop when that passes its end), ten times
+a second. `&lead=150` for more, `&lead=0` for none.
+
 `?scale=1.5` makes either bigger. The page is `player/chyron.html`, copied into the app by `build.sh`;
 `python3 player/chyron_demo.py` serves it with a made-up rehearsal at http://localhost:8767/ to see a look move without
 the player (`&bg=556` gives it a background outside OBS).
 
 http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo, loop ends, the sections checked and
-whether the card is on; `/state?at=SECONDS` describes another moment of the song, and `started` changes with each run of
+whether the card is on; `/state?at=SECONDS` describes another moment of the song, `&lead=MS` the playhead that far ahead, and `started` changes with each run of
 the player. Only this Mac can reach it. Another port: `defaults write local.rehearsal.player chyronPort -int 8770`, or
 `-chyronPort 8770` after the app's path for one run; the loader then takes `port=8770` among its options.
 
