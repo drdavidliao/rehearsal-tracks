@@ -1,0 +1,256 @@
+<!doctype html>
+<!-- The player's chyron for OBS, served at http://localhost:8766/ (build.sh copies it into the app). It reads /state five
+     times a second. Options: style=broadcast (else the plain panel), scale=1.5, and for each style:
+       plain:     corner=bl|br|tl|tr, panel=0 (no dark panel)
+       broadcast: layout=split|stack (title, lower third and sections apart, or all in the lower third), accent=2a7de1
+     bg=556 fills the background, for looking at it outside OBS -->
+<html><head><meta charset="utf-8"><title>Rehearsal chyron</title>
+<style>
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  body { color: #fff; }
+
+  /* ---- plain ---- */
+  :root { --s: 1; --accent: #f2b544; --loop: #5fd38a; }
+  #c { display: none; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+       position: fixed; left: calc(32px * var(--s)); bottom: calc(32px * var(--s)); max-width: calc(100vw - 64px * var(--s));
+       background: rgba(14, 16, 20, 0.84); border-radius: calc(12px * var(--s));
+       padding: calc(14px * var(--s)) calc(20px * var(--s)) calc(16px * var(--s));
+       font-size: calc(36px * var(--s)); line-height: 1.15; transition: opacity .25s; }
+  body.plain #c { display: block; }
+  #c.hidden { opacity: 0; }
+  body.tr #c, body.br #c { left: auto; right: calc(32px * var(--s)); }
+  body.tl #c, body.tr #c { bottom: auto; top: calc(32px * var(--s)); }
+  body.nopanel #c { background: none; text-shadow: 0 2px 6px rgba(0,0,0,.9), 0 0 2px rgba(0,0,0,.9); }
+  #song { font-size: .55em; font-weight: 600; letter-spacing: .02em; opacity: .78; margin-bottom: .2em; white-space: nowrap;
+          overflow: hidden; text-overflow: ellipsis; }
+  #main { display: flex; align-items: center; flex-wrap: wrap; gap: .35em .6em; }
+  #where { display: flex; align-items: center; gap: .35em; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  #icon { width: .72em; height: .72em; flex: none; }
+  #part { font-size: .72em; font-weight: 700; color: #16130b; background: var(--accent); border-radius: .3em; padding: .08em .45em; white-space: nowrap; }
+  #loop { font-size: .62em; font-weight: 600; color: var(--loop); border: 2px solid var(--loop); border-radius: .3em; padding: .05em .4em; white-space: nowrap; }
+  #loop:empty { display: none; }
+  #boxes { display: flex; flex-wrap: wrap; gap: .3em; margin-top: .45em; font-size: .55em; }
+  #boxes:empty { display: none; }
+  .box { min-width: 1.6em; text-align: center; padding: .12em .45em; border-radius: .25em; font-weight: 700;
+         border: 2px solid rgba(255,255,255,.45); color: rgba(255,255,255,.8); }
+  .box.on { background: #fff; border-color: #fff; color: #111; }
+
+  /* ---- broadcast: 1rem is 10px of a 1080-line picture, so it keeps its place at any source size ---- */
+  #tv { display: none; --ink: #fff; --bar: #0c1a2e; --bar2: #15294a; --on-accent: #111;
+        --ease: cubic-bezier(.2, .8, .2, 1); --safe-x: 9.6rem; --safe-y: 5.4rem;
+        font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
+  body.broadcast #tv { display: block; }
+  .label { font-size: 1.5rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+
+  /* each piece wipes in from its left edge, its words a moment after */
+  .wipe { clip-path: inset(0 100% 0 0); transition: clip-path .55s var(--ease) .15s; }
+  .wipe .fade { opacity: 0; transform: translateX(-1.2rem); transition: opacity .35s ease .05s, transform .45s var(--ease) .05s; }
+  #tv.in .wipe { clip-path: inset(0 0 0 0); transition-delay: 0s; }
+  #tv.in .wipe .fade { opacity: 1; transform: none; transition-delay: .35s; }
+  #tv.in .wipe.late { transition-delay: .12s; }
+  #tv.in .wipe.late .fade { transition-delay: .5s; }
+
+  /* the title, top left */
+  #bug { position: fixed; left: var(--safe-x); top: var(--safe-y); display: flex; align-items: stretch;
+         background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 .8rem 2.4rem rgba(0,0,0,.35); }
+  #bug .strip { width: .7rem; background: var(--accent); }
+  #bug .txt { padding: .9rem 2.2rem 1rem 1.6rem; }
+  #bug .title { font-size: 3.4rem; font-weight: 700; line-height: 1; margin-top: .35rem; white-space: nowrap; }
+
+  /* the lower third: who's heard on a tab, where on the bar */
+  #third { position: fixed; left: var(--safe-x); bottom: var(--safe-y); display: flex; flex-direction: column; align-items: flex-start; }
+  #tab { background: var(--accent); color: var(--on-accent); padding: .55rem 1.8rem .5rem 1.6rem; margin-left: .7rem; }
+  #tab .roll { font-size: 2.6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  #bar { display: flex; align-items: center; gap: 2.4rem; min-height: 9rem; padding: 0 3rem 0 0;
+         background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 1rem 3rem rgba(0,0,0,.4);
+         border-top: 1px solid rgba(255,255,255,.12); }
+  #bar .strip { align-self: stretch; width: .7rem; background: var(--accent); }
+  #pp { width: 3.4rem; height: 3.4rem; flex: none; margin-left: 1.4rem; }
+  #pp path { fill: var(--ink); transition: d .3s var(--ease); }
+  #tv.paused #pp path { fill: rgba(255,255,255,.75); }
+  #place .roll { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 7rem; line-height: 1;
+                 padding-top: .9rem; text-transform: uppercase; letter-spacing: .01em; }
+  #loopbox { display: flex; flex-direction: column; justify-content: center; border-left: 2px solid rgba(255,255,255,.18);
+             padding-left: 2.2rem; overflow: hidden; max-width: 30rem; transition: max-width .45s var(--ease), opacity .3s, padding .45s var(--ease); }
+  #loopbox.off { max-width: 0; opacity: 0; padding-left: 0; border-left-color: transparent; margin-left: -2.4rem; }
+  #loopbox .label { color: #6fdc96; }
+  #loopbox .roll { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 4rem; line-height: 1; padding-top: .5rem; white-space: nowrap; }
+
+  /* the sections being rehearsed, bottom right */
+  #track { position: fixed; right: var(--safe-x); bottom: var(--safe-y); padding: 1.1rem 1.6rem 1.4rem;
+           background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 1rem 3rem rgba(0,0,0,.4);
+           border-top: .5rem solid var(--accent); }
+  #track.none { display: none; }
+  #secs { position: relative; display: flex; gap: .6rem; margin-top: .7rem; }
+  #secs .sec { position: relative; z-index: 1; min-width: 4.2rem; padding: .7rem 1.1rem .4rem; text-align: center;
+               font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 3rem; line-height: 1;
+               color: rgba(255,255,255,.7); border: 2px solid rgba(255,255,255,.25); box-sizing: border-box; transition: color .3s; }
+  #secs .sec.on { color: var(--on-accent); border-color: transparent; }
+  #hl { position: absolute; top: 0; height: 100%; background: var(--accent); opacity: 0;
+        transition: left .5s var(--ease), width .5s var(--ease), opacity .3s; }
+
+  /* stack: all of it in the lower third, title on top and sections under */
+  body.stack #bug, body.stack #track { position: static; box-shadow: none; }
+  body.stack #third { gap: 0; }
+  body.stack #bug { margin-bottom: 0; }
+  body.stack #track { border-top: none; margin-top: 0; padding: .8rem 1.6rem 1rem 2.3rem; }
+
+  /* a word that rolls up out of the way of the next */
+  .roll { position: relative; display: block; overflow: hidden; white-space: nowrap; transition: width .4s var(--ease); }
+  .roll span { display: inline-block; transition: transform .45s var(--ease), opacity .35s; }
+  .roll span.gone { position: absolute; left: 0; top: 0; transform: translateY(-110%); opacity: 0; }
+  .roll span.coming { transform: translateY(110%); opacity: 0; transition: none; }
+</style></head>
+<body>
+<div id="c" class="hidden">
+  <div id="song"></div>
+  <div id="main">
+    <span id="where"><svg id="icon" viewBox="0 0 10 10"></svg><span id="loc"></span></span>
+    <span id="part"></span>
+    <span id="loop"></span>
+  </div>
+  <div id="boxes"></div>
+</div>
+
+<div id="tv">
+  <div id="third">
+    <div id="bug" class="wipe"><div class="strip"></div><div class="txt fade"><div class="label">Now rehearsing</div><div class="title roll" id="b-song"></div></div></div>
+    <div id="tab" class="wipe late"><div class="fade"><div class="roll" id="b-part"></div></div></div>
+    <div id="bar" class="wipe">
+      <div class="strip"></div>
+      <svg id="pp" class="fade" viewBox="0 0 10 10"><path id="pp1"/><path id="pp2"/></svg>
+      <div id="place" class="fade"><div class="roll" id="b-loc"></div></div>
+      <div id="loopbox" class="fade off"><div class="label">Loop</div><div class="roll" id="b-loop"></div></div>
+    </div>
+    <div id="track" class="wipe late none"><div class="fade"><div class="label">Sections</div><div id="secs"><div id="hl"></div></div></div></div>
+  </div>
+</div>
+
+<script>
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+document.documentElement.style.setProperty('--s', parseFloat(q.get('scale')) || 1);
+const broadcast = q.get('style') === 'broadcast';
+if (/^[0-9a-f]{3,6}$/i.test(q.get('bg') || '')) document.body.style.background = '#' + q.get('bg');
+document.body.classList.add(broadcast ? 'broadcast' : 'plain');
+
+// ---- plain ----
+document.body.classList.add(q.get('corner') || 'bl');
+if (q.get('panel') === '0') document.body.classList.add('nopanel');
+const PLAY = '<path d="M1.5 0.5 L9.5 5 L1.5 9.5 Z" fill="currentColor"/>';
+const PAUSE = '<rect x="1.2" y="0.8" width="2.8" height="8.4" fill="currentColor"/><rect x="6" y="0.8" width="2.8" height="8.4" fill="currentColor"/>';
+function plain(s) {
+  if (!s || !s.song) { $('c').classList.add('hidden'); return; }
+  $('song').textContent = s.song;
+  $('icon').innerHTML = s.playing ? PLAY : PAUSE;
+  $('loc').textContent = s.location;
+  $('part').textContent = s.part;
+  $('loop').textContent = s.loop || '';
+  const boxes = $('boxes'); boxes.textContent = '';
+  for (const sec of s.sections) {
+    const d = document.createElement('span');
+    d.className = 'box' + (sec.current ? ' on' : '');
+    d.textContent = sec.name;
+    boxes.appendChild(d);
+  }
+  $('c').classList.remove('hidden');
+}
+
+// ---- broadcast ----
+const hex = (q.get('accent') || '').replace(/[^0-9a-f]/gi, '');
+if (hex.length === 6) {
+  const tv = $('tv'), n = parseInt(hex, 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
+  tv.style.setProperty('--accent', '#' + hex);
+  // dark words on a light accent, white on a dark one
+  tv.style.setProperty('--on-accent', 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? '#111' : '#fff');
+}
+// split (the default): the title and the sections are fixed in their own corners
+if (q.get('layout') === 'stack') document.body.classList.add('stack');
+// 1rem is a 108th of the picture's height (10px of 1080 lines)
+if (broadcast) document.documentElement.style.fontSize = 'calc(100vh / 108 * var(--s))';
+
+/** put text in a .roll, the old words rolling up and out as the new come up from below */
+function roll(el, text) {
+  if (el.dataset.t === text) return;
+  const first = el.dataset.t === undefined;
+  el.dataset.t = text;
+  const now = document.createElement('span');
+  now.textContent = text;
+  for (const old of el.querySelectorAll('span:not(.gone)')) {
+    old.classList.add('gone');
+    setTimeout(() => old.remove(), 500);
+  }
+  if (!first) now.classList.add('coming');
+  el.appendChild(now);
+  fit(el);
+  if (!first) requestAnimationFrame(() => requestAnimationFrame(() => now.classList.remove('coming')));
+}
+/** a .roll as wide as its current words, in em so it keeps fitting at any size */
+function fit(el) {
+  const s = el.querySelector('span:not(.gone)');
+  if (s) el.style.width = (s.offsetWidth + 1) / parseFloat(getComputedStyle(el).fontSize) + 'em';
+}
+
+// play and pause as two shapes each, so one turns into the other
+const SHAPES = { play: ['M1 0.5 L5.2 2.9 L5.2 7.1 L1 9.5 Z', 'M5.2 2.9 L9.4 5 L9.4 5 L5.2 7.1 Z'],
+                 pause: ['M1.2 0.8 L3.9 0.8 L3.9 9.2 L1.2 9.2 Z', 'M6.1 0.8 L8.8 0.8 L8.8 9.2 L6.1 9.2 Z'] };
+function shape(playing) {
+  const s = SHAPES[playing ? 'play' : 'pause'];
+  [$('pp1'), $('pp2')].forEach((p, i) => { p.setAttribute('d', s[i]); p.style.d = `path("${s[i]}")`; });
+  $('tv').classList.toggle('paused', !playing);
+}
+
+let names = '';
+function sections(list) {
+  $('track').classList.toggle('none', list.length === 0);
+  const secs = $('secs'), key = list.map(x => x.name).join('\u0001');
+  if (key !== names) {
+    names = key;
+    secs.querySelectorAll('.sec').forEach(e => e.remove());
+    for (const x of list) {
+      const d = document.createElement('div');
+      d.className = 'sec'; d.textContent = x.name;
+      secs.appendChild(d);
+    }
+  }
+  const boxes = [...secs.querySelectorAll('.sec')], at = list.findIndex(x => x.current), hl = $('hl');
+  boxes.forEach((e, i) => e.classList.toggle('on', i === at));
+  if (at < 0) { hl.style.opacity = 0; return; }
+  hl.style.left = boxes[at].offsetLeft + 'px';
+  hl.style.width = boxes[at].offsetWidth + 'px';
+  hl.style.opacity = 1;
+}
+
+let lastState = null;
+function tv(s) {
+  lastState = s;
+  const tvEl = $('tv');
+  if (!s || !s.song) { tvEl.classList.remove('in'); return; }
+  roll($('b-song'), s.song);
+  roll($('b-part'), s.part);
+  roll($('b-loc'), s.location);
+  shape(s.playing);
+  const lb = s.loop_bars;
+  $('loopbox').classList.toggle('off', !lb);
+  if (lb) roll($('b-loop'), lb[0] + ' – ' + lb[1]);
+  sections(s.sections || []);
+  tvEl.classList.add('in');
+}
+// measure again once the condensed faces are in, and whenever the picture changes size
+function remeasure() { document.querySelectorAll('.roll').forEach(fit); names = ''; if (lastState) tv(lastState); }
+document.fonts && document.fonts.ready.then(remeasure);
+addEventListener('resize', remeasure);
+
+const render = broadcast ? tv : plain;
+let last = '';
+async function poll() {
+  try {
+    const r = await fetch('/state', { cache: 'no-store' });
+    const t = await r.text();
+    if (t !== last) { last = t; render(JSON.parse(t)); }
+  } catch (e) { last = ''; render(null); }
+  setTimeout(poll, 200);
+}
+poll();
+</script>
+</body></html>

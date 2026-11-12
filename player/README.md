@@ -164,14 +164,27 @@ score, from its letter's bar to the bar before the next letter. Uncheck it once 
 
 While the player runs, it serves a chyron at http://localhost:8766/ (View ▸ Copy Chyron Address for OBS). In OBS, add a
 Browser Source with that URL at the canvas's size (1920 × 1080, say); its background is see-through. It shows the song, ▶ or
-❚❚ and where the playhead is, who's heard (Tutti, a part, or the parts checked under Other), the loop if one is on, and a box
-for each section checked to rehearse, the one playing filled in. Where is said as at rehearsal: "B", "1 after B", "2 before C",
-otherwise "B: 34"; with marks that are bar numbers, or before the first mark, "Bar 34". A repeat's later times say so.
+❚❚ and where the playhead is, who's heard (Tutti, a part, or the parts checked under Other, with "(a cappella)" when the
+accompaniment is off), the loop if one is on, and a box for each section checked to rehearse, the one playing filled in.
+Where is said as at rehearsal: "B", "1 after B", "2 before C", otherwise "B: 34"; with marks that are bar numbers, or before
+the first mark, "Bar 34". A repeat's later times say so.
 
-Options after the address: `?scale=1.5` for bigger, `&corner=br` (bl, br, tl, tr) for where it sits, `&panel=0` for no dark
-panel behind the text. http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo and the sections
-checked; `/state?at=SECONDS` describes another moment of the song. Only this Mac can reach it. Another port: `defaults write
-local.rehearsal.player chyronPort -int 8770`.
+There are two looks:
+
+- **Plain** (the default): one dark panel. `?corner=br` (bl, br, tl, tr) for where it sits, `?panel=0` for no panel.
+- **Broadcast**: `?style=broadcast`. The title in a tag at top left, a lower third (who's heard on a coloured tab, where on the
+  bar below it, the loop beside), and the sections in a tracker at bottom right, all inside the picture's safe area, in
+  Avenir Next Condensed and DIN Condensed (both come with macOS). Each piece wipes in, words roll over when they change,
+  play and pause turn into each other, and the highlight slides along the sections. `&layout=stack` puts everything in
+  the lower third; `&accent=2a7de1` sets the colour.
+
+`?scale=1.5` makes either bigger. The page is `player/chyron.html`, copied into the app by `build.sh`;
+`python3 player/chyron_demo.py` serves it with a made-up rehearsal at http://localhost:8767/ to see a look move without
+the player (`&bg=556` gives it a background outside OBS).
+
+http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo, loop ends and the sections checked;
+`/state?at=SECONDS` describes another moment of the song. Only this Mac can reach it. Another port: `defaults write
+local.rehearsal.player chyronPort -int 8770`, or `-chyronPort 8770` after the app's path for one run.
 
 ## Correcting a note
 
