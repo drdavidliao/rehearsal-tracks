@@ -23,15 +23,18 @@ Transcribe the voice staves only: the accompaniment track is the map's `I` stem,
    the detector's.
 4. **Second proof: the stems.** `player/pitch_guide.py FOLDER XML check` after a first map. Where print and stems disagree
    in one part only, the print wins; say so in the handback.
-5. **Accompaniment.** Measure its start against a Predominant mix by cross-correlation (often 1.000 s early in his sets);
-   write `Human-sung stems/Accompaniment (aligned to the UVR stems).wav` at its level in the Predominant mixes (fit
-   Predominant = a*stem + g*accompaniment; scale by g/a). A set may lack one: then use the separator's instrumental output.
+5. **Accompaniment.** Measure its start against a Predominant mix by cross-correlation (often 1.000 s early in his sets) and
+   write it aligned as `Human-sung stems/Accompaniment (aligned to the UVR stems).wav`; a set without one: the separator's
+   instrumental output. Its level comes after the map is made (step 6): `player/balance_check.py FOLDER BALANCED.mp3 --write`
+   sets it to its balance against all the voices in the Balanced Voices mix, as the player mixes them, and points the map
+   at the `(balanced)` copy. Not the Predominant mixes: they duck the accompaniment under the featured voice, and a level
+   taken from them came out 5 to 20 dB too soft. With no Balanced mix, give a ratio in dB instead (-6.6 was the median).
 6. **Map.** `python3 player/make_map_scan.py FOLDER --score SCAN.pdf --xml XML --systems _build/systems.json --proofs
    _build/proofA _build/proofB --stems "T1=..." ... "I=..." --part-stems "Tenor 1=T1" ... --staff "Tenor 1=T" ...
    --tempo N --warp --warp-beat`, then `pitch_guide.py ... check` (over 0.9 is right); if it fails, `pitch_guide.py ...
    guide GUIDE.txt` and rerun with `--guide`, and `--pin BAR.BEAT=SECONDS` read from the sung pitch where a guide can't
    follow (repeats, long final holds). See README.md's "Human-sung tracks" paragraph.
-7. **Leave** `Human-sung stems/How player map.json was made.txt` (what was used, any pins, the pitch-check figure), and
+7. **Balance** the accompaniment (step 5). **Leave** `Human-sung stems/How player map.json was made.txt` (what was used, any pins, the pitch-check figure), and
    keep the Cantai map, if any, as `player map (Cantai).json`.
 
 Two parts sharing one "copy" track (e.g. "(Tenor 1) copy Tenor Predominant" and "(Tenor 2) copy Tenor Predominant", byte

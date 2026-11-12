@@ -118,10 +118,13 @@ def guide(folder, xml, m, out, from_bar, R=20):
     u, idx = np.unique(wp[:, 0] / R, return_index=True)
     at = lambda s: float(np.interp(s, u, wp[idx, 1] / R))
     lines = []
+    # nothing before the first sung note: there the match has nothing to go on, and a guide there would only mislead
+    first_sung = min(firsts[n['start'][0]] + local(*n['start']) for p in parts for n in vn[p])
     for i in range(len(xb)):
         if nums[i] < from_bar: continue
         bl = mm.beat_len(mts[i])
         for k in range(max(1, int(xb[i]['quarters'] / bl))):
+            if firsts[i] + local(i, k * bl) < first_sung - 1e-6: continue
             lines.append(f'{nums[i]}.{k + 1}={at(firsts[i] + local(i, k * bl)):.2f}')
     open(out, 'w').write('\n'.join(lines) + '\n')
     print(f'match cost {float(cost[wp[:, 0], wp[:, 1]].mean()):.3f} (0 is every frame the written pitch); wrote {len(lines)} beats to {out}')

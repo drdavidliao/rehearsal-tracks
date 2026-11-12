@@ -254,16 +254,20 @@ def best_offset(d, secs, lo, hi, step=0.005):
     return best[1]
 
 
-def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, guide_path=None, pins=()):
+def fit_warp(xml, xbars, plain_secs, total, voice_stems, offset, beat=False, guide_path=None, pins=(), inst=None):
     """where the stems' tempo strays from the written one: an offset for each bar (or beat), chosen together so that the
     voices' attacks land on their stems' attacks and the offset changes little from piece to piece (a hold can jump it; a
     repeated figure, which fits as well a beat either way, can't), and followed between piece starts. voice_stems: (part,
-    stem path). Returns the anchors (score seconds, stem seconds)."""
+    stem path). inst: (attacks as (bar index, quarters), stem path), the instrumental part on its stem, so that bars where
+    nobody sings (an introduction, an interlude) are timed too. Returns the anchors (score seconds, stem seconds)."""
     vn_, _ = read_voice_notes(xml, [n_ for n_, _ in voice_stems])
     refs = []
     for n_, path in voice_stems:
         d = flux(path); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
         refs.append((d, [nt['start'] for nt in vn_.get(n_, [])]))
+    if inst:
+        d = flux(inst[1]); d = d / (np.percentile(d[d > 0], 99) if (d > 0).any() else 1)
+        refs.append((d, list(inst[0])))
     # the pieces an offset is fitted for: bars, or with --warp-beat beats, for singing that bends the time inside a bar
     if beat:
         mts_ = xml_meters(xml)
@@ -421,8 +425,9 @@ def main():
         # where the stems' tempo strays from the written one: an offset for each bar, chosen together so that the voices'
         # attacks land on their stems' attacks and the offset changes little from bar to bar (a hold can jump it; a
         # repeated figure, which fits as well a beat either way, can't), and followed between bar starts
+        inst = (attacks[a.instrument_part], at(stems['I'])) if a.instrument_part in attacks and 'I' in stems else None
         anchors = fit_warp(at(a.xml), xbars, plain_secs, total, [(n_, at(stems[STEM_OF[n_]])) for n_ in VOICES], offset,
-                           a.warp_beat, at(a.guide) if a.guide else None, a.pin)
+                           a.warp_beat, at(a.guide) if a.guide else None, a.pin, inst)
         if a.anchor:
             # measured by hand, for a slowing the fit can't follow: bar numbers as printed, beats counted from 1
             nums, mts = xml_numbers(at(a.xml)), xml_meters(at(a.xml))
