@@ -77,7 +77,10 @@ needed). The guide follows the bars as sung and writes a bar's later passes with
 finds each stem's part by the stem's key or, where the key isn't a part's name (`T1`), by the map's voice name, and gives no
 times before the first sung note. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
 (1.000 s in several of Matthew Curtis's sets, 0.000 s in others): measure it by cross-correlating the accompaniment with a
-Predominant mix before using it as `I`. Then set its level with `balance_check.py FOLDER BALANCED.mp3 --write`, which matches
+Predominant mix before using it as `I`. The voice stems keep their mix's stereo: in some of his sets the part is on the left
+channel and every other voice on the right, in others each part sits at its seat (tenors left, basses right).
+`center_stems.py FOLDER --write` keeps the left channel of the first kind and folds the second to mono, so the player's pan
+is the only one. Then set the accompaniment's level with `balance_check.py FOLDER BALANCED.mp3 --write`, which matches
 the accompaniment's balance against all the voices, as the player mixes them, to the set's Balanced Voices mix: the
 Predominant mixes duck it, and levels taken from them are far too soft.
 

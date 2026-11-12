@@ -32,7 +32,9 @@ Transcribe the voice staves only: the accompaniment track is the map's `I` stem,
 5. **Accompaniment.** Measure its start against a Predominant mix by cross-correlation (1.000 s early in several of his
    sets, 0.000 s in Frosty, Sleigh Ride, Run Rudolph Run and We Are Lights) and write it aligned as
    `Human-sung stems/Accompaniment (aligned to the UVR stems).wav`; a set without one: the separator's instrumental output.
-   Its level comes after the map is made (step 6): `player/balance_check.py FOLDER BALANCED.mp3 --write` sets it to its
+   Its level comes after the map is made (step 6), and after `player/center_stems.py FOLDER --write` has centred the voice
+   stems (the part on the left and the other voices on the right: the left channel; a part placed at its seat: mono).
+   Then `player/balance_check.py FOLDER BALANCED.mp3 --write` sets it to its
    balance against all the voices in the Balanced Voices mix, as the player mixes them, and points the map at the
    `(balanced)` copy. Not the Predominant mixes: they duck the accompaniment under the featured voice, and a level taken
    from them came out 5 to 20 dB too soft. With no Balanced mix, give a ratio in dB instead (-6.6 was the median).

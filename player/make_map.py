@@ -589,8 +589,11 @@ def main():
         bl = beat_len(b['meter'])
         nb = max(1, int(x['quarters'] / bl))
         qs = sorted(known)
-        # beat 1 at its notes if any (a system's first bar opens with clef and key); else just inside the barline
-        x0 = known.get(F(0), (b['xa'] + 8 if not b['first_in_system'] else (known[qs[0]] if qs else b['xa'] + 40)))
+        # beat 1 at its notes if any; else at the bar's first head or rest on any staff (the piano's too), if that comes
+        # before the voices' first note; else just inside the barline, or past the clef and key in a system's first bar
+        fx = b.get('first_x')
+        x0 = known.get(F(0), fx if fx is not None and (not qs or fx < known[qs[0]] - 1) else
+                       (b['xa'] + 8 if not b['first_in_system'] else (known[qs[0]] if qs else b['xa'] + 40)))
         px = [F(0)] + [q for q in qs if q > 0] + [x['quarters']]
         py = [x0] + [known[q] for q in qs if q > 0] + [b['xb']]
         beatx = [float(np.interp(float(i * bl), [float(p) for p in px], py)) for i in range(nb)]

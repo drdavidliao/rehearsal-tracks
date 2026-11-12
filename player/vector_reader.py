@@ -215,10 +215,17 @@ class Score:
                     start = bls[0][-1]; bls = bls[1:]
                 self.systems[(pi, si)] = dict(page=pi, sys=si, top=sy[0]['top'], bottom=sy[-1]['bot'])
                 edges = [start] + [g[-1] for g in bls]
+                rests = rests_in(page, top_, bot_)
                 for bi, g in enumerate(bls):
                     xa, xb = edges[bi], g[0]
                     num = len(self.bars)
-                    bar = dict(num=num + 1, page=pi, sys=si, xa=round(xa, 2), xb=round(xb, 2), first_in_system=bi == 0, known={})
+                    # where beat 1 is printed when no voice sings on it: the bar's first head or rest on any staff, the
+                    # piano's included (a whole-bar rest, centred, doesn't count)
+                    mid, w = (xa + xb) / 2, xb - xa
+                    xs = [h['cx'] for h in heads if xa < h['cx'] < xb and top_ < h['y'] < bot_] + \
+                         [x for x in rests if xa < x < xb and abs(x - mid) > 0.1 * w]
+                    bar = dict(num=num + 1, page=pi, sys=si, xa=round(xa, 2), xb=round(xb, 2), first_in_system=bi == 0, known={},
+                               first_x=round(min(xs), 2) if xs else None)
                     self.bars.append(bar)
                     if num >= len(lengths): continue
                     for k, s in enumerate(sy):
