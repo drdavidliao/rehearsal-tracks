@@ -21,7 +21,8 @@ bench/
 # a lyric sheet plan holds the song's words
 *lyric sheet plan.json
 
-# local to each checkout: Claude Code worktrees and launch configs, the needle demo's start time
+# local to each checkout: Claude Code worktrees and launch configs, the needle demo's start time, the rehearsal logs
 .claude/worktrees/
 .claude/launch.json
 needle/.demo_start
+needle/.rehearsal/
