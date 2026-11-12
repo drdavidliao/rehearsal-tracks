@@ -30,7 +30,13 @@ to bottom in `voices`, and the Hear list and the Other checkboxes use their name
 
 A score that's a scan has no vector PDF to read, so `make_map_scan.py` takes the bars and heads from the pixels through scanproof's projects (SKILL.md 1.2),
 the times from the tempo marks and `--anchor BAR=SECONDS`, and shows the scan. Its header has the arguments. Dark is then the page filter.
-`--part-stems` there says which stem sings each part, so two parts on one stem make one voice.
+`--part-stems` there says which stem sings each part, so two parts on one stem make one voice. It follows repeats, endings, a
+D.S. or a D.C. (al Coda, al Fine) as `make_map.play_order` reads them from the MusicXML's marks: the notes are timed on a copy
+of the MusicXML in the sung order, so every pass of a bar is timed from the stems, and a later pass's notes have ids ending in `'`
+(`T1.57.0'`). `--pin` and a guide name a later pass the same way (`57'.1=96.3`). `--swing 0.62` puts swung offbeat eighths
+at 0.62 of the beat at any tempo, and with `--warp` fits the voices' attacks there; `--swing-above 140` keeps it to bars at
+140 or faster. `--out` writes the map under another name, to compare it with the one in use. `staff_text.py` writes the marks
+from a transcription's `@repeat`, `@ending`, `@segno`, `@tocoda`, `@ds`, `@dc`, `@fine` and `@coda` lines.
 With no Piano part, as in an unaccompanied score, the time of bar 1 is fitted from each voice's attacks on its own stem.
 
 `--reader-pdf` is the vector score the bar and beat positions are read from, and `--score` is what the app shows, with the same
@@ -67,10 +73,13 @@ right. `pitch_guide.py FOLDER XML check` says how many of the map's notes the st
 octave): over 0.9 is right, far less is not. For such a song, make the map once, then
 `pitch_guide.py FOLDER XML guide GUIDE.txt` times every beat by matching each part's written pitches to its stem, and
 `--warp --warp-beat --guide GUIDE.txt` keeps the attack fit within 0.35 s of it (`--from BAR` limits the guide to where it's
-needed). Separated stems come from mp3s whose accompaniment track may start earlier than the singing (1.000 s in
-Matthew Curtis's sets): measure it by cross-correlating the accompaniment with a Predominant mix before using it as `I`. Then set its level with
-`balance_check.py FOLDER BALANCED.mp3 --write`, which matches the accompaniment's balance against all the voices, as the
-player mixes them, to the set's Balanced Voices mix: the Predominant mixes duck it, and levels taken from them are far too soft.
+needed). The guide follows the bars as sung and writes a bar's later passes with a `'`, which `make_map.py` leaves out. It
+finds each stem's part by the stem's key or, where the key isn't a part's name (`T1`), by the map's voice name, and gives no
+times before the first sung note. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
+(1.000 s in several of Matthew Curtis's sets, 0.000 s in others): measure it by cross-correlating the accompaniment with a
+Predominant mix before using it as `I`. Then set its level with `balance_check.py FOLDER BALANCED.mp3 --write`, which matches
+the accompaniment's balance against all the voices, as the player mixes them, to the set's Balanced Voices mix: the
+Predominant mixes duck it, and levels taken from them are far too soft.
 
 ## Keys
 
