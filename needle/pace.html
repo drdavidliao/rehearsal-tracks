@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rehearsal pace</title>
+<style>
+/* a departure board: amber on black, a row per section with when it's due */
+:root{--bg:#050505;--panel:#0d0d0c;--amber:#ffb020;--dim:#7a5a1c;--faint:#2a2214;--green:#53e08a;--red:#ff5a3c;--line:#1c1a16}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--amber);font:600 18px/1.3 "SF Mono",Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.06em;padding:14px 16px}
+#board{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:12px 14px 14px;position:relative;overflow:hidden}
+/* the lamp grid over everything */
+#board::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(circle,transparent 55%,rgba(0,0,0,.38) 60%) 0 0/3px 3px}
+header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--faint);padding-bottom:6px}
+#name{font-size:22px}#clock{font-size:30px;font-variant-numeric:tabular-nums}
+#sub{color:var(--dim);font-size:12px;margin:6px 0 10px}
+table{width:100%;border-collapse:collapse}
+th{color:var(--dim);font-size:11px;text-align:left;font-weight:600;padding:2px 6px}
+td{padding:5px 6px;border-top:1px solid var(--line);white-space:nowrap;font-variant-numeric:tabular-nums}
+td.song{overflow:hidden;text-overflow:ellipsis;max-width:0;width:60%}
+td.due,th.due{text-align:right}td.st,th.st{text-align:right;width:9.5em}
+tr.done td{color:var(--dim)}tr.done td.st{color:var(--green);opacity:.75}tr.done.late td.st{color:var(--red)}
+tr.cur td{color:var(--bg);background:var(--amber)}tr.cur.over td{background:var(--red)}
+tr.gap td{color:var(--dim);text-align:center;font-size:12px}
+.blink{animation:b 1s steps(1) infinite}@keyframes b{50%{opacity:0}}
+/* the line: a stop per section, filled when done */
+#line{position:relative;height:46px;margin:14px 4px 0}
+#line .rail{position:absolute;left:0;right:0;top:24px;height:3px;background:var(--faint)}
+#line .run{position:absolute;left:0;top:24px;height:3px;background:var(--green)}
+#line .stop{position:absolute;top:19px;width:9px;height:9px;margin-left:-6px;border-radius:50%;border:2px solid var(--dim);background:var(--panel)}
+#line .stop.done{background:var(--green);border-color:var(--green)}
+#line .stop.cur{background:var(--amber);border-color:var(--amber);box-shadow:0 0 8px var(--amber)}
+#line .lab{position:absolute;top:0;font-size:10px;color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border-left:1px solid var(--faint);padding-left:3px;box-sizing:border-box}
+#line .now{position:absolute;top:14px;width:2px;height:20px;background:var(--amber);margin-left:-1px}
+#ends{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin:2px 4px 0}
+#msg{color:var(--dim);font-size:13px;padding:20px 0}
+</style></head><body>
+<div id="board">
+  <header><span id="name">Rehearsal</span><span id="clock">--:--</span></header>
+  <div id="sub">loading…</div>
+  <table id="rows"></table>
+  <div id="line"></div><div id="ends"><span id="e0"></span><span id="e1"></span></div>
+</div>
+<script>
+// A fixed schedule: from a minute after the rehearsal starts to a minute before it ends (announcements), split over the
+// checked sections by playing time. ?from=19:00&until=21:00 (or the status's pacing.from/until); &rows=8 for how many
+// sections to list. The status is rehearsal_status.py's; see README.md.
+const q = new URLSearchParams(location.search), ROWS = +q.get('rows') || 8;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const two = n => String(n).padStart(2, '0');
+const hm = t => { const d = new Date(t * 1000); return two(d.getHours()) + ':' + two(d.getMinutes()) };
+// minutes left round down and minutes over round up, as the clock times shown are rounded down
+const mins = s => { const m = s >= 0 ? Math.floor(s / 60) : Math.ceil(-s / 60); return m < 1 ? '<1 min' : m + ' min' };
+let status = null, fetchedAt = 0;
+
+// HH:MM as epoch seconds on the day of `ref` (the status's now)
+function at(s, ref) { const [h, m] = s.split(':').map(Number); const d = new Date(ref * 1000); d.setHours(h, m, 0, 0); return d.getTime() / 1000 }
+
+function draw() {
+  if (!status) return;
+  const p = status.pacing || {sections: []}, secs = p.sections;
+  const now = p.now + (Date.now() - fetchedAt) / 1000, d = new Date(now * 1000);
+  $('clock').textContent = hm(now) + ':' + two(d.getSeconds());
+  const from = q.get('from') || p.from, until = q.get('until') || p.until;
+  if (!from || !until) { $('sub').textContent = 'add ?from=19:00&until=21:00 to the address'; return }
+  let a = at(from, now), b = at(until, now);
+  if (b <= a) b += 86400;
+  if (now > b + 6 * 3600) { a += 86400; b += 86400 }          // tomorrow's rehearsal, after midnight
+  if (a > now + 18 * 3600) { a -= 86400; b -= 86400 }        // tonight's, seen after midnight
+  const t0 = a + 60, t1 = b - 60, total = secs.reduce((x, s) => x + s.play, 0);
+  if (!secs.length || !total) { $('sub').textContent = 'no song is tagged Today'; $('rows').innerHTML = ''; return }
+  let cum = 0;
+  for (const s of secs) { s.start = t0 + (t1 - t0) * cum / total; cum += s.play; s.by = t0 + (t1 - t0) * cum / total }
+  const cur = secs.find(s => !s.done), ci = secs.indexOf(cur), ndone = secs.filter(s => s.done).length;
+  $('sub').textContent = `schedule ${hm(t0)}–${hm(t1)} · ${ndone} of ${secs.length} sections done` +
+    (cur && now < t0 ? ` · starts ${hm(t0)}` : '');
+
+  // rows: the last section done, the current one, and what follows, as many as fit
+  const first = Math.max(0, (cur ? ci : secs.length) - 1), shown = secs.slice(first, first + ROWS);
+  let html = '<tr><th>Sec</th><th>Song</th><th class="due">Due</th><th class="st">Status</th></tr>';
+  if (first > 0) html += `<tr class="gap"><td colspan="4">${first} earlier section${first > 1 ? 's' : ''} done</td></tr>`;
+  for (const s of shown) {
+    let cls = '', st = '';
+    if (s.done) { const e = s.by - s.done; cls = 'done' + (e < 0 ? ' late' : ''); st = e >= 0 ? (e < 60 ? 'on time' : mins(e) + ' early') : mins(e) + ' late' }
+    else if (s === cur) {
+      const left = s.by - now; cls = 'cur' + (left < 0 ? ' over' : '');
+      st = now < t0 ? 'next' : left >= 0 ? `<span class="blink">▶</span> ${mins(left)} left` : `${mins(left)} over`;
+    } else st = `in ${mins(s.start - now)}`.replace('in <1 min', 'next');
+    html += `<tr class="${cls}"><td>${esc(s.section)}</td><td class="song">${esc(s.song)}</td><td class="due">${hm(s.by)}</td><td class="st">${st}</td></tr>`;
+  }
+  const after = secs.length - first - shown.length;
+  if (after > 0) html += `<tr class="gap"><td colspan="4">${after} more · last due ${hm(t1)}</td></tr>`;
+  if (!cur) { const last = Math.max(...secs.map(s => s.done)), e = t1 - last;
+    html += `<tr class="gap"><td colspan="4">all done ${hm(last)} · ${e >= 0 ? mins(e) + ' early' : mins(e) + ' late'}</td></tr>` }
+  $('rows').innerHTML = html;
+
+  // the line: a stop at each section's due time, a song's name over its first stop
+  const x = t => Math.max(0, Math.min(100, (t - t0) / (t1 - t0) * 100));
+  let line = '<div class="rail"></div>';
+  const doneTo = cur ? cur.start : t1;
+  line += `<div class="run" style="width:${x(doneTo)}%"></div>`;
+  for (const s of secs) {
+    line += `<div class="stop ${s.done ? 'done' : s === cur ? 'cur' : ''}" style="left:${x(s.by)}%" title="${esc(s.song + ' ' + s.section + ' ' + hm(s.by))}"></div>`;
+  }
+  // each song's name over its stretch of the line
+  for (const song of [...new Set(secs.map(s => s.song))]) {
+    const its = secs.filter(s => s.song === song), l = x(its[0].start), r = x(its[its.length - 1].by);
+    line += `<div class="lab" style="left:${l}%;width:${r - l}%">${esc(song)}</div>`;
+  }
+  if (now >= t0 && now <= t1) line += `<div class="now" style="left:${x(now)}%"></div>`;
+  $('line').innerHTML = line; $('e0').textContent = hm(t0); $('e1').textContent = hm(t1);
+}
+
+async function tick() {
+  try { status = await (await fetch('/status', {cache: 'no-store'})).json(); fetchedAt = Date.now(); draw() }
+  catch (e) { $('sub').textContent = 'server not answering' }
+}
+tick(); setInterval(tick, 10000); setInterval(draw, 1000);
+</script></body></html>

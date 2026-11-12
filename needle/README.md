@@ -36,3 +36,54 @@ rather than draw one that isn't measured.
 finished jobs, per unit of size: pages, bars, minutes of audio) and the whole batch's, with jobs not yet started taking the
 next free slot. The band is the spread actually measured, so it narrows or widens as jobs finish; before any job has
 finished there is no pace, and a status should give a hand estimate and say so in `basis`. `demo_status.py` uses it.
+
+## Rehearsal: when today's songs will be done
+
+`rehearsal_status.py` gives one needle for the songs tagged "Today" in the Rehearsal Player, with a dot per song, so the
+singers can see whether there's time for questions:
+
+    python3 needle/server.py --cmd "python3 needle/rehearsal_status.py"            # songs tagged Today
+    python3 needle/server.py --cmd "python3 needle/rehearsal_status.py --songs DIR DIR"   # or these, in this order
+    python3 needle/server.py --cmd "python3 needle/demo_rehearsal.py" --port 8767  # a made-up rehearsal, to see it
+
+The first status asked for starts a poller (`rehearsal_status.py --poll`) that reads the player's
+`http://localhost:8766/state` every second and appends each change of song, bar, play/pause, Balanced/part mode, tempo
+or checked sections to `needle/.rehearsal/<date>.jsonl` (a day runs to 06:00, so a rehearsal past midnight stays in
+one file; `--log` for another). It stops itself once no status has
+been asked for in 10 minutes. Each status replays that day's log; `--at 19:40 --no-poll` gives the status as it was at
+19:40 (a time more than 12 hours before the log's first event is the next day's), for looking back over a logged rehearsal.
+
+- **Songs**: folders whose `player tags.json` (or a folder above, as the player's tags go) has "Today", found as the
+  player finds songs (Spotlight's `player map.json`s, and `~/Dropbox`), in name order; `--songs` gives them in the order
+  they'll be rehearsed. The song playing comes first, then the rest in that order.
+- **What's to rehearse**: each song's checked sections (from `/state` once the song has been loaded, else the player's
+  `sections:<folder>` default); none checked means the whole song. A section runs from its letter's bar to the bar
+  before the next letter, with an Intro for bars before the first, as in the player.
+- **Playing time**: from the map's bar times, scaled by `song_tempo/tempo` at the tempo the song was last played at.
+- **Done**: a section played through in Balanced mode without a jump, from its first bar (where the player was paused
+  before it started) to its last; or, once anything later in the song is played, or another of today's songs is.
+  Done stays done if the rehearsal goes back.
+- **Pace**: wall-clock time over playing time. At each finish, the time since the last finish (since a song of today's
+  was first played, for the first) goes to the sections finished then that were played at all; sections skipped
+  unplayed just leave the list. The needle is the last finish plus the remaining playing time at the overall pace
+  (all the time over all the playing time so far); the band uses the fastest and slowest single finish. Before any
+  finish there is no band and the pace is `--guess` (3× playing time). The estimate moves only when a section
+  finishes (or a tempo changes), and the subtitle says when the clock has run past it.
+
+Talking, a break or warm-ups after a song is first played all count as rehearsal time, so they show up in the pace: a
+section sung straight through right after another finished gives a pace near 1× and widens the band.
+
+## Rehearsal pace: the schedule to keep
+
+`pace.html` on the same server is a fixed schedule instead of a forecast: the rehearsal's time, from a minute after it
+starts to a minute before it ends (for announcements), split over today's checked sections in rehearsal order by playing
+time at each song's own tempo. Give the start and end in the address:
+
+    http://localhost:8765/pace.html?from=19:00&until=21:00
+
+or to the status script (`rehearsal_status.py --from 19:00 --until 21:00`; the address wins). It looks like a departure
+board, amber on black: a row per section with the time it's due, the one being rehearsed lit with the minutes left (red
+once over), the last one done with how early or late, the ones after with how soon they start (`&rows=8` sets how many
+rows), and under them a line with a stop per section at its due time, filled when done, and a mark at now. The deadlines
+move only if the checked sections change. "Done" is as above. The page counts down every second and fetches the status
+every 10 s.
