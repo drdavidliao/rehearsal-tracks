@@ -5,7 +5,7 @@
     then open http://localhost:8767/?style=broadcast  (or any of chyron.html's options)
 
 It plays through a few bars, pauses, changes part, loops, moves on a section, goes off the air and comes back with
-another song, about 50 seconds round.
+another song, and shows the note names card, about 60 seconds round.
 """
 import argparse, http.server, json, os, socketserver, time
 
@@ -40,6 +40,9 @@ def script():
     for loc, cur in [('A', 'A'), ('1 after A', 'A'), ('A: 9', 'A'), ('2 before B', 'A'), ('1 before B', 'A'), ('B', 'B'), ('1 after B', 'B')]:
         out.append((1.3, st('When You Believe', loc, cur=cur, marked=secs)))
     out.append((3, st('When You Believe', '1 after B', part='Soprano 1', playing=False, cur='B', marked=secs)))
+    # the note names card, over a pause
+    out.append((6, dict(st('When You Believe', '1 after B', part='Soprano 1', playing=False, cur='B', marked=secs), notes_card=True)))
+    out.append((2, st('When You Believe', '1 after B', part='Soprano 1', playing=False, cur='B', marked=secs)))
     return out
 
 

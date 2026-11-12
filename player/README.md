@@ -163,28 +163,48 @@ score, from its letter's bar to the bar before the next letter. Uncheck it once 
 ## A chyron for OBS
 
 While the player runs, it serves a chyron at http://localhost:8766/ (View ▸ Copy Chyron Address for OBS). In OBS, add a
-Browser Source with that URL at the canvas's size (1920 × 1080, say); its background is see-through. It shows the song, ▶ or
-❚❚ and where the playhead is, who's heard (Tutti, a part, or the parts checked under Other, with "(a cappella)" when the
-accompaniment is off), the loop if one is on, and a box for each section checked to rehearse, the one playing filled in.
-Where is said as at rehearsal: "B", "1 after B", "2 before C", otherwise "B: 34"; with marks that are bar numbers, or before
-the first mark, "Bar 34". A repeat's later times say so.
+Browser Source at the canvas's size (1920 × 1080, say); its background is see-through. Give it the loader,
+`player/chyron-obs.html`, as a file address with any options after `#`:
+
+    file:///Users/davidliao/Cowork/rehearsal-tracks/player/chyron-obs.html#style=broadcast
+
+The loader is there even while the player isn't: it asks the player every half second, shows the chyron once it answers,
+and loads it afresh whenever the player restarts, so a rebuilt chyron.html shows without touching OBS. Pointing OBS at
+http://localhost:8766/ directly works too, but a source loaded while the player is closed stays blank until it's
+refreshed (Refresh cache of current page in its properties), and it keeps the page it loaded across restarts.
+
+It shows the song, ▶ or ❚❚ and where the playhead is, who's heard (Tutti, a part, or the parts checked under Other, with
+"(a cappella)" when the accompaniment is off), the loop if one is on, and a box for each section checked to rehearse, the
+one playing filled in. Where is said as at rehearsal: "B", "1 after B", "2 before C", otherwise "B: 34"; with marks that
+are bar numbers, or before the first mark, "Bar 34". A repeat's later times say so.
+
+Chyron ▸ Note names card in the sidebar slides in a card of the British and North American names for whole to 32nd notes
+(semibreve to demisemiquaver), each with its note drawn, for a London chorus with singers in North America.
 
 There are two looks:
 
 - **Plain** (the default): one dark panel. `?corner=br` (bl, br, tl, tr) for where it sits, `?panel=0` for no panel.
-- **Broadcast**: `?style=broadcast`. The title in a tag at top left, a lower third (who's heard on a coloured tab, where on the
-  bar below it, the loop beside), and the sections in a tracker at bottom right, all inside the picture's safe area, in
-  Avenir Next Condensed and DIN Condensed (both come with macOS). Each piece wipes in, words roll over when they change,
-  play and pause turn into each other, and the highlight slides along the sections. `&layout=stack` puts everything in
-  the lower third; `&accent=2a7de1` sets the colour.
+- **Broadcast**: `?style=broadcast`. The title in a tag at top left; a lower third with who's heard on a coloured tab over
+  where you are, and when a loop is on, LOOP ↻ on a green tab over its bars; and the sections in a tracker at bottom
+  right, or top right for the rest of a song once the lower third grows into it. All of it sits in the picture's safe
+  area, its main words in DIN Condensed at one size and its labels in Avenir Next Condensed (both come with macOS).
+  Each piece wipes in. Where you are slides sideways, and only on the way into or out of "1 after B" or "2 before C",
+  and then only the words that change; other bar numbers simply change. The part, title and loop numbers roll when they
+  change, play and pause turn into each other, and the highlight slides along the sections. `&layout=stack` puts
+  everything in the lower third; `&accent=2a7de1` sets the colour.
+
+The pieces along the bottom sit 13% of the height up, clear of the name Zoom draws in the bottom left of a tile (it
+reaches about 10% up a 16:9 tile); `&bottom=5` puts them in the usual safe area when the picture isn't going to Zoom.
+In your own Zoom tile the chyron reads backwards if Zoom mirrors your video for you; others see it the right way round.
 
 `?scale=1.5` makes either bigger. The page is `player/chyron.html`, copied into the app by `build.sh`;
 `python3 player/chyron_demo.py` serves it with a made-up rehearsal at http://localhost:8767/ to see a look move without
 the player (`&bg=556` gives it a background outside OBS).
 
-http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo, loop ends and the sections checked;
-`/state?at=SECONDS` describes another moment of the song. Only this Mac can reach it. Another port: `defaults write
-local.rehearsal.player chyronPort -int 8770`, or `-chyronPort 8770` after the app's path for one run.
+http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo, loop ends, the sections checked and
+whether the card is on; `/state?at=SECONDS` describes another moment of the song, and `started` changes with each run of
+the player. Only this Mac can reach it. Another port: `defaults write local.rehearsal.player chyronPort -int 8770`, or
+`-chyronPort 8770` after the app's path for one run; the loader then takes `port=8770` among its options.
 
 ## Correcting a note
 

@@ -143,6 +143,8 @@ final class Player: ObservableObject {
     var deviceCheck = 0
     @Published var fixes: [NoteFix] = []
     @Published var bypass = false
+    /// the chyron's card of British and North American note names, for a London chorus with singers across the Atlantic
+    @Published var notesCard = false
     var folder: URL?
     let volumeRange = -40.0...6.0
     var pdf: PDFDocument?
@@ -767,6 +769,10 @@ struct Controls: View {
                     Text("System output").tag("")
                     ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
                 }.labelsHidden().controlSize(.small).help("Audio output")
+                Divider()
+                heading("Chyron")
+                Toggle("Note names card 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
+                    .help("Shows the British and North American names for whole to 32nd notes on the chyron")
                 Divider()
                 heading("Score")
                 Picker("", selection: $p.darkScore) {

@@ -49,7 +49,7 @@ extension Player {
 
     /// what the chyron shows, and the plain facts under it
     func chyronState(at: Double? = nil) -> [String: Any] {
-        guard let m = map, error == nil else { return ["song": NSNull()] }
+        guard let m = map, error == nil else { return ["song": NSNull(), "started": playerStarted, "notes_card": notesCard] }
         let t = at ?? engine_position()
         let i = bar(at: t) ?? 0
         let b = m.bars[i]
@@ -65,7 +65,7 @@ extension Player {
         let modeName: String
         switch mode { case .balanced: modeName = "balanced"; case .only: modeName = "only"; case .other: modeName = "other" }
         return [
-            "song": songName,
+            "song": songName, "started": playerStarted, "notes_card": notesCard,
             "playing": engine_is_playing() != 0,
             "location": spoken(i),
             "part": partLabel,
@@ -79,6 +79,9 @@ extension Player {
         ]
     }
 }
+
+/// a stamp for this run of the player (set at the first request): a page that sees it change knows the player restarted
+let playerStarted = Date().timeIntervalSince1970
 
 /// a little HTTP server on the loopback address, answered on the main thread, where the player's state lives
 final class ChyronServer {

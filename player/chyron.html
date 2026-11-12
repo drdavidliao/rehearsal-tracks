@@ -3,6 +3,7 @@
      times a second. Options: style=broadcast (else the plain panel), scale=1.5, and for each style:
        plain:     corner=bl|br|tl|tr, panel=0 (no dark panel)
        broadcast: layout=split|stack (title, lower third and sections apart, or all in the lower third), accent=2a7de1
+       either: bottom=13 (how far up, in % of the height, the bottom pieces sit: 13 clears Zoom's name tag; 5 outside Zoom)
      bg=556 fills the background, for looking at it outside OBS -->
 <html><head><meta charset="utf-8"><title>Rehearsal chyron</title>
 <style>
@@ -10,9 +11,41 @@
   body { color: #fff; }
 
   /* ---- plain ---- */
-  :root { --s: 1; --accent: #f2b544; --loop: #5fd38a; }
+  :root { --s: 1; --accent: #f2b544; --loop: #5fd38a; --slide: cubic-bezier(.2, .8, .2, 1);
+          /* how far up the picture the bottom pieces sit: 13% clears the name Zoom draws in a tile's bottom left corner,
+             which reaches 10% up (measured on a 16:9 tile, 2026-11). bottom=5 for the usual safe area outside Zoom. */
+          --bottom: 13vh; }
+
+  /* ---- the note names card, in either style: big enough to read when the picture is a third of a Zoom window, it fills
+     most of the picture's height, in the middle, over everything else. Each row is a strip of its own that slides in from
+     the right a moment after the one above (its --i), and out again a little quicker. Everything is sized from --card. ---- */
+  #card { --card: 8.6rem; position: fixed; left: 50%; top: 50%; z-index: 10; font-size: var(--card);
+          transform: translate(-50%, -50%); color: #fff; pointer-events: none;
+          font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  body.broadcast #card { font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
+  #card table { border-collapse: separate; border-spacing: 0 .07em; }
+  /* the row slides, its background drawn once across it, so its cells show no seams */
+  #card tr { background: rgba(12, 18, 30, .86); transform: translateX(100vw);
+          transition: transform .6s var(--slide); transition-delay: calc(var(--i) * 40ms); }
+  #card.in tr { transform: none; transition-delay: calc(var(--i) * 70ms); }
+  #card th, #card td { white-space: nowrap; }
+  #card th { font-size: .36em; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+             padding: .5em 0 .4em; }
+  body.broadcast #card th { border-top: .2em solid var(--accent); }
+  #card td { font-size: 1em; font-weight: 600; line-height: 1; padding: .04em 0; }
+  #card .br { text-align: right; padding-right: .35em; }
+  #card .na { text-align: left; padding-left: .35em; }
+  #card td.br { padding-left: .45em; }
+  #card td.na { padding-right: .5em; }
+  #card th.br { padding-left: 1.25em; padding-right: 1.2em; }
+  #card th.na { padding-left: 1.2em; padding-right: 1.4em; }
+  #card .n { text-align: center; width: 1.2em; }
+  #card .n svg { height: 1.45em; width: auto; display: block; margin: 0 auto; color: #fff; }
+  #card .flag { letter-spacing: 0; }
+  /* the parts every name shares, faint, so the part that tells them apart stands out */
+  #card .faint { opacity: .62; }
   #c { display: none; font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
-       position: fixed; left: calc(32px * var(--s)); bottom: calc(32px * var(--s)); max-width: calc(100vw - 64px * var(--s));
+       position: fixed; left: calc(32px * var(--s)); bottom: var(--bottom); max-width: calc(100vw - 64px * var(--s));
        background: rgba(14, 16, 20, 0.84); border-radius: calc(12px * var(--s));
        padding: calc(14px * var(--s)) calc(20px * var(--s)) calc(16px * var(--s));
        font-size: calc(36px * var(--s)); line-height: 1.15; transition: opacity .25s; }
@@ -37,9 +70,12 @@
 
   /* ---- broadcast: 1rem is 10px of a 1080-line picture, so it keeps its place at any source size ---- */
   #tv { display: none; --ink: #fff; --bar: #0c1a2e; --bar2: #15294a; --on-accent: #111;
-        --ease: cubic-bezier(.2, .8, .2, 1); --safe-x: 9.6rem; --safe-y: 5.4rem;
+        --ease: cubic-bezier(.2, .8, .2, 1); --safe-x: 9.6rem; --safe-y: 5.4rem; --hero: 7rem; --loop-tab: #6fdc96;
         font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
   body.broadcast #tv { display: block; }
+  /* each piece's main words, in one face and size: the title, the part, where, the loop and the sections */
+  .hero { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: var(--hero); line-height: 1;
+          padding-top: .13em; text-transform: uppercase; letter-spacing: .01em; }
   .label { font-size: 1.5rem; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
 
   /* each piece wipes in from its left edge, its words a moment after */
@@ -55,39 +91,42 @@
          background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 .8rem 2.4rem rgba(0,0,0,.35); }
   #bug .strip { width: .7rem; background: var(--accent); }
   #bug .txt { padding: .9rem 2.2rem 1rem 1.6rem; }
-  #bug .title { font-size: 3.4rem; font-weight: 700; line-height: 1; margin-top: .35rem; white-space: nowrap; }
+  #bug .title { white-space: nowrap; }
 
-  /* the lower third: who's heard on a tab, where on the bar */
-  #third { position: fixed; left: var(--safe-x); bottom: var(--safe-y); display: flex; flex-direction: column; align-items: flex-start; }
-  #tab { background: var(--accent); color: var(--on-accent); padding: .55rem 1.8rem .5rem 1.6rem; margin-left: .7rem; }
-  #tab .roll { font-size: 2.6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-  #bar { display: flex; align-items: center; gap: 2.4rem; min-height: 9rem; padding: 0 3rem 0 0;
+  /* The lower third: two columns, each a tab over its part of the bar. Who's heard on the accent tab over where; when a loop
+     is on, LOOP on a green tab over its bars, the numbers level with the bar number. */
+  #third { position: fixed; left: var(--safe-x); bottom: var(--bottom); display: flex; flex-direction: column; align-items: flex-start; }
+  #lt { display: grid; grid-template-columns: auto auto; justify-content: start; }
+  #tab, #looptab { grid-row: 1; justify-self: start; align-self: end; padding: .4rem 2.2rem 0 1.8rem; }
+  #tab { grid-column: 1; background: var(--accent); color: var(--on-accent); margin-left: .7rem; }
+  #looptab { grid-column: 2; background: var(--loop-tab); color: #0d1a12; }
+  #bar, #loopcell { grid-row: 2; display: flex; align-items: center; min-height: 9rem;
          background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 1rem 3rem rgba(0,0,0,.4);
          border-top: 1px solid rgba(255,255,255,.12); }
+  #bar { grid-column: 1; gap: 2.4rem; padding: 0 3rem 0 0; }
+  #loopcell { grid-column: 2; padding: 0 3rem 0 2.2rem; border-left: 2px solid rgba(255,255,255,.18); }
   #bar .strip { align-self: stretch; width: .7rem; background: var(--accent); }
   #pp { width: 3.4rem; height: 3.4rem; flex: none; margin-left: 1.4rem; }
   #pp path { fill: var(--ink); transition: d .3s var(--ease); }
   #tv.paused #pp path { fill: rgba(255,255,255,.75); }
-  #place .roll { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 7rem; line-height: 1;
-                 padding-top: .9rem; text-transform: uppercase; letter-spacing: .01em; }
-  #loopbox { display: flex; flex-direction: column; justify-content: center; border-left: 2px solid rgba(255,255,255,.18);
-             padding-left: 2.2rem; overflow: hidden; max-width: 30rem; transition: max-width .45s var(--ease), opacity .3s, padding .45s var(--ease); }
-  #loopbox.off { max-width: 0; opacity: 0; padding-left: 0; border-left-color: transparent; margin-left: -2.4rem; }
-  #loopbox .label { color: #6fdc96; }
-  #loopbox .roll { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 4rem; line-height: 1; padding-top: .5rem; white-space: nowrap; }
+  /* the loop's column opens and closes */
+  .lp { overflow: hidden; max-width: 80rem; transition: max-width .45s var(--ease), opacity .3s, padding .45s var(--ease), clip-path .55s var(--ease); }
+  #lt.nolp .lp { max-width: 0; opacity: 0; padding-left: 0; padding-right: 0; border-left-width: 0; }
+  #looptab .sym { font-size: .8em; letter-spacing: 0; font-family: "Apple Symbols", "Menlo", sans-serif; }
 
   /* the sections being rehearsed, bottom right */
-  #track { position: fixed; right: var(--safe-x); bottom: var(--safe-y); padding: 1.1rem 1.6rem 1.4rem;
+  #track { position: fixed; right: var(--safe-x); bottom: var(--bottom); padding: 1.1rem 1.6rem 1.4rem;
            background: linear-gradient(180deg, var(--bar2), var(--bar)); box-shadow: 0 1rem 3rem rgba(0,0,0,.4);
            border-top: .5rem solid var(--accent); }
   #track.none { display: none; }
-  #secs { position: relative; display: flex; gap: .6rem; margin-top: .7rem; }
-  #secs .sec { position: relative; z-index: 1; min-width: 4.2rem; padding: .7rem 1.1rem .4rem; text-align: center;
-               font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; font-size: 3rem; line-height: 1;
+  /* up: moved to the top right because the lower third has grown into it */
+  #track.up { bottom: auto; top: var(--safe-y); }
+  #secs { position: relative; display: flex; flex-wrap: wrap; gap: 1rem; margin-top: .7rem; max-width: 100rem; }
+  #secs .sec { position: relative; z-index: 1; min-width: 1.1em; padding: .13em .25em 0; text-align: center;
                color: rgba(255,255,255,.7); border: 2px solid rgba(255,255,255,.25); box-sizing: border-box; transition: color .3s; }
   #secs .sec.on { color: var(--on-accent); border-color: transparent; }
-  #hl { position: absolute; top: 0; height: 100%; background: var(--accent); opacity: 0;
-        transition: left .5s var(--ease), width .5s var(--ease), opacity .3s; }
+  #hl { position: absolute; background: var(--accent); opacity: 0;
+        transition: left .5s var(--ease), top .5s var(--ease), width .5s var(--ease), opacity .3s; }
 
   /* stack: all of it in the lower third, title on top and sections under */
   body.stack #bug, body.stack #track { position: static; box-shadow: none; }
@@ -95,11 +134,16 @@
   body.stack #bug { margin-bottom: 0; }
   body.stack #track { border-top: none; margin-top: 0; padding: .8rem 1.6rem 1rem 2.3rem; }
 
-  /* a word that rolls up out of the way of the next */
-  .roll { position: relative; display: block; overflow: hidden; white-space: nowrap; transition: width .4s var(--ease); }
-  .roll span { display: inline-block; transition: transform .45s var(--ease), opacity .35s; }
-  .roll span.gone { position: absolute; left: 0; top: 0; transform: translateY(-110%); opacity: 0; }
-  .roll span.coming { transform: translateY(110%); opacity: 0; transition: none; }
+  /* words that roll up out of the way of the next: each word on its own, so only the ones that change move */
+  .roll { display: flex; gap: .22em; white-space: nowrap; }
+  .seg { position: relative; display: block; overflow: hidden; flex: none; transition: width .4s var(--ease), margin .4s var(--ease); }
+  .seg.leaving { width: 0 !important; margin-right: -.22em; }
+  .seg span { display: inline-block; transition: transform .45s var(--ease), opacity .35s; }
+  .seg span.gone { position: absolute; left: 0; top: 0; transform: translateY(-110%); opacity: 0; }
+  .seg span.coming { transform: translateY(110%); opacity: 0; transition: none; }
+  /* .h: sideways instead, for a place whose box grows and shrinks with the words: out to the left, in from the right */
+  .roll.h .seg span.gone { transform: translateX(-110%); }
+  .roll.h .seg span.coming { transform: translateX(110%); }
 </style></head>
 <body>
 <div id="c" class="hidden">
@@ -114,23 +158,32 @@
 
 <div id="tv">
   <div id="third">
-    <div id="bug" class="wipe"><div class="strip"></div><div class="txt fade"><div class="label">Now rehearsing</div><div class="title roll" id="b-song"></div></div></div>
-    <div id="tab" class="wipe late"><div class="fade"><div class="roll" id="b-part"></div></div></div>
-    <div id="bar" class="wipe">
-      <div class="strip"></div>
-      <svg id="pp" class="fade" viewBox="0 0 10 10"><path id="pp1"/><path id="pp2"/></svg>
-      <div id="place" class="fade"><div class="roll" id="b-loc"></div></div>
-      <div id="loopbox" class="fade off"><div class="label">Loop</div><div class="roll" id="b-loop"></div></div>
+    <div id="bug" class="wipe"><div class="strip"></div><div class="txt fade"><div class="label">Now rehearsing</div><div class="title roll hero" id="b-song"></div></div></div>
+    <div id="lt" class="nolp">
+      <div id="tab" class="wipe late"><div class="fade"><div class="roll hero" id="b-part"></div></div></div>
+      <div id="looptab" class="wipe late lp"><div class="fade hero">Loop <span class="sym">↻</span></div></div>
+      <div id="bar" class="wipe">
+        <div class="strip"></div>
+        <svg id="pp" class="fade" viewBox="0 0 10 10"><path id="pp1"/><path id="pp2"/></svg>
+        <div id="place" class="fade"><div class="roll h hero" id="b-loc"></div></div>
+      </div>
+      <div id="loopcell" class="wipe lp"><div class="fade"><div class="roll hero" id="b-loop"></div></div></div>
     </div>
     <div id="track" class="wipe late none"><div class="fade"><div class="label">Sections</div><div id="secs"><div id="hl"></div></div></div></div>
   </div>
 </div>
+
+<div id="card"><table>
+  <thead><tr style="--i: 0"><th class="br">British English <span class="flag">🇬🇧</span></th><th class="n">Note</th><th class="na">North American English <span class="flag">🇨🇦</span></th></tr></thead>
+  <tbody id="cardrows"></tbody>
+</table></div>
 
 <script>
 const q = new URLSearchParams(location.search);
 const $ = id => document.getElementById(id);
 document.documentElement.style.setProperty('--s', parseFloat(q.get('scale')) || 1);
 const broadcast = q.get('style') === 'broadcast';
+if (parseFloat(q.get('bottom')) >= 0) document.documentElement.style.setProperty('--bottom', parseFloat(q.get('bottom')) + 'vh');
 if (/^[0-9a-f]{3,6}$/i.test(q.get('bg') || '')) document.body.style.background = '#' + q.get('bg');
 document.body.classList.add(broadcast ? 'broadcast' : 'plain');
 
@@ -161,31 +214,108 @@ const hex = (q.get('accent') || '').replace(/[^0-9a-f]/gi, '');
 if (hex.length === 6) {
   const tv = $('tv'), n = parseInt(hex, 16), [r, g, b] = [n >> 16, (n >> 8) & 255, n & 255];
   tv.style.setProperty('--accent', '#' + hex);
+  document.documentElement.style.setProperty('--accent', '#' + hex);     // the note names card too
   // dark words on a light accent, white on a dark one
   tv.style.setProperty('--on-accent', 0.2126 * r + 0.7152 * g + 0.0722 * b > 140 ? '#111' : '#fff');
 }
 // split (the default): the title and the sections are fixed in their own corners
 if (q.get('layout') === 'stack') document.body.classList.add('stack');
 // 1rem is a 108th of the picture's height (10px of 1080 lines)
-if (broadcast) document.documentElement.style.fontSize = 'calc(100vh / 108 * var(--s))';
+document.documentElement.style.fontSize = 'calc(100vh / 108 * var(--s))';
 
-/** put text in a .roll, the old words rolling up and out as the new come up from below */
-function roll(el, text) {
+// ---- the note names card ----
+/** a note drawn: an open or filled head, a stem but for the whole note, and 0 to 3 flags */
+function note(open, stem, flags) {
+  const head = stem ? '<ellipse cx="10.6" cy="50" rx="7.6" ry="5.4" transform="rotate(-20 10.6 50)" '
+                    + (open ? 'fill="none" stroke="currentColor" stroke-width="2.6"/>' : 'fill="currentColor"/>')
+                    : '<ellipse cx="15" cy="50" rx="9" ry="5.6" transform="rotate(-12 15 50)" fill="none" stroke="currentColor" stroke-width="2.8"/>';
+  let out = head;
+  // the stem reaches higher for three flags, so each keeps its room
+  const top = flags >= 3 ? -5 : flags == 2 ? 3 : 6;
+  // The stem: a rectangle 2.8 wide with a square top at y = top. Its right edge is flush with the head's rightmost point
+  // (x 17.98 at y 48.75 for this tilted head, 1.3 further out for an open head's outline), and it runs down to that point,
+  // so nothing of it shows past the head.
+  const right = open ? 19.28 : 17.98, dx = right - 19;
+  if (stem) out += `<rect x="${right - 2.8}" y="${top}" width="2.8" height="${48.9 - top}" fill="currentColor"/>`;
+  // Each flag starts exactly at the stem's right edge, the top one at the stem's top right corner, and sweeps down and right
+  // to a point: thick (4.5) where it leaves the stem, with a clear gap (6) before the next.
+  for (let i = 0; i < flags; i++) {
+    const y = top + 10.5 * i, X = v => (v + dx).toFixed(2);
+    out += `<path d="M${X(19)} ${y} C ${X(21)} ${y + 3.5}, ${X(28.6)} ${y + 7}, ${X(27)} ${y + 17} C ${X(26)} ${y + 12.5}, ${X(22.5)} ${y + 8.5}, ${X(19)} ${y + 4.5} Z" fill="currentColor"/>`;
+  }
+  return `<svg viewBox="0 -7 32 69" aria-hidden="true">${out}</svg>`;
+}
+const NOTES = [['semibreve', note(true, false, 0), 'whole note'], ['minim', note(true, true, 0), 'half note'],
+               ['crotchet', note(false, true, 0), 'quarter note'], ['quaver', note(false, true, 1), 'eighth note'],
+               ['semiquaver', note(false, true, 2), '16th note'], ['demisemiquaver', note(false, true, 3), '32nd note']];
+// faint: the "emi" of semi and demi, and "note"
+const faint = t => t.replace(/([sd])emi/g, '$1<span class="faint">emi</span>').replace(/ note$/, ' <span class="faint">note</span>');
+$('cardrows').innerHTML = NOTES.map(([br, svg, na], i) =>
+  `<tr style="--i: ${i + 1}"><td class="br">${faint(br)}</td><td class="n">${svg}</td><td class="na">${faint(na)}</td></tr>`).join('');
+function card(s) { $('card').classList.toggle('in', !!(s && s.notes_card)); }
+
+/** Put text in a .roll a word at a time. The words that stay put stay still; a changed word rolls up and out as its
+    replacement comes up from below ("1 after 20" to "2 after 20" moves only the 2). With animate false the new words
+    simply appear. */
+function roll(el, text, animate = true) {
   if (el.dataset.t === text) return;
   const first = el.dataset.t === undefined;
   el.dataset.t = text;
+  animate = animate && !first;
+  const words = text.split(/\s+/).filter(Boolean);
+  const segs = [...el.querySelectorAll(':scope > .seg:not(.leaving)')], had = segs.map(x => x.dataset.t);
+  // the words in common at the start and the end
+  let pre = 0, suf = 0;
+  while (pre < Math.min(had.length, words.length) && had[pre] === words[pre]) pre++;
+  while (suf < Math.min(had.length, words.length) - pre && had[had.length - 1 - suf] === words[words.length - 1 - suf]) suf++;
+  const oldMid = segs.slice(pre, segs.length - suf), newMid = words.slice(pre, words.length - suf);
+  if (oldMid.length === newMid.length) {
+    // word for word: each changed one rolls in its place
+    oldMid.forEach((x, i) => swap(x, newMid[i], animate));
+    return;
+  }
+  // a different number of words: the old ones in the middle roll away and close up, the new ones roll in
+  for (const x of oldMid) {
+    if (!animate) { x.remove(); continue; }
+    x.classList.add('leaving');
+    x.querySelectorAll('span').forEach(sp => sp.classList.add('gone'));
+    setTimeout(() => x.remove(), 500);
+  }
+  const before = segs[segs.length - suf] || null;
+  for (const w of newMid) {
+    const x = document.createElement('div');
+    x.className = 'seg';
+    // a new word's slot opens from nothing
+    if (animate) x.style.width = '0em';
+    el.insertBefore(x, before);
+    x.offsetWidth;
+    swap(x, w, animate);
+  }
+}
+/** one word's slot: the old word rolls up and out, the new one up into place */
+function swap(x, word, animate) {
+  if (x.dataset.t === word) return;
+  x.dataset.t = word;
   const now = document.createElement('span');
-  now.textContent = text;
-  for (const old of el.querySelectorAll('span:not(.gone)')) {
+  now.textContent = word;
+  for (const old of x.querySelectorAll('span:not(.gone)')) {
+    if (!animate) { old.remove(); continue; }
     old.classList.add('gone');
     setTimeout(() => old.remove(), 500);
   }
-  if (!first) now.classList.add('coming');
-  el.appendChild(now);
-  fit(el);
-  if (!first) requestAnimationFrame(() => requestAnimationFrame(() => now.classList.remove('coming')));
+  if (animate) now.classList.add('coming');
+  x.appendChild(now);
+  if (animate) fit(x);
+  else {
+    // the slot takes its new width at once too
+    x.style.transition = 'none';
+    fit(x);
+    x.offsetWidth;
+    x.style.transition = '';
+  }
+  if (animate) requestAnimationFrame(() => requestAnimationFrame(() => now.classList.remove('coming')));
 }
-/** a .roll as wide as its current words, in em so it keeps fitting at any size */
+/** a word's slot as wide as its word, in em so it keeps fitting at any size */
 function fit(el) {
   const s = el.querySelector('span:not(.gone)');
   if (s) el.style.width = (s.offsetWidth + 1) / parseFloat(getComputedStyle(el).fontSize) + 'em';
@@ -209,7 +339,7 @@ function sections(list) {
     secs.querySelectorAll('.sec').forEach(e => e.remove());
     for (const x of list) {
       const d = document.createElement('div');
-      d.className = 'sec'; d.textContent = x.name;
+      d.className = 'sec hero'; d.textContent = x.name;
       secs.appendChild(d);
     }
   }
@@ -217,7 +347,9 @@ function sections(list) {
   boxes.forEach((e, i) => e.classList.toggle('on', i === at));
   if (at < 0) { hl.style.opacity = 0; return; }
   hl.style.left = boxes[at].offsetLeft + 'px';
+  hl.style.top = boxes[at].offsetTop + 'px';
   hl.style.width = boxes[at].offsetWidth + 'px';
+  hl.style.height = boxes[at].offsetHeight + 'px';
   hl.style.opacity = 1;
 }
 
@@ -228,16 +360,36 @@ function tv(s) {
   if (!s || !s.song) { tvEl.classList.remove('in'); return; }
   roll($('b-song'), s.song);
   roll($('b-part'), s.part);
-  roll($('b-loc'), s.location);
+  // only a move to or from "1 after B" or "2 before C" rolls; bar numbers otherwise just change
+  const near = t => /\b(after|before)\b/i.test(t || '');
+  roll($('b-loc'), s.location, near($('b-loc').dataset.t) || near(s.location));
   shape(s.playing);
   const lb = s.loop_bars;
-  $('loopbox').classList.toggle('off', !lb);
+  $('lt').classList.toggle('nolp', !lb);
   if (lb) roll($('b-loop'), lb[0] + ' – ' + lb[1]);
   sections(s.sections || []);
   tvEl.classList.add('in');
+  dodge(s.song);
+}
+/** The sections go up to the top right when the lower third would run into them at the bottom, and stay there for the
+    rest of the song rather than hop back and forth as the words change length. Checked as the words change and again once
+    they've finished growing. */
+let upFor = null, dodgeLater = null;
+function dodge(song) {
+  if (!dodgeLater) dodgeLater = setTimeout(() => { dodgeLater = null; dodgeNow(lastState && lastState.song); }, 650);
+  dodgeNow(song);
+}
+function dodgeNow(song) {
+  const track = $('track');
+  if (document.body.classList.contains('stack') || track.classList.contains('none')) return;
+  const em = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const free = innerWidth - parseFloat(getComputedStyle($('tv')).getPropertyValue('--safe-x')) * em - track.offsetWidth;
+  if (upFor !== song) upFor = null;
+  if ($('lt').getBoundingClientRect().right + 3 * em > free) upFor = song;
+  track.classList.toggle('up', upFor !== null);
 }
 // measure again once the condensed faces are in, and whenever the picture changes size
-function remeasure() { document.querySelectorAll('.roll').forEach(fit); names = ''; if (lastState) tv(lastState); }
+function remeasure() { document.querySelectorAll('.seg:not(.leaving)').forEach(fit); names = ''; if (lastState) tv(lastState); }
 document.fonts && document.fonts.ready.then(remeasure);
 addEventListener('resize', remeasure);
 
@@ -247,8 +399,8 @@ async function poll() {
   try {
     const r = await fetch('/state', { cache: 'no-store' });
     const t = await r.text();
-    if (t !== last) { last = t; render(JSON.parse(t)); }
-  } catch (e) { last = ''; render(null); }
+    if (t !== last) { last = t; const s = JSON.parse(t); render(s); card(s); }
+  } catch (e) { last = ''; render(null); card(null); }
   setTimeout(poll, 200);
 }
 poll();
