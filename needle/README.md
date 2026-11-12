@@ -1,7 +1,8 @@
 # Finish-time needle
 
 A page that shows when a long batch of work should finish: one dial per batch, with a needle at the best guess, a blue band
-from the fastest to the slowest pace measured so far, a dot per job (green when done), a dashed line at the current time,
+from the fastest to the slowest pace measured so far, a marker per job (each its own shape and colour, repeated beside
+its row in the table, whose rows run in the markers' order round the dial; filled when done, an outline until then), a dashed line at the current time,
 and a table of the jobs. It fetches its status every 20 s (or the status's `refresh`) and says when it checked and when it
 will check next. It follows the system's light or dark mode.
 

@@ -158,9 +158,14 @@ class Stamper:
             capw = text_w(cap, 'Sans', 5.6) if cap else 0
             # on the top staff a caption also keeps off the boxed letter of a bar on this system (just left of its barline)
             boxes = [o['xa'] for o in self.r.bars if k == 0 and o['num'] in self.letter_bars and o['page'] == b['page'] and o['sys'] == b['sys']]
+            # nor on printed words: the words of the staff above, or a boxed letter at a system's start, which can
+            # stand further left of the bar's barline than `boxes` allows for
+            # the caption's own height against the words' ink: a font box's bottom fifth is descender space
+            ink_text = [c for c in pm.text if c['bottom'] - 0.2 * (c['bottom'] - c['top']) > cy - 2.2 and c['top'] < cy + 2.2]
             def clear(a0, a1):
                 return (a0 > 8 and a1 < pw - 8 and all(g.x1 < a0 or g.x0 > a1 for g in dyn)
-                        and all(xa + 3 < a0 or xa - 18 > a1 for xa in boxes))
+                        and all(xa + 3 < a0 or xa - 18 > a1 for xa in boxes)
+                        and all(c['x1'] < a0 or c['x0'] > a1 for c in ink_text))
             side = 'right'
             if before and cap:
                 side = 'left'
@@ -174,10 +179,17 @@ class Stamper:
                 if side == 'above':
                     # no room either side of the circles: 'above' lands on the words of the staff above, so
                     # rather run the caption on to the right past the dynamic in its way, where that is clear
-                    past = max([g.x1 for g in dyn if g.x0 <= x + span + capw + 8] + [xa + 3 for xa in boxes if xa - 18 <= x + span + capw + 8 and xa > x], default=None)
-                    past = None if past is None else past + 2
-                    if past is not None and clear(past, past + capw + 6):
-                        side = ('right', past - (x + span + 1.5))
+                    # past the dynamic in its way, and past any words at the caption's height after it
+                    a0 = x + span + 1.5
+                    for _ in range(8):
+                        a1 = a0 + capw + 6
+                        block = ([g.x1 for g in dyn if g.x0 <= a1 and g.x1 >= a0] +
+                                 [xa + 3 for xa in boxes if xa - 18 <= a1 and xa + 3 >= a0] +
+                                 [c['x1'] for c in ink_text if c['x0'] <= a1 and c['x1'] >= a0])
+                        if not block: break
+                        a0 = max(block) + 2
+                    if a0 > x + span + 1.5 and clear(a0, a0 + capw + 6):
+                        side = ('right', a0 - (x + span + 1.5))
             circles = []
             for m, (lab, c, col) in enumerate(bs):
                 circles.append((x + r + m * (2 * r + 1.5), lab, col))

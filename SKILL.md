@@ -901,7 +901,10 @@ What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
   head; catch it as outgoing from the nearest chord. Slurs nested or ending on one
   note need their own `number`s (check 8 fails otherwise).
 - **The fi ligature's cid changes with the Dorico version:** `(cid:57)` in 6.0
-  exports, `(cid:51)` in 6.2. Map both, and read the word list for any other.
+  exports, `(cid:51)` in 6.2, `(cid:65)` in a 6.2.31 one (it follows the font subset). All three are mapped;
+  read the word list for any other.
+- **Arcs across a page break can match no note** (build-log problems). Read each against the page: a tie there changes
+  what is sung (a held note read as a new attack), so put ties and slurs on in the build before `lyrics()`, which uses them.
 - **Fermatas are not read** (Bravura `E4C0`); add them in the build's `finish.py`.
 - **Single-note extenders.** The score can print a line under a word sung on one
   note, with nothing after it. Where the singers' parts print none, drop it and
@@ -3233,7 +3236,8 @@ main director says, so the plan always covers every letter.
   together in the plan (a letter whose first four bars are S+A+T in unison still
   teaches them one at a time).
 - One voice per staff; the marks need a PDF `dorico_reader.py` can read.
-- Captions can still collide where systems are tight, and counts crowd in a narrow bar
+- A caption keeps off printed words at its own height (the staff above's words, a boxed letter at a system's start),
+  running on past them to the right when neither side is clear. Captions can still collide where systems are tight, and counts crowd in a narrow bar
   of 16ths. With five staves the gap between systems is small: an "everyone" badge, a
   "why" tag and a split label are kept below the words of the system above, and an
   "everyone" badge with no room there joins the letter's row (after the part badges, or

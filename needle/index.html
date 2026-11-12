@@ -9,6 +9,7 @@ h1{font-size:16px;font-weight:500;margin:0 0 4px}.sub{color:var(--muted);font-si
 h2{font-size:14px;font-weight:500;margin:20px 0 0}
 svg{width:100%;max-width:420px;display:block;margin:0 auto}
 table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td{padding:5px 4px;border-top:1px solid var(--track)}
+td.k{width:16px;padding-right:0}td.k svg{width:14px;height:14px;display:inline;margin:0;vertical-align:-2px}
 td.t{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.done{color:var(--done)}.st{color:var(--ink2)}
 .basis{color:var(--muted);font-size:12px;text-align:center;margin:2px 0 0}
 </style></head><body>
@@ -20,6 +21,21 @@ let PERIOD = 20000, timer = null;
 const ns = 'http://www.w3.org/2000/svg', cx = 170, cy = 172;
 const css = v => getComputedStyle(document.documentElement).getPropertyValue(v);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+// each item's marker: its own shape and colour (Okabe-Ito, colour-blind safe), filled when done, an outline while not
+const SHAPES = ['circle', 'square', 'triangle', 'diamond', 'star', 'cross'];
+const HUES = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73', '#D55E00', '#0072B2', '#9a8a00'];
+function markerSVG(i, done, x, y, r) {
+  const c = HUES[i % HUES.length], shape = SHAPES[i % SHAPES.length];
+  const paint = `fill="${done ? c : 'none'}" stroke="${c}" stroke-width="${done ? 1 : 1.8}" stroke-linejoin="round"`;
+  const poly = pts => `<polygon points="${pts.map(([a, b]) => `${(x + a * r).toFixed(2)},${(y + b * r).toFixed(2)}`).join(' ')}" ${paint}/>`;
+  if (shape === 'circle') return `<circle cx="${x}" cy="${y}" r="${r * 0.95}" ${paint}/>`;
+  if (shape === 'square') return poly([[-.85, -.85], [.85, -.85], [.85, .85], [-.85, .85]]);
+  if (shape === 'triangle') return poly([[0, -1.1], [1, .75], [-1, .75]]);
+  if (shape === 'diamond') return poly([[0, -1.15], [1.05, 0], [0, 1.15], [-1.05, 0]]);
+  if (shape === 'star') return poly([...Array(10)].map((_, k) => { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? .5 : 1.2; return [q * Math.cos(a), q * Math.sin(a)] }));
+  const w = .35;   // cross
+  return poly([[-w, -1], [w, -1], [w, -w], [1, -w], [1, w], [w, w], [w, 1], [-w, 1], [-w, w], [-1, w], [-1, -w], [-w, -w]]);
+}
 const fmt = m => { const t = ((Math.round(m) % 1440) + 1440) % 1440; return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0') };
 
 function dial(n, nowMin) {
@@ -50,12 +66,14 @@ function dial(n, nowMin) {
   }
   const [nx, ny] = pt(nowMin, 132);
   el('line', {x1: cx, y1: cy, x2: nx, y2: ny, stroke: css('--muted'), 'stroke-dasharray': '3 3'});
-  items.forEach(x => { const m = min(x.time); if (m != null) { const [px, py] = pt(m, 115); el('circle', {cx: px, cy: py, r: 4, fill: x.done ? css('--done') : css('--ink')}) } });
+  const marks = document.createElementNS(ns, 'g');
+  items.forEach((x, i) => { const m = min(x.time); if (m != null) { const [px, py] = pt(m, 115); marks.insertAdjacentHTML('beforeend', markerSVG(i, x.done, px, py, 5.5)) } });
   const target = left.length || !items.length ? n.estimate : items.map(x => x.time).filter(Boolean).sort((a, b) => min(a) - min(b)).pop();
   if (target) {
     const [tx, ty] = pt(min(target), 96);
     el('line', {x1: cx, y1: cy, x2: tx, y2: ty, stroke: css('--ink'), 'stroke-width': 3, 'stroke-linecap': 'round'});
   }
+  svg.appendChild(marks);   // over the needle, so a marker at the estimate stays visible
   el('circle', {cx, cy, r: 7, fill: css('--ink')});
   const finished = items.length && !left.length;
   el('text', {x: 170, y: 150, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 500, fill: css('--ink')}, (finished ? 'done ' : '') + (target || '—'));
@@ -64,8 +82,10 @@ function dial(n, nowMin) {
   if (n.title) box.innerHTML = `<h2>${esc(n.title)}</h2>`;
   box.appendChild(svg);
   if (n.basis && !finished) box.insertAdjacentHTML('beforeend', `<p class="basis">band: ${esc(n.basis)}</p>`);
-  if (items.length) box.insertAdjacentHTML('beforeend', '<table>' + items.map(x =>
-    `<tr><td>${esc(x.name)}</td><td class="st ${x.done ? 'done' : ''}">${esc(x.done ? 'done' : (x.state || ''))}</td>` +
+  if (items.length) box.insertAdjacentHTML('beforeend', '<table>' + items.map((x, i) => [x, i])
+    // in the order the markers sit round the dial, by time; an item with no time keeps its place after them
+    .sort((a, b) => (min(a[0].time) ?? 1e9) - (min(b[0].time) ?? 1e9) || a[1] - b[1]).map(([x, i]) =>
+    `<tr><td class="k"><svg viewBox="0 0 14 14" aria-hidden="true">${markerSVG(i, x.done, 7, 7, 5)}</svg></td><td>${esc(x.name)}</td><td class="st ${x.done ? 'done' : ''}">${esc(x.done ? 'done' : (x.state || ''))}</td>` +
     `<td class="t">${x.time ? (x.done ? '' : 'near ') + esc(x.time) : ''}</td></tr>`).join('') + '</table>');
   return [box, items.length, items.length - left.length];
 }
