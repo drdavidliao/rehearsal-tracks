@@ -82,15 +82,14 @@ section sung straight through right after another finished gives a pace near 1×
 
 ## Rehearsal pace: the schedule to keep
 
-`pace.html` on the same server is a fixed schedule instead of a forecast: the rehearsal's time, from a minute after it
-starts to a minute before it ends (for announcements), split over today's checked sections in rehearsal order by playing
-time at each song's own tempo. Give the start and end in the address:
+`pace.html` on the same server shows a suggested pace, not where the rehearsal is: the time from a minute after the
+rehearsal starts to a minute before it ends (for announcements), split over today's checked sections in rehearsal order
+by playing time at each song's own tempo. Each song is a row of its section letters, each as wide as its share of the
+time, with the time each is due to start under it (as many as fit), and a cursor slides across them by the clock, the
+section under it lit. Give the start and end in the address:
 
+    python3 needle/server.py --cmd "python3 needle/rehearsal_status.py --no-poll" --host 0.0.0.0
     http://localhost:8765/pace.html?from=19:00&until=21:00
 
-or to the status script (`rehearsal_status.py --from 19:00 --until 21:00`; the address wins). It looks like a departure
-board, amber on black: a row per section with the time it's due, the one being rehearsed lit with the minutes left (red
-once over), the last one done with how early or late, the ones after with how soon they start (`&rows=8` sets how many
-rows), and under them a line with a stop per section at its due time, filled when done, and a mark at now. The deadlines
-move only if the checked sections change. "Done" is as above. The page counts down every second and fetches the status
-every 10 s.
+or to the status script (`--from 19:00 --until 21:00`; the address wins). `--no-poll` because the page doesn't follow the
+player: it reads the songs and their checked sections once a minute, in case they change.
