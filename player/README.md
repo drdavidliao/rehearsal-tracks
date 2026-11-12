@@ -184,6 +184,11 @@ It shows the song, ▶ or ❚❚ and where the playhead is, who's heard (Tutti, 
 one playing filled in. Where is said as at rehearsal: "B", "1 after B", "2 before C", otherwise "B: 34"; with marks that
 are bar numbers, or before the first mark, "Bar 34". A repeat's later times say so.
 
+When the player opens a different song, the chyron breaks into it like an election-night network: slashes sweep
+the picture, NEXT SONG slams in over a band, the title slams down with
+a jolt, and after about 4 seconds the title flies into its place and the band shuts. A page
+opened mid-song, or the same song coming back after the player was closed, makes no news. `&breaking=0` turns it off.
+
 Chyron ▸ Note names in the sidebar slides in a card of the British and North American names for whole to 32nd notes
 (semibreve to demisemiquaver), each with its note drawn, for a London chorus with singers in North America.
 

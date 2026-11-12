@@ -3,7 +3,7 @@
      times a second. Options: style=broadcast (else the plain panel), scale=1.5, and for each style:
        plain:     corner=bl|br|tl|tr, panel=0 (no dark panel)
        broadcast: layout=split|stack (title, lower third and sections apart, or all in the lower third), accent=2a7de1
-       either: lead=100 (ms ahead of the playhead, for OBS's delay; 0 for none), bottom=13 (how far up, in % of the height, the bottom pieces sit: 13 clears Zoom's name tag; 5 outside Zoom)
+       either: breaking=0 (no breaking-news takeover when another song opens), lead=100 (ms ahead of the playhead, for OBS's delay; 0 for none), bottom=13 (how far up, in % of the height, the bottom pieces sit: 13 clears Zoom's name tag; 5 outside Zoom)
      bg=556 fills the background, for looking at it outside OBS -->
 <html><head><meta charset="utf-8"><title>Rehearsal chyron</title>
 <style>
@@ -144,6 +144,52 @@
   /* .h: sideways instead, for a place whose box grows and shrinks with the words: out to the left, in from the right */
   .roll.h .seg span.gone { transform: translateX(-110%); }
   .roll.h .seg span.coming { transform: translateX(110%); }
+  /* ---- a new song is breaking news: when the player opens another song, a network-news takeover in either style. Slashes
+     sweep across, a band opens with NEXT SONG slamming in, the title slams down with
+     a jolt, and then the title flies to where it lives and the band shuts. About 5 s. ---- */
+  #news { position: fixed; inset: 0; z-index: 20; pointer-events: none; display: none; overflow: hidden; color: #fff;
+          --red: #d0142c; --navy: #0a1630; --e: cubic-bezier(.2, .8, .2, 1); font-size: 1rem;
+          font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; }
+  #news.go { display: block; }
+  #news .slash { position: absolute; top: -20vh; height: 140vh; left: 0; transform: translateX(-80vw) skewX(-18deg); }
+  #news .s1 { width: 34vw; background: var(--red); }
+  #news .s2 { width: 9vw; background: #fff; }
+  #news .s3 { width: 52vw; background: var(--navy); }
+  #news.go .s1 { animation: sweep .9s cubic-bezier(.6, 0, .3, 1) 0s both, sweep2 .8s cubic-bezier(.6, 0, .3, 1) 4.3s forwards; }
+  #news.go .s2 { animation: sweep .9s cubic-bezier(.6, 0, .3, 1) .07s both, sweep2 .8s cubic-bezier(.6, 0, .3, 1) 4.37s forwards; }
+  #news.go .s3 { animation: sweep .9s cubic-bezier(.6, 0, .3, 1) .14s both, sweep2 .8s cubic-bezier(.6, 0, .3, 1) 4.44s forwards; }
+  @keyframes sweep { from { transform: translateX(-80vw) skewX(-18deg); } to { transform: translateX(180vw) skewX(-18deg); } }
+  @keyframes sweep2 { from { transform: translateX(-80vw) skewX(-18deg); } to { transform: translateX(180vw) skewX(-18deg); } }
+  #news .flash { position: absolute; inset: 0; background: #fff; opacity: 0; }
+  #news.go .flash { animation: flash .5s ease-out .4s both, flash2 .4s ease-out 1.8s both; }
+  @keyframes flash { 0% { opacity: 0; } 15% { opacity: .8; } 100% { opacity: 0; } }
+  @keyframes flash2 { 0% { opacity: 0; } 15% { opacity: .35; } 100% { opacity: 0; } }
+  #news .band { position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-50%) scaleY(0);
+                background: linear-gradient(180deg, #16295a, var(--navy) 65%, #050b1a); box-shadow: 0 0 8rem rgba(0,0,0,.7);
+                border-top: .7rem solid var(--red); border-bottom: .7rem solid var(--red); }
+  #news.go .band { animation: open .45s var(--e) .3s both, shut .4s cubic-bezier(.7, 0, .8, .3) 4.5s forwards; }
+  @keyframes open { from { transform: translateY(-50%) scaleY(0); } to { transform: translateY(-50%) scaleY(1); } }
+  @keyframes shut { from { transform: translateY(-50%) scaleY(1); } to { transform: translateY(-50%) scaleY(0); } }
+  #news .inner { padding: 3.2rem 9.6rem 3.6rem; }
+  #news.go .inner { animation: jolt .45s linear 1.8s; }
+  @keyframes jolt { 0%, 100% { transform: none; } 12% { transform: translate(-1.4rem, .7rem); } 28% { transform: translate(1.1rem, -.9rem); }
+                    45% { transform: translate(-.8rem, .5rem); } 62% { transform: translate(.6rem, -.3rem); } 80% { transform: translate(-.3rem, .2rem); } }
+  #news .top { display: flex; align-items: center; gap: 2rem; }
+  #news .bn { position: relative; overflow: hidden; background: var(--red); font-size: 9.5rem; line-height: 1; padding: .16em .35em .02em;
+              text-transform: uppercase; letter-spacing: .02em; box-shadow: 0 .6rem 2rem rgba(0,0,0,.45); transform-origin: 30% 50%; }
+  #news .bn::after { content: ''; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%; transform: skewX(-20deg);
+                     background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); }
+  #news.go .bn { animation: slam .5s cubic-bezier(.2, 1.4, .4, 1) .5s both; }
+  #news.go .bn::after { animation: glint .7s ease-in-out 1.1s, glint2 .7s ease-in-out 3s; }
+  @keyframes slam { 0% { transform: scale(2.8); opacity: 0; filter: blur(1.2rem); } 60% { opacity: 1; filter: blur(0); } 100% { transform: none; opacity: 1; } }
+  @keyframes glint { from { left: -60%; } to { left: 130%; } }
+  @keyframes glint2 { from { left: -60%; } to { left: 130%; } }
+  #news .headline { margin-top: 1.6rem; }
+  #news .big { font-size: 19rem; white-space: nowrap; text-shadow: 0 .4rem 2.4rem rgba(0,0,0,.55); }
+  #news.go .big { animation: slam2 .55s cubic-bezier(.2, 1.3, .4, 1) 1.75s both; }
+  @keyframes slam2 { 0% { transform: translateY(35%) scale(1.5); opacity: 0; filter: blur(1.5rem); } 55% { opacity: 1; filter: blur(0); } 100% { transform: none; opacity: 1; } }
+  .flyer { position: fixed; z-index: 30; margin: 0; color: #fff; white-space: nowrap; transform-origin: 0 0; pointer-events: none; }
+  .awaiting { opacity: 0 !important; }
 </style></head>
 <body>
 <div id="c" class="hidden">
@@ -177,6 +223,15 @@
   <thead><tr style="--i: 0"><th class="br">British English <span class="flag">🇬🇧</span></th><th class="n">Note</th><th class="na">North American English <span class="flag">🇨🇦</span></th></tr></thead>
   <tbody id="cardrows"></tbody>
 </table></div>
+
+<div id="news" aria-hidden="true">
+  <div class="slash s3"></div><div class="slash s2"></div><div class="slash s1"></div>
+  <div class="band"><div class="inner">
+    <div class="top"><div class="bn">Next song</div></div>
+    <div class="headline"><div class="big hero"></div></div>
+  </div></div>
+  <div class="flash"></div>
+</div>
 
 <script>
 const q = new URLSearchParams(location.search);
@@ -393,6 +448,55 @@ function remeasure() { document.querySelectorAll('.seg:not(.leaving)').forEach(f
 document.fonts && document.fonts.ready.then(remeasure);
 addEventListener('resize', remeasure);
 
+// ---- a new song is breaking news ----
+const BREAKING = q.get('breaking') !== '0';
+// the last song named; undefined until the first answer, so a page loaded mid-song makes no news
+let lastSong, newsTimers = [];
+function breaking(s) {
+  const song = s && s.song;
+  if (lastSong === undefined) { lastSong = song || null; return; }
+  // off the air and back with the same song is no news
+  if (!song || song === lastSong) return;
+  lastSong = song;
+  if (BREAKING) projectWinner(song);
+}
+function projectWinner(song) {
+  newsTimers.forEach(clearTimeout); newsTimers = [];
+  document.querySelectorAll('.flyer').forEach(e => e.remove());
+  const news = $('news'), big = news.querySelector('.big'), target = broadcast ? $('b-song') : $('song');
+  // the title waits, unseen and without rolling, where the flying one will land
+  if (broadcast) roll(target, song, false); else target.textContent = song;
+  target.classList.add('awaiting');
+  big.textContent = song; big.style.fontSize = ''; big.style.visibility = '';
+  news.classList.remove('go'); news.offsetWidth; news.classList.add('go');
+  // a long title shrinks to fit the band
+  const em = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const room = innerWidth - 2 * 9.6 * em;
+  if (big.scrollWidth > room) big.style.fontSize = 19 * room / big.scrollWidth + 'rem';
+  newsTimers.push(setTimeout(() => fly(big, target), 4100));
+  // and whatever happens, all of it is gone by 5.4 s (animations don't run while OBS isn't drawing the source)
+  newsTimers.push(setTimeout(() => {
+    news.classList.remove('go'); target.classList.remove('awaiting'); document.querySelectorAll('.flyer').forEach(e => e.remove());
+  }, 5400));
+}
+/** the big title lifts out of the band and flies to the title's place, then gives way to it */
+function fly(big, target) {
+  const a = big.getBoundingClientRect(), b = target.getBoundingClientRect();
+  const land = () => target.classList.remove('awaiting');
+  if (!b.width) { land(); return; }
+  const f = document.createElement('div'), size = parseFloat(getComputedStyle(big).fontSize);
+  f.className = 'hero flyer'; f.textContent = big.textContent;
+  Object.assign(f.style, { left: a.left + 'px', top: a.top + 'px', fontSize: size + 'px' });
+  document.body.appendChild(f);
+  big.style.visibility = 'hidden';
+  const k = parseFloat(getComputedStyle(target).fontSize) / size;
+  f.animate([{ transform: 'none' }, { transform: `translate(${b.left - a.left}px, ${b.top - a.top}px) scale(${k})` }],
+            { duration: 750, easing: 'cubic-bezier(.6, 0, .2, 1)', fill: 'forwards' }).finished.then(() => {
+    land();
+    f.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 250, fill: 'forwards' }).finished.then(() => f.remove());
+  });
+}
+
 const render = broadcast ? tv : plain;
 // how far ahead of the playhead to show, in ms, for the time OBS takes to put the page in the picture
 const LEAD = parseFloat(q.get('lead')) >= 0 ? parseFloat(q.get('lead')) : 100;
@@ -401,7 +505,7 @@ async function poll() {
   try {
     const r = await fetch('/state?lead=' + LEAD, { cache: 'no-store' });
     const t = await r.text();
-    if (t !== last) { last = t; const s = JSON.parse(t); render(s); card(s); }
+    if (t !== last) { last = t; const s = JSON.parse(t); breaking(s); render(s); card(s); }
   } catch (e) { last = ''; render(null); card(null); }
   setTimeout(poll, 100);
 }
