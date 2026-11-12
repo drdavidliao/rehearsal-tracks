@@ -17,6 +17,11 @@ It serves on http://localhost:8765 (`--port` for another). To keep it in Claude 
 
 The page also works as an OBS Browser Source pointed at the same address.
 
+To see it on a phone on the same Wi-Fi, add `--host 0.0.0.0`; the server prints the address to open, such as
+`http://192.168.1.162:8765/pace.html?from=19:00&until=21:00`. Anyone on that network can then open the pages and
+`/status` (song and section names, times); it serves nothing else from `needle/`, so the logs in `.rehearsal/` stay
+private. Without `--host` only this Mac can reach it.
+
 ## Status
 
     {"title": "Player maps", "refresh": 20, "note": "anything for the subtitle",
