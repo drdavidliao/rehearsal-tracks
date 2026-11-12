@@ -45,6 +45,22 @@ finished jobs, per unit of size: pages, bars, minutes of audio) and the whole ba
 next free slot. The band is the spread actually measured, so it narrows or widens as jobs finish; before any job has
 finished there is no pace, and a status should give a hand estimate and say so in `basis`. `demo_status.py` uses it.
 
+## Steps of different kinds: `milestones.py`
+
+For a run of unlike steps (transcribe, mark up, separate, map), where the jobs aren't sized alike:
+
+    python3 needle/server.py --cmd "python3 needle/milestones.py STEPS.json"
+    python3 needle/milestones.py STEPS.json --now 16:00     # the status as it was at 16:00
+
+Each step has a `guess` in minutes, which only says how big it is next to the others; the work fills in `start` and `end`
+(and `parts_done` for a step of equal parts) as it goes. Every finished step measures taken / guessed, and the steps left
+are their guesses times the fastest, median and slowest of those: the needle at the median, the band the spread seen. A
+step of equal parts that has finished some times the rest at their own pace. Lanes (`lane`) run their steps one after
+another and `after` waits for other steps. Before anything finishes the band is half to twice the guesses and the basis
+says so; with one finished step it is that step's ratio and no band, since no spread has been measured. The format is
+in the script's header. Replayed on a song whose guesses were four to ten times too long, it said 16:11 from the first
+finished step on, for a finish at 16:10; the hand-set bands had started at 16:50, then 16:30, 16:15 and 16:20.
+
 ## Rehearsal: when today's songs will be done
 
 `rehearsal_status.py` gives one needle for the songs tagged "Today" in the Rehearsal Player, with a dot per song, so the
