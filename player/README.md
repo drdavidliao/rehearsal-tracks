@@ -160,6 +160,19 @@ falls past the end.
 The sidebar lists the rehearsal letters, and Intro if there are bars before the first. A checked section gets a blue tint on the
 score, from its letter's bar to the bar before the next letter. Uncheck it once it's rehearsed. The checks are remembered for each song.
 
+## A chyron for OBS
+
+While the player runs, it serves a chyron at http://localhost:8766/ (View ▸ Copy Chyron Address for OBS). In OBS, add a
+Browser Source with that URL at the canvas's size (1920 × 1080, say); its background is see-through. It shows the song, ▶ or
+❚❚ and where the playhead is, who's heard (Tutti, a part, or the parts checked under Other), the loop if one is on, and a box
+for each section checked to rehearse, the one playing filled in. Where is said as at rehearsal: "B", "1 after B", "2 before C",
+otherwise "B: 34"; with marks that are bar numbers, or before the first mark, "Bar 34". A repeat's later times say so.
+
+Options after the address: `?scale=1.5` for bigger, `&corner=br` (bl, br, tl, tr) for where it sits, `&panel=0` for no dark
+panel behind the text. http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo and the sections
+checked; `/state?at=SECONDS` describes another moment of the song. Only this Mac can reach it. Another port: `defaults write
+local.rehearsal.player chyronPort -int 8770`.
+
 ## Correcting a note
 
 Right-click a note on a voice's staff to mute it or move it up or down by semitones. Tied notes count as one, and only

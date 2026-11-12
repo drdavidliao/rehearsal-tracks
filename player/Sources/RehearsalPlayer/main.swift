@@ -850,6 +850,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     var window: NSWindow!
     var findWindow: NSWindow?
     var timer: Timer?
+    var chyron: ChyronServer?
 
     func applicationDidFinishLaunching(_ n: Notification) {
         NSApp.setActivationPolicy(.regular)
@@ -881,6 +882,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         else { openFolder() }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in self?.player.tick() }
         RunLoop.main.add(timer!, forMode: .common)
+        chyron = ChyronServer(state: { [weak self] in self?.player.chyronState(at: $0) ?? [:] }, failed: { [weak self] in self?.player.say($0) })
         NSApp.activate(ignoringOtherApps: true)
     }
     func applicationShouldTerminateAfterLastWindowClosed(_ s: NSApplication) -> Bool { true }
@@ -918,6 +920,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         a.addButton(withTitle: "Remove All"); a.addButton(withTitle: "Cancel")
         if a.runModal() == .alertFirstButtonReturn { player.clearFixes() }
     }
+    @objc func copyChyron() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(ChyronServer.address, forType: .string)
+        player.say("Copied \(ChyronServer.address): in OBS, add a Browser Source with this URL")
+    }
     @objc func toggleTwo() { player.twoPages.toggle(); player.score?.setTwoPages(player.twoPages) }
 
     func buildMenu() {
@@ -932,7 +939,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         fm.addItem(withTitle: "Find Songs…", action: #selector(findSongs), keyEquivalent: "O")
         file.submenu = fm
         let view = NSMenuItem(); main.addItem(view)
-        let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2"); view.submenu = vm
+        let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2")
+        vm.addItem(.separator())
+        vm.addItem(withTitle: "Copy Chyron Address for OBS", action: #selector(copyChyron), keyEquivalent: "")
+        view.submenu = vm
         let st = NSMenuItem(); main.addItem(st)
         let sm = NSMenu(title: "Stretch")
         sm.delegate = self
