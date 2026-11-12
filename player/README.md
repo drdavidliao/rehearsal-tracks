@@ -111,14 +111,14 @@ Predominant mixes duck it, and levels taken from them are far too soft.
 ## Finding a song
 
 File > Find Songs lists every folder on this Mac with a `player map.json`, through Spotlight, so a new song appears by itself. Click tags in the cloud to narrow the list: a song must have all the
-tags chosen, and a tag that would leave nothing is dimmed. Double-click a song to open it, or click one to tag it. The Tags box in the sidebar tags the open song.
+tags chosen, and a tag that would leave nothing is dimmed. Double-click a song to open it, or click one to tag it. Tags, folded at the foot of the sidebar, tags the open song.
 
 A song's folders are its first tags: `Choir/2026 Fall/Song` gives Choir and 2026 Fall, and `Band/Band 2026 Fall/Song` gives Band and 2026 Fall. These can't be removed. Tags you add are in
 `player tags.json` in the song folder, so they sync with it and survive a new map.
 
 ## Dark mode
 
-Light and Dark in the sidebar, or `d`. `make_map.py` also writes a dark copy of the score through `dark_score.py` (it needs `pypdf`),
+Light and Dark under Settings, folded at the foot of the sidebar, or `d`. `make_map.py` also writes a dark copy of the score through `dark_score.py` (it needs `pypdf`),
 drawn element by element: notes and rests with their stems, beams, flags, dots and accidentals are warm, and staves, clefs, time
 signatures, slurs and words are cool. The colors are at the top of that file. For a song without a dark copy, Dark is a filter on the page.
 
@@ -134,7 +134,7 @@ In `Sources/CEngine/engine.cpp`, with each voice's pan and trim worked out in `S
 - A soloist is 0 dB and centred. Instruments 0 dB, centred.
 - The Instruments / click checkbox, or `c`, takes the instrumental stem out of every mode, for a stem that's a click, say. It's remembered for each song.
 - The whole mix is -3 dB until the Volume box says otherwise. The setting is remembered.
-- The Source files switch says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.
+- The Each voice file switch ("a single voice" or "part-predominant") says what the voice files are, and is remembered for each song. It changes "only" and "Other", not Balanced.
 - With part-predominant files (each has its part loudest and the others bleeding through):
   - "Only": that voice +6 dB on top of its trim, keeping its pan; the other voices off; instruments on.
   - "Other": the voices checked, each with a boost on top of its trim: two +3 dB, three +1.5 dB, four +0.75 dB, halving again for each more.
@@ -145,7 +145,7 @@ In `Sources/CEngine/engine.cpp`, with each voice's pan and trim worked out in `S
 - A stereo stem pans as a balance with a constant-power law, unity at centre.
 - Past 0.9 the output rounds off smoothly towards 1 so a boosted part can't hard-clip. Below that the samples are untouched.
 
-The menu at the top right chooses the Core Audio output device. The choice is remembered. If that device is
+Output, under Settings at the foot of the sidebar, chooses the Core Audio output device. The choice is remembered. If that device is
 unplugged, sound goes to the system output until it's chosen again.
 
 ## Looping

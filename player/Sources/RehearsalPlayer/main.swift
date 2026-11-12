@@ -710,6 +710,8 @@ struct Controls: View {
     @FocusState var editingBar: Bool
     @FocusState var editingVol: Bool
     @FocusState var editingBar2: Bool
+    @AppStorage("sidebarSettingsOpen") var settingsOpen = false
+    @AppStorage("sidebarTagsOpen") var tagsOpen = false
     // back to the score's keys (space, arrows and so on) once a box has been used
     func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
     func volString(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
@@ -737,6 +739,18 @@ struct Controls: View {
                         .fixedSize(horizontal: false, vertical: true).stretches()
                 }
                 rule()
+                Toggle(isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })) { Label("Loop", systemImage: "repeat") }
+                    .toggleStyle(.checkbox).help("l")
+                HStack(spacing: 6) {
+                    Text("bar").fixedSize()
+                    TextField("", text: $p.loopFrom).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
+                        .onSubmit { p.commitLoop(); leave() }
+                    Text("to").fixedSize()
+                    TextField("", text: $p.loopTo).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
+                        .onSubmit { p.commitLoop(); leave() }
+                        .help("Bar numbers or letters. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
+                }
+                rule()
                 HStack(spacing: 6) {
                     Text("Tempo ♩ =").fixedSize()
                     TextField("", text: $tempoText).frame(width: 44).focused($editing).multilineTextAlignment(.trailing)
@@ -747,6 +761,19 @@ struct Controls: View {
                     Slider(value: Binding(get: { p.bpm }, set: { p.setTempo($0) }), in: p.bpmRange).controlSize(.small)
                     Button("Reset") { if let t = p.map?.tempo { p.setTempo(t) } }.controlSize(.small)
                 }.stretches()
+                HStack(spacing: 6) {
+                    Text("Volume").fixedSize()
+                    TextField("", text: $volText).frame(width: 44).focused($editingVol).multilineTextAlignment(.trailing)
+                        .onSubmit {
+                            let t = volText.replacingOccurrences(of: "−", with: "-").replacingOccurrences(of: "dB", with: "", options: .caseInsensitive)
+                                .trimmingCharacters(in: .whitespaces)
+                            if let v = Double(t) { p.setVolume(v) } else { NSSound.beep() }
+                            volText = volString(p.volume)
+                            leave()
+                        }
+                    Text("dB").fixedSize()
+                }
+                Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).controlSize(.small).stretches()
                 rule()
                 heading("Hear")
                 Picker("", selection: $p.mode) {
@@ -754,17 +781,6 @@ struct Controls: View {
                 }.pickerStyle(.radioGroup).labelsHidden()
                 if p.mode == .other { OtherParts(p: p).stretches() }
                 Toggle("Instruments / click", isOn: $p.instruments).toggleStyle(.checkbox).help("c")
-                rule()
-                Toggle("Loop", isOn: Binding(get: { p.loopOn }, set: { on in if on { p.commitLoop() } else { p.loopOn = false } })).toggleStyle(.checkbox)
-                HStack(spacing: 6) {
-                    Text("bar").fixedSize()
-                    TextField("", text: $p.loopFrom).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
-                        .onSubmit { p.commitLoop(); leave() }
-                    Text("to").fixedSize()
-                    TextField("", text: $p.loopTo).frame(width: 44).focused($editingBar2).multilineTextAlignment(.trailing)
-                        .onSubmit { p.commitLoop(); leave() }
-                        .help("Bar numbers or letters. In a repeat, ' or b after the number for the 2nd time through: 17' or 17b")
-                }
                 if !p.sections.isEmpty {
                     rule()
                     heading("Sections to rehearse")
@@ -783,44 +799,38 @@ struct Controls: View {
                     }
                 }
                 rule()
-                HStack(spacing: 6) {
-                    Text("Volume").fixedSize()
-                    TextField("", text: $volText).frame(width: 44).focused($editingVol).multilineTextAlignment(.trailing)
-                        .onSubmit {
-                            let t = volText.replacingOccurrences(of: "−", with: "-").replacingOccurrences(of: "dB", with: "", options: .caseInsensitive)
-                                .trimmingCharacters(in: .whitespaces)
-                            if let v = Double(t) { p.setVolume(v) } else { NSSound.beep() }
-                            volText = volString(p.volume)
-                            leave()
-                        }
-                    Text("dB").fixedSize()
-                }
-                Slider(value: Binding(get: { p.volume }, set: { p.setVolume($0) }), in: p.volumeRange).controlSize(.small).stretches()
-                heading("Output")
-                Picker("", selection: Binding(get: { p.deviceUID }, set: { p.setDevice($0) })) {
-                    Text("System output").tag("")
-                    ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
-                }.labelsHidden().controlSize(.small).help("Audio output").stretches()
-                rule()
                 heading("Chyron")
                 Toggle("Note names 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
                     .help("Shows the British and North American names for whole to 32nd notes on the chyron")
                 rule()
-                heading("Score")
-                Picker("", selection: $p.darkScore) {
-                    Text("Light").tag(false)
-                    Text("Dark").tag(true)
-                }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden()
-                rule()
-                heading("Source files")
+                heading("Each voice file")
                 Picker("", selection: $p.isolated) {
-                    Text("1 purely isolated voice\nper audio file").tag(true)
-                    Text("part-predominant files").tag(false)
+                    Text("a single voice").tag(true)
+                    Text("part-predominant").tag(false)
                 }.pickerStyle(.radioGroup).labelsHidden()
+                // set once and left alone, so folded away until opened; whether each is open is remembered.
+                // The voice-file switch is changed often enough, and the chyron's card wanted at a moment's notice, to stay out
+                rule()
+                DisclosureGroup(isExpanded: $settingsOpen) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        heading("Output")
+                        Picker("", selection: Binding(get: { p.deviceUID }, set: { p.setDevice($0) })) {
+                            Text("System output").tag("")
+                            ForEach(p.devices, id: \.uid) { Text($0.name).tag($0.uid) }
+                        }.labelsHidden().controlSize(.small).help("Audio output")
+                        heading("Score")
+                        Picker("", selection: $p.darkScore) {
+                            Text("Light").tag(false)
+                            Text("Dark").tag(true)
+                        }.pickerStyle(.radioGroup).horizontalRadioGroupLayout().labelsHidden().help("d")
+                    }.padding(.top, 4)
+                } label: { Label("Settings", systemImage: "gearshape").font(.caption).foregroundStyle(.secondary) }
+                .stretches()
                 if let f = p.folder?.path {
-                    rule()
-                    heading("Tags")
-                    TagEditor(path: f, leaveAfter: true).id(f).stretches()
+                    DisclosureGroup(isExpanded: $tagsOpen) {
+                        TagEditor(path: f, leaveAfter: true).id(f).padding(.top, 4)
+                    } label: { Label("Tags", systemImage: "tag").font(.caption).foregroundStyle(.secondary) }
+                    .stretches()
                 }
             }
             .padding(.horizontal, 10).padding(.top, 34).padding(.bottom, 10)     // the top clears the window's buttons

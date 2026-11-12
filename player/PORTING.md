@@ -74,7 +74,7 @@ want to hear:". The voices heard get a boost on top of their trim, and the other
 | all | none: this is Balanced, and checking the last selects it |
 
 That table is for part-predominant files, where each file has its part loudest and the others bleeding through. A switch, remembered
-for each song, says "Source files: 1 purely isolated voice per audio file / part-predominant files". With isolated files, the voices heard
+for each song, says "Each voice file: a single voice / part-predominant". With isolated files, the voices heard
 in "only" and Other are at 0 dB in place of their trims, and the others at -18 dB. Balanced and "instruments alone" don't change.
 
 The master volume starts at -3 dB, typed or on a slider, and is remembered. Pan a stereo stem as a balance with a constant-power
