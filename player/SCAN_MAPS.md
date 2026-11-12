@@ -47,6 +47,9 @@ Transcribe the voice staves only: the accompaniment track is the map's `I` stem,
    Coda), check it against the recording. Swung eighths: `--swing F` only where the stems swing: measure where their
    offbeat attacks fall first. Run Rudolph Run's and Sleigh Ride's are sung straight (Sleigh Ride checked 0.93 with
    `--swing 0.62`, 0.98 without). `--out FILE` writes a trial map beside the one in use, for `check FILE`.
+   The typed voices have no rehearsal marks, so then run `player/find_boxes.py FOLDER`, look at its contact sheet (each
+   boxed mark it found, cropped beside the bar it gave it) and the pages for any it missed, and `--write`. It has to be run
+   again after every rebuild of the map.
 7. **Balance** the accompaniment (step 5). **Leave** `Human-sung stems/How player map.json was made.txt` (what was used,
    any pins, the pitch-check figure), and
    keep the Cantai map, if any, as `player map (Cantai).json`.

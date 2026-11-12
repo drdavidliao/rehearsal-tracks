@@ -160,6 +160,12 @@ falls past the end.
 The sidebar lists the rehearsal letters, and Intro if there are bars before the first. A checked section gets a blue tint on the
 score, from its letter's bar to the bar before the next letter. Uncheck it once it's rehearsed. The checks are remembered for each song.
 
+The letters come from the MusicXML's rehearsal marks. A map made from a scan's typed voices, or from MusicXML without them,
+has none until `find_boxes.py FOLDER --write` reads the score's boxed marks (bar numbers or letters in a frame) off the
+page and puts them on the map's bars; run it without `--write` first and check its contact sheet. It doesn't find circled
+marks, unboxed letters, or a box drawn over the staff, and a score that boxes the first bar number of every system (one scanned
+octavo did) has no rehearsal marks to find. A rebuilt map loses them, so run it again after a rebuild.
+
 ## A chyron for OBS
 
 While the player runs, it serves a chyron at http://localhost:8766/ (View ▸ Copy Chyron Address for OBS). In OBS, add a
