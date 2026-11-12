@@ -27,7 +27,9 @@ KEYS = ('folder', 'song', 'playing', 'bar', 'pass', 'section', 'mode', 'tempo', 
 
 
 def hm(t): return time.strftime('%H:%M', time.localtime(t))
-def today_log(): return os.path.join(STORE, datetime.date.today().isoformat() + '.jsonl')
+def today_log():
+    """one log per rehearsal day, which runs to 06:00, so a rehearsal past midnight stays in one file"""
+    return os.path.join(STORE, (datetime.datetime.now() - datetime.timedelta(hours=6)).date().isoformat() + '.jsonl')
 
 
 # ---- polling ---------------------------------------------------------------------------------------------------------
@@ -242,11 +244,12 @@ def status(songs, events, now, guess):
     return dict(title='Rehearsal', refresh=10, note=note, needles=[needle])
 
 
-def clock(s, day):
-    """HH:MM on the log's day, or epoch seconds"""
+def clock(s, first):
+    """HH:MM after the log's first event (the next day's if more than 12 hours before it), or epoch seconds"""
     if ':' not in s: return float(s)
     h, m = map(int, s.split(':'))
-    return datetime.datetime.combine(day, datetime.time(h, m)).timestamp()
+    t = datetime.datetime.combine(datetime.date.fromtimestamp(first), datetime.time(h, m)).timestamp()
+    return t + 86400 if t < first - 12 * 3600 else t
 
 
 def main():
@@ -257,15 +260,14 @@ def main():
     ap.add_argument('--poll', action='store_true', help='poll the player and log what changes')
     ap.add_argument('--url', default=STATE_URL)
     ap.add_argument('--no-poll', action='store_true', help="don't start the poller (for a logged rehearsal)")
-    ap.add_argument('--at', help='the status as at this time (HH:MM on the log\'s day, or epoch seconds); later events are ignored')
+    ap.add_argument('--at', help='the status as at this time (HH:MM, or epoch seconds); later events are ignored')
     ap.add_argument('--guess', type=float, default=3.0, help='wall-clock over playing time before anything has finished')
     a = ap.parse_args()
     if a.poll: return poll(a.log, a.url)
     if not a.no_poll: ensure_poller(a.log)
     log = a.log or today_log()
     events = [json.loads(l) for l in open(log)] if os.path.exists(log) else []
-    day = datetime.date.fromtimestamp(events[0]['wall']) if events else datetime.date.today()
-    now = clock(a.at, day) if a.at else time.time()
+    now = clock(a.at, events[0]['wall'] if events else time.time()) if a.at else time.time()
     events = [e for e in events if e['wall'] <= now]
     folders = a.songs if a.songs is not None else today_songs(a.tag)
     marks = player_marks()

@@ -48,9 +48,10 @@ singers can see whether there's time for questions:
 
 The first status asked for starts a poller (`rehearsal_status.py --poll`) that reads the player's
 `http://localhost:8766/state` every second and appends each change of song, bar, play/pause, Balanced/part mode, tempo
-or checked sections to `needle/.rehearsal/<date>.jsonl` (`--log` for another file). It stops itself once no status has
+or checked sections to `needle/.rehearsal/<date>.jsonl` (a day runs to 06:00, so a rehearsal past midnight stays in
+one file; `--log` for another). It stops itself once no status has
 been asked for in 10 minutes. Each status replays that day's log; `--at 19:40 --no-poll` gives the status as it was at
-19:40, for looking back over a logged rehearsal.
+19:40 (a time more than 12 hours before the log's first event is the next day's), for looking back over a logged rehearsal.
 
 - **Songs**: folders whose `player tags.json` (or a folder above, as the player's tags go) has "Today", found as the
   player finds songs (Spotlight's `player map.json`s, and `~/Dropbox`), in name order; `--songs` gives them in the order
