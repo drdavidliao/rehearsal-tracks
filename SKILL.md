@@ -2291,7 +2291,9 @@ Then shift the anchor until the report says the lights lead by 25–30 ms.
 took about one, and nearly all of the overrun allowance was spent on one unknown, the
 choice of formant engine. The repository's mixing and video tools ran in minutes.
 Estimate the known steps from their real run times, and put the margin only on the
-genuinely new part.
+genuinely new part. Give finish times as clock times. For a batch of several jobs, offer
+the finish-time dial in `needle/` in the side panel (README there): a status script that
+uses `pace.finish_times` keeps the band to the pace actually measured, not a guessed one.
 
 ### 9.6 A human singer's finished practice set (`mixset/`)
 
