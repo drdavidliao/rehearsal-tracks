@@ -73,6 +73,13 @@ def rising(px, py, gap=1.0):
     return [px[0], px[-1]], [py[0], py[-1]]
 
 
+def kept_trims(path):
+    """the voice trims (dB, by stem key) in the map at path, if there is one: levels set on a map by hand or by a script
+    (outer sections -0.5, inner +0.5, say) survive a rebuild; --trim still sets any voice it names"""
+    try: return {v['key']: v['trim'] for v in json.load(open(path)).get('voices') or [] if v.get('trim') is not None}
+    except (OSError, ValueError): return {}
+
+
 # the letters older commands used for an SATB score's stems
 LETTERS = {'S': ['Soprano'], 'A': ['Alto', 'Alto 1'], 'A2': ['Alto 2'], 'T': ['Tenor'], 'B': ['Bass']}
 
@@ -663,7 +670,11 @@ def main():
         os.remove(at(score_dark)); score_dark = None
         print('  no note glyphs found: no dark copy')
     trims = {k: float(v) for k, v in (t_.split('=', 1) for t_ in a.trim)}
-    m = dict(voices=[dict(key=k, name=n, **({'trim': trims[n]} if n in trims else {})) for k, n in voices], notes=notes, score=a.score, **({'score_dark': score_dark} if score_dark else {}), stems=stems, offset=round(offset, 4), page_height=page_h, pages=npages,
+    kept = kept_trims(at('player map.json'))
+    trim_of = lambda k, n: trims[n] if n in trims else kept.get(k)
+    if any(n not in trims and k in kept for k, n in voices):
+        print('kept trims from the map being replaced:', {n: kept[k] for k, n in voices if n not in trims and k in kept})
+    m = dict(voices=[dict(key=k, name=n, **({'trim': trim_of(k, n)} if trim_of(k, n) is not None else {})) for k, n in voices], notes=notes, score=a.score, **({'score_dark': score_dark} if score_dark else {}), stems=stems, offset=round(offset, 4), page_height=page_h, pages=npages,
              tempo=float(next((t_ for b in xbars for _, t_ in b['tempos']), 120.0)), music_end=bars[-1]['end_t'],
              systems=list(systems.values()), bars=bars)
     with open(at('player map.json'), 'w') as f:

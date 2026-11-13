@@ -57,7 +57,8 @@ A song whose only print is a scan can show an engraving instead: `../xml2ly.py` 
 scan's systems and pages if given its scanproof project, and `lilypond` makes the PDF for `--reader-pdf` and `--score`.
 
 `I` is the one instrumental stem. `--trim "Bass=-3.68"` takes a stem down (or up) on top of the voice's own trim, for a stem
-exported louder than the others. Times come from the MusicXML's tempo marks, so this suits tracks rendered to the score's tempo;
+exported louder than the others. A rebuild keeps the trims of the map it replaces (`make_map_scan.py` too), so a level set on a map
+survives; `--trim` still sets any voice it names. Times come from the MusicXML's tempo marks, so this suits tracks rendered to the score's tempo;
 a repeat is played as written (with first and second endings), and the map lists its bars again for each time through, so the
 cursor follows; a repeated bar's notes are timed on its first time through, so a note fix there applies only then. The script fits the
 time of bar 1 from the piano's on-beat attacks and prints the drift by section: look at that before trusting a new song. A rit,

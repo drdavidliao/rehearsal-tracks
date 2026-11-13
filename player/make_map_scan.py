@@ -232,6 +232,10 @@ def main():
         v = next((v for v in voices if v['key'] == stem), None)
         if v: v['name'] += ' and ' + part
         else: voices.append(dict(key=stem, name=part))
+    kept = mm.kept_trims(at('player map.json'))
+    for v in voices:
+        if v['key'] in kept: v['trim'] = kept[v['key']]
+    if kept: print('kept trims from player map.json:', {v['name']: v['trim'] for v in voices if 'trim' in v})
     m = dict(voices=voices, notes=notes, score=a.score, stems=stems, offset=round(secs(0, F(0)), 4), page_height=sizes[0][1], pages=len(sizes),
              tempo=a.tempo, music_end=round(total, 4), systems=list(sysd.values()), bars=bars)
     with open(at(a.out), 'w') as f:
