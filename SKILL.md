@@ -1717,16 +1717,18 @@ mp3 (2026-11-12):
   shift from where the sound starts, then pair the strongest attacks (librosa onsets, the strongest 40%) with the
   nearest within 150 ms of it, and look at the median per section. That one held at 0.612 s ahead, to about 10 ms,
   from bar 1 to the final rit; the rit itself showed as both tracks swelling to the last chord together.
-- **Match the level.** The separated stem is normalized, so it came out 10.8 dB louder than the old instrumental
-  (the median over 8-bar sections), and the voices' stems are balanced against the old one. Take it down by that.
+- **Match the loudness, in LUFS.** The voices' stems are balanced against the old instrumental, so the new one gets
+  the old one's integrated loudness (`ffmpeg -i F.wav -af ebur128=peak=true -f null -`, the summary's `I:`), not its
+  RMS. Two renders differ in tone: there the new one had far more above 6 kHz, and an RMS match (-10.8 dB) left it
+  -24.6 LUFS against the old one's -23.0, which the user heard as the instrumental too quiet. -9.21 dB matched.
 - **Same length.** Pad the front by the shift in samples and pad or cut the end to the old file's sample count:
 
 ```
-ffmpeg -i NEW.wav -af "adelay=26989S:all=1,volume=-10.81dB,apad=whole_len=OLD_SAMPLES,atrim=end_sample=OLD_SAMPLES" \
+ffmpeg -i NEW.wav -af "adelay=26989S:all=1,volume=-9.21dB,apad=whole_len=OLD_SAMPLES,atrim=end_sample=OLD_SAMPLES" \
   -c:a pcm_s24le "NEW aligned.wav"
 ```
 
-Then pair attacks again against the old file (the median was 3 ms) before changing the map's `stems.I`, and keep a
+Then pair attacks again against the old file (the median was 3 ms) and measure its LUFS again before changing the map's `stems.I`, and keep a
 copy of the old map in `_build/`. A new backing can differ in places (there, beat-by-beat hits in two bars where the
 old one and the score's piano are silent): say where in the handback.
 
