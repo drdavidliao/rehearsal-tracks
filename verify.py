@@ -547,8 +547,19 @@ class Engraving:
         return out
 
 
+def dedupe_chars(chars, x='x0', y='top', t='text'):
+    """drop a character drawn a second time on top of itself: Dorico exports bold lyrics and marks as faux bold,
+    every letter struck twice at the same place ("lloonnee", "rriitt..")"""
+    seen, out = set(), []
+    for c in chars:
+        k = (c[t], round(c[x], 1), round(c[y], 1))
+        if k in seen: continue
+        seen.add(k); out.append(c)
+    return out
+
+
 def syllables(chars):
-    chars = sorted(chars, key=lambda c: c['x0'])
+    chars = sorted(dedupe_chars(chars, t='t'), key=lambda c: c['x0'])
     toks = []
     for c in chars:
         if toks and c['x0'] - toks[-1]['x1'] < 0.25 and c['t'] != '-' and not toks[-1]['t'].endswith('-'):
@@ -567,8 +578,20 @@ def syllables(chars):
     return out
 
 
-# ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N)
-LIGATURES = {'(cid:57)': 'fi', '(cid:51)': 'fi'}      # Academico (Dorico's default text font): 57 in Dorico 6.0 exports, 51 in 6.2
+# ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N). Academico (Dorico's
+# default text font) puts them wherever its subset in that PDF does, so the code changes from export to export; read
+# the word list (check 9) of every new score for a "(cid:" left over and add it here. dorico_reader uses this table.
+LIGATURES = {
+    '(cid:33)': 'fl',      # Dorico 4.2 ("floating", "fly")
+    '(cid:51)': 'fi',      # 4.2, 6.2
+    '(cid:57)': 'fi',      # 6.0
+    '(cid:58)': 'fi',      # 6.1 ("final")
+    '(cid:59)': 'fi',      # 6.0 ("fire")
+    '(cid:64)': 'fi',      # 5.0 ("fills", "fireplace")
+    '(cid:65)': 'fi',      # 6.2
+    '(cid:66)': 'fi',      # 6.1 ("first", "finished")
+    '(cid:38)': 'fi',      # 5.0, the singers' parts pages of a score-and-parts PDF
+}
 
 
 def check_instructions(pdf):
@@ -603,6 +626,9 @@ def check_extender_lines(root, names, E, lanes):
         for k, s in enumerate(syls):
             band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 1.0 * sp]
             hit = [ln for ln in band if s['x1'] - 1 <= ln[0] <= s['x1'] + 2.5 * sp]
+            # a line is the syllable's immediately left of it: in "And I___" the line starts within reach of "And"
+            # too, but "I" stands between
+            hit = [ln for ln in hit if not any(u is not s and u['x0'] >= s['x1'] - 0.1 and u['x1'] <= ln[0] + 1 for u in syls)]
             for ln in hit: consumed.add((pi, tuple(ln)))
             entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}", bool(s.get('hyph'))]
             printed[lanes[lane]].append(entry)

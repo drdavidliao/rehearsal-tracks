@@ -834,7 +834,8 @@ hairpins are open 7-point polylines. With those, `dorico_reader.py` reads an ope
 score (one voice per vocal staff, piano on two) straight into MusicXML: glyph
 baselines sit exactly on their staff positions, so no offset needs calibrating.
 Its `Reader` runs `read().voices().pitches().ties_slurs().lyrics(...).marks(...)`,
-then `melisma_lines(...)` and `matching_lines(...)` (2.5), then `emit()`; a per-piece build script holds only the page range, the lyric
+with `.tempo_marks()` and `.fermatas()` after `marks()` where the score has more than one tempo mark, tempo words, a
+swing mark or fermatas (they are opt-in because older builds add those themselves), then `melisma_lines(...)` and `matching_lines(...)` (2.5), then `emit()`; a per-piece build script holds only the page range, the lyric
 font and size, the parts, and any word fixes (`lyric_fix`), and calls `finish()`,
 which writes the print file and the copy before `break_words_at_melismas` that a
 Cantai file is made from. Keep that script and its log in the song's `_build/`
@@ -867,8 +868,9 @@ What the first two Dorico SATB + piano arrangements taught:
 - **Academico's `fi` ligature has no Unicode.** pdfplumber reports `(cid:57)`, so
   "find" reads `(cid:57)nd`; map it.
 - **A tie runs from the last note of a system.** An arc leaving the right margin is
-  a tie only when it leaves the system's last note on that staff and the arc on the
-  next system arrives at the same pitch; otherwise it is a slur continuing.
+  a tie only when it leaves the last note of its voice on that staff and the arc on
+  the next system arrives at the same pitch on the first note of its voice; otherwise
+  it is a slur continuing.
 - **Two same-pitch notes with a note between are not tied.** Check that nothing
   in the voice sits between them before calling the arc a tie.
 
@@ -877,14 +879,12 @@ What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
 - **Read the time signature; never assume 4/4.** Its digits are Bravura
   `E080`–`E089` on the top staff, numerator row above denominator; each bar gets
   its own `meter` and length, and `<time>` is written wherever it changes. A part
-  page's multi-bar rest prints its count in the same digits, as a lone row: do not
-  read that as a meter (the reader has no guard for it yet; it matters only when
-  reading parts for the cross-check).
+  page's multi-bar rest prints its count in the same digits, as a lone row: the
+  reader skips a lone row rather than read it as a meter.
 - **Low notes of a piano RH chord can sit nearer the LH staff.** On ledger lines in
   the grand-staff gap, the nearest staff is the wrong one. A head outside its
   staff belongs to the adjacent staff when its stem's far end is inside that staff
-  and another head on the same stem is already that staff's
-  (`restaff_gap_heads`); its staccato goes with it. `verify.py` checks 12 and 17
+  (`restaff_gap_heads`); its staccato, accent and accidental go with it. `verify.py` checks 12 and 17
   use the same rule (`head_staff`). Ties under such notes likewise go to the
   neighbouring staff when the nearest has no head at either end.
 - **Words under ledger notes fall past the midpoint between staves.** Below a sung
@@ -900,12 +900,13 @@ What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
 - **A slur can leave the margin clear of every stem**, beyond tie distance of any
   head; catch it as outgoing from the nearest chord. Slurs nested or ending on one
   note need their own `number`s (check 8 fails otherwise).
-- **The fi ligature's cid changes with the Dorico version:** `(cid:57)` in 6.0
-  exports, `(cid:51)` in 6.2, `(cid:65)` in a 6.2.31 one (it follows the font subset). All three are mapped;
-  read the word list for any other.
+- **The fi ligature's cid changes with the export** (it follows the font subset), and Dorico 4.2 has an fl one
+  too. The one table is `verify.LIGATURES`, which the reader uses; read the word list for a `(cid:` left over and
+  add it there, never in a build.
 - **Arcs across a page break can match no note** (build-log problems). Read each against the page: a tie there changes
   what is sung (a held note read as a new attack), so put ties and slurs on in the build before `lyrics()`, which uses them.
-- **Fermatas are not read** (Bravura `E4C0`); add them in the build's `finish.py`.
+- **Fermatas** (Bravura `E4C0` above, `E4C1` below): `r.fermatas()` puts each on the nearest note or rest of its
+  staff, and on the other voices' items at that onset.
 - **Single-note extenders.** The score can print a line under a word sung on one
   note, with nothing after it. Where the singers' parts print none, drop it and
   say so (check 10 then reports it); where nothing else decides, keep what the
@@ -946,8 +947,32 @@ What a swung SATB + piano in G (108 bars, Dorico 6.2) added, all in the reader e
 - **Chord symbols can sit nearer the staff above than the piano**, so the midpoint band loses them. Where the words
   are another size than the symbols, the band starts at the staff above. The kinds now include `m6`, `m11`, `dim7`,
   `9`, `9sus4`, and a small `(#11)` (`F4DE`), whose hidden degree is altered.
-- **A swing mark is in Metrico** (`E230 E232 = E2A0`), which the reader skips: read it by eye and write `<swing>` in
-  the tempo's `<sound>` in the build, or tracks come out straight.
+- **A swing mark is in Metrico** (`E230 E232 = E2A0`; straight is `E230 E232 = E230 E232`), which `marks()` skips:
+  `r.tempo_marks()` reads it, or tracks come out straight.
+
+What five more (Dorico 4.2 to 6.1, November 2026) added, all now in the reader; their builds keep only word fixes and
+one three-voice bar. Rebuilding the seven earlier songs gave byte-identical files.
+
+- **A flag goes with its stem's heads**, not the nearest staff: a down-stem RH lower-voice eighth hangs its flag nearer
+  the LH and read as a quarter (`restaff_flags`).
+- **Rests go to the voice they complete.** A two-voice staff's rest on or near the middle line went to the wrong voice;
+  rests are moved between the voices where that makes both fill the bar, one way only (`rests_between`). A rest in the
+  grand-staff gap more than 1.5 SP outside its staff goes to the other piano staff when it is just what a voice there
+  lacks (`rests_across`). A whole rest above a stemless note is voice 1.
+- **Ties go by voice.** An arc over other notes of a one-voice staff is a slur, whichever way their stems point; a
+  stemless whole note can be tied over another voice's notes; across a break a tie leaves the last note of its voice
+  and arrives on the first of its voice. These caught ties the hand fixes had missed (Bb2 wholes, RH across a page).
+- **Two whole notes a second apart** sit side by side 1.7 SP apart: one chord, not two voices. A stem touching a head
+  from the wrong side (a crotchet's down stem against the half beside it) gives the head up, and a down-stem chord's
+  onset column is at its stem.
+- **Faux bold**: bold lyrics and marks are each letter drawn twice in one place ("lloonnee", "rriitt.."); the reader and
+  verify read each once.
+- **Text in the chord symbols' font** ("pedal ad lib.", even interleaved with a "D") is a run with a word space in it:
+  written as words, not a chord. Kinds now include `maj9` and `aug`.
+- **An extension line belongs to the syllable just left of it**: in "And I___" it is in reach of "And" too (reader and
+  verify check 10). A word at a system's right edge keeps letters that run past the staff end.
+- **Tempo**: `marks()` reads only page 1's metronome mark. `tempo_marks()` reads every page's, a dotted unit
+  (`ECB7`; dotted quarter = 75 sounds as 112.5), the words beside it ("Lively, Irish jig"), and the swing marks.
 
 ## Step 3 — Exploding a condensed score into one part per voice
 
