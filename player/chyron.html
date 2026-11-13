@@ -192,19 +192,19 @@
   .awaiting { opacity: 0 !important; }
   /* ---- the announcement, in either style: on the right, under the picture's top edge, its heading in the accent and a strip
      for each line. Like the note names card, each strip slides in from the right a moment after the one above (its --i)
-     and out again a little quicker. A long one shrinks (--ann) to stay clear of the bottom pieces. ---- */
+     and out again a little quicker. Its words are the card's, at the card's size; a long one shrinks (--ann) to stay
+     clear of the sections at the bottom right. ---- */
   #ann { --ann: 1; position: fixed; right: 3.2rem; top: 5.4rem; z-index: 9; display: grid; justify-items: stretch;
-         row-gap: .5rem; font-size: calc(var(--ann) * 1rem); pointer-events: none;
+         row-gap: .6rem; font-size: calc(var(--ann) * 8.6rem); pointer-events: none;
          font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
   body.broadcast #ann { right: 9.6rem; font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
-  #ann .ar { background: rgba(12, 18, 30, .86); padding: .16em .6em .1em .5em; white-space: nowrap;
-             font-size: 5.6em; font-weight: 600; line-height: 1; transform: translateX(120vw);
+  #ann .ar { background: rgba(12, 18, 30, .86); padding: .1em .5em .04em .4em; white-space: nowrap;
+             font-size: 1em; font-weight: 600; line-height: 1; transform: translateX(120vw);
              transition: transform .6s var(--slide); transition-delay: calc(var(--i) * 40ms); }
   #ann.in .ar { transform: none; transition-delay: calc(var(--i) * 70ms); }
-  #ann .ah { font-size: 3.2em; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
-             padding: .7em 1.2em .55em 1em; border-left: .3em solid var(--accent); }
-  body.broadcast #ann .ar:not(.ah) { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; text-transform: uppercase;
-                                     padding-top: .24em; font-weight: 400; }
+  #ann .ah { font-size: .36em; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: var(--accent);
+             padding: .5em 1.1em .4em; }
+  body.broadcast #ann .ah { border-top: .2em solid var(--accent); }
   /* a blank line in the words: a gap, not a strip */
   #ann .gap { height: 1.6em; background: none; }
 </style></head>
@@ -518,7 +518,7 @@ function fly(big, target) {
 // ---- the announcement ----
 /** The announcement's strips, rebuilt only when its words change. Words changed while it's showing simply appear; when it's
     taken off, the old strips slide out before anything else is put there. */
-let annText = null;
+let annText = null, annFit = '';
 function announce(s) {
   const text = s && s.announcement, ann = $('ann');
   if (!text) { ann.classList.remove('in'); return; }
@@ -534,18 +534,23 @@ function announce(s) {
       d.textContent = l;
       ann.appendChild(d);
     });
-    fitAnn();
   }
+  // fitted again when the words change or the sections come, go or move
+  const key = text + '\u0001' + $('track').className;
+  if (key !== annFit) { annFit = key; fitAnn(); }
   ann.offsetWidth;
   ann.classList.add('in');
 }
-/** small enough to stay clear of the bottom pieces and the title, and to fit across the picture */
+/** as big as the note names card where it fits: down to the sections when they're at the bottom right (else near the
+    bottom of the picture), and across no more than 60% of it, so the title shows */
 function fitAnn() {
-  const ann = $('ann');
+  const ann = $('ann'), track = $('track');
   ann.style.setProperty('--ann', 1);
   const em = parseFloat(getComputedStyle(document.documentElement).fontSize);
-  const h = ann.offsetHeight, w = ann.offsetWidth;
-  const roomH = innerHeight * 0.6, roomW = innerWidth * 0.6;
+  const h = ann.offsetHeight, w = ann.offsetWidth, top = ann.getBoundingClientRect().top;
+  const below = broadcast && !track.classList.contains('none') && !track.classList.contains('up')
+    ? track.getBoundingClientRect().top - 2 * em : innerHeight - 5.4 * em;
+  const roomH = below - top, roomW = innerWidth * 0.6;
   const k = Math.min(1, roomH / h, roomW / w);
   if (k < 1) ann.style.setProperty('--ann', k.toFixed(3));
 }
