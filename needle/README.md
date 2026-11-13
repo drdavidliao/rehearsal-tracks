@@ -58,7 +58,26 @@ are their guesses times the fastest, median and slowest of those: the needle at 
 step of equal parts that has finished some times the rest at their own pace. Lanes (`lane`) run their steps one after
 another and `after` waits for other steps. Before anything finishes the band is half to twice the guesses and the basis
 says so; with one finished step it is that step's ratio and no band, since no spread has been measured. The format is
-in the script's header. Replayed on a song whose guesses were four to ten times too long, it said 16:11 from the first
+in the script's header.
+
+Two rules for whoever keeps the steps file:
+
+- **Done means checked.** A step gets its `end` only once its output is checked and in place. A first draft still being
+  checked or fixed stays running, with a `state` that says so ("draft made; fixing caption collisions"). Marking the draft
+  done shows a finish that isn't real, and the reader will notice.
+- **No hand-typed bands.** Write guesses only as relative sizes and let the measured steps set the needle and band.
+  Hand-set bands, skewed by intuition before any data, missed the real finish every time they were tried; if a band
+  must be typed, its reason goes in `basis`.
+
+Update the file at each real transition (a step started, a part or step finished), not in batches afterwards.
+
+Write times to the second (`HH:MM:SS`: `date +%H:%M:%S`, or the mtime of the file a part writes). `HH:MM` still works, but
+it rounds both ends of every span: a step can read as taking no time, and a steady 2.6-minute pace as alternating 2 and 3
+minutes. The band's fast end is the fastest of those, so on one batch it sat at 01:49, before the stems that every
+remaining step waited on could finish (01:51); timed from the stems' file mtimes, the parts were 2:34 to 2:50 apart and the
+fast end moved to 01:52. A span between minute-only stamps counts as at least half a minute.
+
+Replayed on a song whose guesses were four to ten times too long, it said 16:11 from the first
 finished step on, for a finish at 16:10; the hand-set bands had started at 16:50, then 16:30, 16:15 and 16:20.
 
 ## Rehearsal: when today's songs will be done

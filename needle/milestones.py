@@ -24,16 +24,31 @@ their own measured pace instead, fastest to slowest part. A running step never f
 
 Before anything has been measured there is nothing to go on but the guesses: the band is then half to twice them, and the
 basis says so. A step is "end"ed (done) only once its checks have passed and its output is in place.
+
+Times may be HH:MM or HH:MM:SS; write seconds (`date +%H:%M:%S`, or a file's mtime). Spans between minute-only stamps
+are rounded both ways: a step can read as taking no time, and a steady pace as alternating 2 and 3 minutes, which pulls the
+band's fast end in. Such a span counts as at least half a minute.
 """
 import argparse, datetime, json, statistics, sys
 
 
 def minutes(s, now):
-    """HH:MM as minutes since midnight; more than 12 hours before now is tomorrow's"""
+    """HH:MM or HH:MM:SS as minutes since midnight; more than 12 hours before now is tomorrow's"""
     if not s: return None
-    h, m = map(int, s.split(':'))
-    v = h * 60 + m
+    f = s.split(':')
+    v = int(f[0]) * 60 + int(f[1]) + (float(f[2]) / 60 if len(f) > 2 else 0)
     return v + 1440 if v < now - 720 else v
+
+
+# A time written HH:MM is only known to the minute, so a span between two of them can read 0 when it took most of a minute,
+# and a 2.6-minute pace reads as 2 or 3. Such a span counts as at least half a minute; stamps with seconds have no floor.
+COARSE_FLOOR = 0.5
+
+
+def span(a, b, T):
+    """minutes from stamp a to stamp b"""
+    d = T(b) - T(a)
+    return max(d, COARSE_FLOOR) if a.count(':') < 2 or b.count(':') < 2 else d
 
 
 def hm(v):
@@ -47,13 +62,13 @@ def status(spec, now):
     # what has finished by `now` (a replay ignores what came after)
     done = {s['name'] for s in steps if s.get('end') and T(s['end']) <= now}
     started = lambda s: s.get('start') and T(s['start']) <= now
-    ratios = [(T(s['end']) - T(s['start'])) / s['guess'] for s in steps
+    ratios = [span(s['start'], s['end'], T) / s['guess'] for s in steps
               if s['name'] in done and s.get('start') and s.get('guess')]
     # equal parts of a running step, measured: each part's time since the one before (or the step's start)
     def part_times(s):
-        ends = sorted(T(t) for t in s.get('parts_done', []) if T(t) <= now)
-        prev, out = T(s['start']), []
-        for e in ends: out.append(e - prev); prev = e
+        ends = sorted((t for t in s.get('parts_done', []) if T(t) <= now), key=T)
+        prev, out = s['start'], []
+        for e in ends: out.append(span(prev, e, T)); prev = e
         return out
     measured_parts = sum(len(part_times(s)) for s in steps if started(s) and s['name'] not in done and s.get('parts'))
     if ratios:
@@ -110,10 +125,10 @@ def status(spec, now):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('steps')
-    ap.add_argument('--now', help='HH:MM: the status as it was then')
+    ap.add_argument('--now', help='HH:MM or HH:MM:SS: the status as it was then')
     a = ap.parse_args()
     clock = datetime.datetime.now()
-    now = clock.hour * 60 + clock.minute
+    now = clock.hour * 60 + clock.minute + clock.second / 60
     if a.now:
         now = minutes(a.now, now)
     print(json.dumps(status(json.load(open(a.steps)), now)))
