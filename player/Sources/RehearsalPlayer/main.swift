@@ -145,6 +145,16 @@ final class Player: ObservableObject {
     @Published var bypass = false
     /// the chyron's card of British and North American note names, for a London chorus with singers across the Atlantic
     @Published var notesCard = false
+    /// the chyron's announcement, off at each start: its first line a heading, the rest its lines. The words are remembered.
+    @Published var announcing = false
+    @Published var announcement = UserDefaults.standard.string(forKey: "announcement") ?? "" {
+        didSet { UserDefaults.standard.set(announcement, forKey: "announcement") }
+    }
+    /// what the chyron shows: nothing while it's off or empty
+    var announced: Any {
+        let t = announcement.trimmingCharacters(in: .whitespacesAndNewlines)
+        return announcing && !t.isEmpty ? t : NSNull()
+    }
     var folder: URL?
     let volumeRange = -40.0...6.0
     var pdf: PDFDocument?
@@ -700,6 +710,20 @@ struct FitColumn: Layout {
     }
 }
 
+/// the announcement's words, in a popover from the sidebar so the sidebar stays a checkbox high
+struct AnnouncementEditor: View {
+    @ObservedObject var p: Player
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("The first line is the heading; each line after it is a line of the announcement.")
+                .font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            TextEditor(text: $p.announcement).font(.body).frame(width: 320, height: 170)
+                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color(nsColor: .separatorColor)))
+            Toggle("Show it on the chyron", isOn: $p.announcing).toggleStyle(.checkbox)
+        }.padding(12).frame(width: 344)
+    }
+}
+
 /// the controls, down the left edge, so the score has the window's whole height
 struct Controls: View {
     @ObservedObject var p: Player
@@ -711,6 +735,8 @@ struct Controls: View {
     @FocusState var editingVol: Bool
     @FocusState var editingBar2: Bool
     @AppStorage("sidebarSettingsOpen") var settingsOpen = false
+    @AppStorage("sidebarChyronOpen") var chyronOpen = false
+    @State var editingAnnouncement = false
     @AppStorage("sidebarTagsOpen") var tagsOpen = false
     // back to the score's keys (space, arrows and so on) once a box has been used
     func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
@@ -799,18 +825,28 @@ struct Controls: View {
                     }
                 }
                 rule()
-                heading("Chyron")
-                Toggle("Note names 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
-                    .help("Shows the British and North American names for whole to 32nd notes on the chyron")
-                rule()
                 heading("Each voice file")
                 Picker("", selection: $p.isolated) {
                     Text("a single voice").tag(true)
                     Text("part-predominant").tag(false)
                 }.pickerStyle(.radioGroup).labelsHidden()
-                // set once and left alone, so folded away until opened; whether each is open is remembered.
-                // The voice-file switch is changed often enough, and the chyron's card wanted at a moment's notice, to stay out
+                // folded away until opened, being set once and left alone or not wanted in the midst of rehearsing; whether
+                // each is open is remembered. The voice-file switch is changed often enough to stay out.
                 rule()
+                DisclosureGroup(isExpanded: $chyronOpen) {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Toggle("Note names 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
+                            .help("Shows the British and North American names for whole to 32nd notes on the chyron")
+                        HStack(spacing: 4) {
+                            Toggle("Announcement", isOn: $p.announcing).toggleStyle(.checkbox)
+                                .help("Slides the announcement in on the chyron")
+                            Button { editingAnnouncement = true } label: { Image(systemName: "square.and.pencil") }
+                                .buttonStyle(.borderless).help("Write the announcement")
+                                .popover(isPresented: $editingAnnouncement, arrowEdge: .trailing) { AnnouncementEditor(p: p) }
+                        }
+                    }.padding(.top, 4)
+                } label: { Label("Chyron", systemImage: "tv").font(.caption).foregroundStyle(.secondary) }
+                .stretches()
                 DisclosureGroup(isExpanded: $settingsOpen) {
                     VStack(alignment: .leading, spacing: 6) {
                         heading("Output")

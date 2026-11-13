@@ -190,6 +190,23 @@
   @keyframes slam2 { 0% { transform: translateY(35%) scale(1.5); opacity: 0; filter: blur(1.5rem); } 55% { opacity: 1; filter: blur(0); } 100% { transform: none; opacity: 1; } }
   .flyer { position: fixed; z-index: 30; margin: 0; color: #fff; white-space: nowrap; transform-origin: 0 0; pointer-events: none; }
   .awaiting { opacity: 0 !important; }
+  /* ---- the announcement, in either style: on the right, under the picture's top edge, its heading in the accent and a strip
+     for each line. Like the note names card, each strip slides in from the right a moment after the one above (its --i)
+     and out again a little quicker. A long one shrinks (--ann) to stay clear of the bottom pieces. ---- */
+  #ann { --ann: 1; position: fixed; right: 3.2rem; top: 5.4rem; z-index: 9; display: grid; justify-items: stretch;
+         row-gap: .5rem; font-size: calc(var(--ann) * 1rem); pointer-events: none;
+         font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif; }
+  body.broadcast #ann { right: 9.6rem; font-family: "Avenir Next Condensed", "Arial Narrow", sans-serif; }
+  #ann .ar { background: rgba(12, 18, 30, .86); padding: .16em .6em .1em .5em; white-space: nowrap;
+             font-size: 5.6em; font-weight: 600; line-height: 1; transform: translateX(120vw);
+             transition: transform .6s var(--slide); transition-delay: calc(var(--i) * 40ms); }
+  #ann.in .ar { transform: none; transition-delay: calc(var(--i) * 70ms); }
+  #ann .ah { font-size: 3.2em; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent);
+             padding: .7em 1.2em .55em 1em; border-left: .3em solid var(--accent); }
+  body.broadcast #ann .ar:not(.ah) { font-family: "DIN Condensed", "Avenir Next Condensed", sans-serif; text-transform: uppercase;
+                                     padding-top: .24em; font-weight: 400; }
+  /* a blank line in the words: a gap, not a strip */
+  #ann .gap { height: 1.6em; background: none; }
 </style></head>
 <body>
 <div id="c" class="hidden">
@@ -224,6 +241,7 @@
   <tbody id="cardrows"></tbody>
 </table></div>
 
+<div id="ann" aria-hidden="true"></div>
 <div id="news" aria-hidden="true">
   <div class="slash s3"></div><div class="slash s2"></div><div class="slash s1"></div>
   <div class="band"><div class="inner">
@@ -497,6 +515,43 @@ function fly(big, target) {
   });
 }
 
+// ---- the announcement ----
+/** The announcement's strips, rebuilt only when its words change. Words changed while it's showing simply appear; when it's
+    taken off, the old strips slide out before anything else is put there. */
+let annText = null;
+function announce(s) {
+  const text = s && s.announcement, ann = $('ann');
+  if (!text) { ann.classList.remove('in'); return; }
+  if (text !== annText) {
+    annText = text;
+    const lines = text.split('\n').map(l => l.trim());
+    while (lines.length && !lines[lines.length - 1]) lines.pop();
+    ann.textContent = '';
+    lines.forEach((l, i) => {
+      const d = document.createElement('div');
+      d.className = 'ar' + (i === 0 ? ' ah' : '') + (l ? '' : ' gap');
+      d.style.setProperty('--i', i);
+      d.textContent = l;
+      ann.appendChild(d);
+    });
+    fitAnn();
+  }
+  ann.offsetWidth;
+  ann.classList.add('in');
+}
+/** small enough to stay clear of the bottom pieces and the title, and to fit across the picture */
+function fitAnn() {
+  const ann = $('ann');
+  ann.style.setProperty('--ann', 1);
+  const em = parseFloat(getComputedStyle(document.documentElement).fontSize);
+  const h = ann.offsetHeight, w = ann.offsetWidth;
+  const roomH = innerHeight * 0.6, roomW = innerWidth * 0.6;
+  const k = Math.min(1, roomH / h, roomW / w);
+  if (k < 1) ann.style.setProperty('--ann', k.toFixed(3));
+}
+addEventListener('resize', () => { if (annText) fitAnn(); });
+document.fonts && document.fonts.ready.then(() => { if (annText) fitAnn(); });
+
 const render = broadcast ? tv : plain;
 // how far ahead of the playhead to show, in ms, for the time OBS takes to put the page in the picture
 const LEAD = parseFloat(q.get('lead')) >= 0 ? parseFloat(q.get('lead')) : 100;
@@ -505,8 +560,8 @@ async function poll() {
   try {
     const r = await fetch('/state?lead=' + LEAD, { cache: 'no-store' });
     const t = await r.text();
-    if (t !== last) { last = t; const s = JSON.parse(t); breaking(s); render(s); card(s); }
-  } catch (e) { last = ''; render(null); card(null); }
+    if (t !== last) { last = t; const s = JSON.parse(t); breaking(s); render(s); card(s); announce(s); }
+  } catch (e) { last = ''; render(null); card(null); announce(null); }
   setTimeout(poll, 100);
 }
 poll();

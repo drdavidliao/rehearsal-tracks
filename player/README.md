@@ -189,7 +189,12 @@ the picture, NEXT SONG slams in over a band, the title slams down with
 a jolt, and after about 4 seconds the title flies into its place and the band shuts. A page
 opened mid-song, or the same song coming back after the player was closed, makes no news. `&breaking=0` turns it off.
 
-Chyron ▸ Note names in the sidebar slides in a card of the British and North American names for whole to 32nd notes
+Chyron ▸ Announcement, in the folded Chyron group at the foot of the sidebar, slides in an announcement at the top
+right, a strip for each line under its heading in the accent; the pencil beside it opens the words to write. The first line
+is the heading, a blank line leaves a gap, and a long one shrinks to fit. It's off each time the player starts; the words
+are remembered.
+
+Chyron ▸ Note names, in the same group, slides in a card of the British and North American names for whole to 32nd notes
 (semibreve to demisemiquaver), each with its note drawn, for a London chorus with singers in North America.
 
 There are two looks:
@@ -217,7 +222,7 @@ a second. `&lead=150` for more, `&lead=0` for none.
 the player (`&bg=556` gives it a background outside OBS).
 
 http://localhost:8766/state is the same as JSON, with the bar, beat, section, tempo, loop ends, the sections checked and
-whether the card is on; `/state?at=SECONDS` describes another moment of the song, `&lead=MS` the playhead that far ahead, and `started` changes with each run of
+whether the card is on, and the announcement while it's showing; `/state?at=SECONDS` describes another moment of the song, `&lead=MS` the playhead that far ahead, and `started` changes with each run of
 the player. Only this Mac can reach it. Another port: `defaults write local.rehearsal.player chyronPort -int 8770`, or
 `-chyronPort 8770` after the app's path for one run; the loader then takes `port=8770` among its options.
 

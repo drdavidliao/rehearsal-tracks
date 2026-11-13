@@ -60,7 +60,7 @@ extension Player {
     }
 
     func chyronState(at: Double? = nil, lead: Double = 0) -> [String: Any] {
-        guard let m = map, error == nil else { return ["song": NSNull(), "started": playerStarted, "notes_card": notesCard] }
+        guard let m = map, error == nil else { return ["song": NSNull(), "started": playerStarted, "notes_card": notesCard, "announcement": announced] }
         let t = ahead(at ?? engine_position(), lead: lead, at: at != nil)
         let i = bar(at: t) ?? 0
         let b = m.bars[i]
@@ -76,7 +76,7 @@ extension Player {
         let modeName: String
         switch mode { case .balanced: modeName = "balanced"; case .only: modeName = "only"; case .other: modeName = "other" }
         return [
-            "song": songName, "started": playerStarted, "notes_card": notesCard,
+            "song": songName, "started": playerStarted, "notes_card": notesCard, "announcement": announced,
             "playing": engine_is_playing() != 0,
             "location": spoken(i),
             "part": partLabel,
