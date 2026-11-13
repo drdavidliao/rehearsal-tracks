@@ -1689,6 +1689,47 @@ Everything in this step was worked out on the solo-and-TTBB piece
 (TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
 observations from that session, not documented behaviour.
 
+### 9.0 Separate a recording into stems: the usual settings
+
+"The usual settings" for splitting an mp3 (a part-predominant track, an All Parts mix) into voices and accompaniment
+are Ultimate Vocal Remover's model MDX23C-InstVoc HQ, run from the command line through `audio-separator`, without
+opening the UVR app. It is installed in `~/Models/uvr` (a venv with `audio-separator` 0.48.0, and the model in
+`~/Models/uvr/models`):
+
+```
+~/Models/uvr/venv/bin/audio-separator "IN.mp3" -m MDX23C-8KFFT-InstVoc_HQ.ckpt --model_file_dir ~/Models/uvr/models \
+  --output_dir "SONG FOLDER" --output_format WAV --single_stem Vocals --mdxc_segment_size 256 \
+  --mdxc_override_model_segment_size --mdxc_overlap 8 --normalization 1.0 --log_level info
+```
+
+`--single_stem Vocals` for the voices, `--single_stem Instrumental` for the accompaniment. It writes
+`IN_(Vocals)_MDX23C-8KFFT-InstVoc_HQ.wav` (or `_(Instrumental)_`) at the input's rate, 16-bit, and runs on the GPU:
+a 3 min 44 s mp3 took 2 min 14 s. These match the UVR app's own saved settings (its `data.pkl`, last saved
+2026-11-06): MDX-Net, MDX23C-InstVoc HQ, segment size 256, overlap 8, GPU on, normalization off. The app writes
+24-bit WAV, with no model name in the file names when that option is off.
+
+**A new instrumental for a song that has a player map.** The map's times come from the old instrumental, so the new
+one is put on the old one's timeline rather than the map being remade. Done for a publisher's replacement All Parts
+mp3 (2026-11-12):
+
+- **Don't trust a whole-track cross-correlation.** The two are different renders: on the waveform the peak is weak
+  (correlation about 0.2), and on the onset envelope it lands a beat or more off (one window gave 7.4 s). Take a rough
+  shift from where the sound starts, then pair the strongest attacks (librosa onsets, the strongest 40%) with the
+  nearest within 150 ms of it, and look at the median per section. That one held at 0.612 s ahead, to about 10 ms,
+  from bar 1 to the final rit; the rit itself showed as both tracks swelling to the last chord together.
+- **Match the level.** The separated stem is normalized, so it came out 10.8 dB louder than the old instrumental
+  (the median over 8-bar sections), and the voices' stems are balanced against the old one. Take it down by that.
+- **Same length.** Pad the front by the shift in samples and pad or cut the end to the old file's sample count:
+
+```
+ffmpeg -i NEW.wav -af "adelay=26989S:all=1,volume=-10.81dB,apad=whole_len=OLD_SAMPLES,atrim=end_sample=OLD_SAMPLES" \
+  -c:a pcm_s24le "NEW aligned.wav"
+```
+
+Then pair attacks again against the old file (the median was 3 ms) before changing the map's `stems.I`, and keep a
+copy of the old map in `_build/`. A new backing can differ in places (there, beat-by-beat hits in two bars where the
+old one and the score's piano are silent): say where in the handback.
+
 ### 9.1 Export one stem per staff
 
 **Wait until Cantai has rendered everything, then export.** Cantai renders in
