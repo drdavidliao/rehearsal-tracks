@@ -64,6 +64,15 @@ def read_xml(path):
     return bars, attacks
 
 
+def rising(px, py, gap=1.0):
+    """A bar's onset positions, or only its ends (beat 1 and the barline) when they don't rise left to right. A crowded
+    piano bar can be misread with notes at the wrong onsets, and then no subset of its positions can be trusted (in one,
+    beats 2-4 read 194, 184, 180 for a page's 180, 195, 208): spaced evenly across the bar, the cursor is a few points
+    out at worst, instead of sliding back across the bar or holding two beats at one place."""
+    if all(b - a >= gap for a, b in zip(py, py[1:])): return px, py
+    return [px[0], px[-1]], [py[0], py[-1]]
+
+
 # the letters older commands used for an SATB score's stems
 LETTERS = {'S': ['Soprano'], 'A': ['Alto', 'Alto 1'], 'A2': ['Alto 2'], 'T': ['Tenor'], 'B': ['Bass']}
 
@@ -596,6 +605,7 @@ def main():
                        (b['xa'] + 8 if not b['first_in_system'] else (known[qs[0]] if qs else b['xa'] + 40)))
         px = [F(0)] + [q for q in qs if q > 0] + [x['quarters']]
         py = [x0] + [known[q] for q in qs if q > 0] + [b['xb']]
+        px, py = rising(px, py)
         beatx = [float(np.interp(float(i * bl), [float(p) for p in px], py)) for i in range(nb)]
         if a.staff: systems[(b['page'], b['sys'])] = vs.systems[(b['page'], b['sys'])]
         else:

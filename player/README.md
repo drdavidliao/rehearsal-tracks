@@ -50,7 +50,7 @@ staff share:
 over. Where systems with the same number of staves differ, `--names "Solo=S" "T=TT" "B=BB"` labels each staff by the name printed
 at its left, first match winning. The reader finds staves and barlines from the lines, and noteheads from the music font or, with
 none, from filled shapes of a notehead's size; it matches them to the MusicXML's notes bar by bar, and at each onset a part
-takes the head nearest its pitch. It prints any bar where the heads and the onsets don't match. A bar's number is the MusicXML's,
+takes the head nearest its pitch. It prints any bar where the heads and the onsets don't match. A bar's beats are placed at the heads and rests found at each onset; where those don't rise left to right (a crowded piano bar misread, notes at the wrong onsets), the beats are spaced evenly from beat 1 to the barline instead, so the cursor never slides back or stalls. A bar's number is the MusicXML's,
 so a pickup is bar 0.
 
 A song whose only print is a scan can show an engraving instead: `../xml2ly.py` writes a LilyPond file from the MusicXML, with the
@@ -75,7 +75,7 @@ octave): over 0.9 is right, far less is not. For such a song, make the map once,
 `--warp --warp-beat --guide GUIDE.txt` keeps the attack fit within 0.35 s of it (`--from BAR` limits the guide to where it's
 needed). The guide follows the bars as sung and writes a bar's later passes with a `'`, which `make_map.py` leaves out. It
 finds each stem's part by the stem's key or, where the key isn't a part's name (`T1`), by the map's voice name, and gives no
-times before the first sung note. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
+times before the first sung note. So check the bars before the voices come in yourself: compare the accompaniment's attacks and pitches with the score's piano there and `--pin` them. On two of nine separated sets the fit had the intro a beat out. Some sets, not all, open with the parts' starting notes given one at a time, or click pulses, before the music (10–13 s on three of these nine): leave them before bar 1, timed at its tempo, rather than stretching bar 1 over them. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
 (1.000 s in several of Matthew Curtis's sets, 0.000 s in others): measure it by cross-correlating the accompaniment with a
 Predominant mix before using it as `I`. The voice stems keep their mix's stereo: in some of his sets the part is on the left
 channel and every other voice on the right, in others each part sits at its seat (tenors left, basses right).
