@@ -50,13 +50,13 @@ song's parts, top to bottom:
 
 - A soloist is centred at 0 dB.
 - The other parts are sections, spread evenly from -45 (the highest) to +45 on Logic's knob (-64 to +63). The outer two are at
-  0 dB and any between them at -3 dB.
+  0 dB and any between them at -3 dB, except that four sections are at -0.5, -2.5, -2.5, -0.5 dB.
 - A section split in two (Tenor 2a and 2b, Bass a and b, Alto 1 and 2, Soprano 1 and 2) sits 5 either side of where the section would.
   Tenor 1 and Tenor 2, or Baritone and Bass, are sections of their own.
 
 | | Soprano | Alto | Tenor | Bass |
 |---|---|---|---|---|
-| Trim | 0 dB | -3 dB | -3 dB | 0 dB |
+| Trim | -0.5 dB | -2.5 dB | -2.5 dB | -0.5 dB |
 | Pan | -45 | -15 | +15 | +45 |
 
 With Alto 1 and Alto 2 they pan at -20 and -10; three sections pan at -45, 0 and +45; two at -45 and +45.

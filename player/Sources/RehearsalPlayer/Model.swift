@@ -59,14 +59,16 @@ struct Voice {
     }
 
     /// The pans and trims. Sections other than soloists spread evenly from -45 (the highest) to +45, the outer two at 0 dB and
-    /// any between at -3 dB; a section's halves sit 5 either side of its place. Soloists are centred at 0 dB.
+    /// any between at -3 dB, except that four sections are at -0.5, -2.5, -2.5, -0.5; a section's halves sit 5 either side of
+    /// its place. Soloists are centred at 0 dB.
     static func mix(_ vs: inout [Voice]) {
         var sections: [String] = []
         for v in vs where !v.solo && !sections.contains(v.section) { sections.append(v.section) }
         let n = sections.count
         for (k, sec) in sections.enumerated() {
             let pan: Float = n == 1 ? 0 : -45 + 90 * Float(k) / Float(n - 1)
-            let trim: Float = k == 0 || k == n - 1 ? 0 : -3
+            let outer = k == 0 || k == n - 1
+            let trim: Float = n == 4 ? (outer ? -0.5 : -2.5) : (outer ? 0 : -3)
             let members = vs.indices.filter { !vs[$0].solo && vs[$0].section == sec }
             for (j, i) in members.enumerated() {
                 vs[i].pan = pan + (members.count == 1 ? 0 : -5 + 10 * Float(j) / Float(members.count - 1))

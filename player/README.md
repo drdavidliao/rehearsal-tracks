@@ -127,7 +127,8 @@ signatures, slurs and words are cool. The colors are at the top of that file. Fo
 In `Sources/CEngine/engine.cpp`, with each voice's pan and trim worked out in `Sources/RehearsalPlayer/Model.swift`.
 
 - Sections, top to bottom, pan evenly from -45 to +45 on Logic's knob scale (-64 to +63). The outer two are at 0 dB and any between
-  at -3 dB. SATB is S -45, A -15, T +15, B +45 with trims 0, -3, -3, 0; three sections pan -45, 0, +45; two, -45 and +45.
+  at -3 dB, except four sections, which are at -0.5, -2.5, -2.5, -0.5 dB. SATB is S -45, A -15, T +15, B +45 with trims -0.5,
+  -2.5, -2.5, -0.5; three sections pan -45, 0, +45 at 0, -3, 0 dB; two, -45 and +45 at 0 dB.
 - A section split in two sits 5 either side of the section's place, with its trim: Alto 1 and Alto 2 in SATB at -20 and -10, or
   Tenor 2a and 2b in a TTBB at -20 and -10. The names decide: a trailing a or b (Tenor 2a, Bass b), or Soprano or Alto 1 and 2. Tenor 1 and
   Tenor 2, and Baritone and Bass, are sections of their own. A map can say `"section"` for a voice where the names don't show it.

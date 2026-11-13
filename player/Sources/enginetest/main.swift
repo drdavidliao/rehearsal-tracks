@@ -1,7 +1,7 @@
 // Offline checks of the player's engine: writes raw float stereo of the mix so the numbers can be measured.
 //   enginetest <cache dir> <out dir> <speed> <instrumental stem, or - for none> <voice stem>...
 // PANS and TRIMS in the environment, comma-separated, one per voice: the app's pans and trims for the song. Without them four
-// voices take SATB's (-45 -15 15 45; 0 -3 -3 0), and any other number is centred at 0 dB.
+// voices take SATB's (-45 -15 15 45; -0.5 -2.5 -2.5 -0.5), and any other number is centred at 0 dB.
 // FIXES in the environment, space-separated: stem:start:end:semitones, or m for the semitones to mute.
 import CEngine
 import Foundation
@@ -17,7 +17,7 @@ guard engine_load(&ptrs, Int32(nv), a[1]) != 0 else { print("load failed"); exit
 let env = ProcessInfo.processInfo.environment
 func list(_ k: String) -> [Float]? { env[k].map { $0.split(separator: ",").map { Float($0)! } } }
 var pans = list("PANS") ?? (nv == 4 ? [-45, -15, 15, 45] : Array(repeating: 0, count: nv))
-var trims = list("TRIMS") ?? (nv == 4 ? [0, -3, -3, 0] : Array(repeating: 0, count: nv))
+var trims = list("TRIMS") ?? (nv == 4 ? [-0.5, -2.5, -2.5, -0.5] : Array(repeating: 0, count: nv))
 engine_set_voice_mix(&pans, &trims)
 let all = Int32((1 << nv) - 1)
 print("rate", engine_sample_rate(), "duration", engine_duration(), "voices", engine_voice_count())
