@@ -49,7 +49,11 @@ Transcribe the voice staves only: the accompaniment track is the map's `I` stem,
    `--swing 0.62`, 0.98 without). `--out FILE` writes a trial map beside the one in use, for `check FILE`.
    The typed voices have no rehearsal marks, so then run `player/find_boxes.py FOLDER`, look at its contact sheet (each
    boxed mark it found, cropped beside the bar it gave it) and the pages for any it missed, and `--write`. It has to be run
-   again after every rebuild of the map.
+   again after every rebuild of the map. Then `player/first_beat.py FOLDER`: in bars with no voice on beat 1 (piano
+   bars, late entries) the map puts beat 1 a guessed number of spaces after the bar's start, which can land past the
+   first chord (We Are Lights bar 1 and 4). It finds the first filled head instead and draws old and new beats on each
+   bar; it also mistakes time-signature digits, key-signature flats and clefs for heads, so write only the bars the
+   picture shows right with `--write --bars N N ...`. Also rerun after a rebuild.
 7. **Balance** the accompaniment (step 5). **Leave** `Human-sung stems/How player map.json was made.txt` (what was used,
    any pins, the pitch-check figure), and
    keep the Cantai map, if any, as `player map (Cantai).json`.
