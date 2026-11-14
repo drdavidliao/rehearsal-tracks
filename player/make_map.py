@@ -462,8 +462,18 @@ def main():
     ap.add_argument('--anchor', nargs='+', default=[], help='"bar.beat=seconds": measured times; from the first of them on, the times follow these')
     ap.add_argument('--trim', nargs='+', default=[], help='"Part=dB": a stem louder or softer than the others were made, as the mixes trim it')
     ap.add_argument('--names', nargs='+', help='"pattern=label": a staff whose printed name matches takes the label, first match winning')
+    ap.add_argument('--incomplete-ok', metavar='USER_WROTE',
+                    help="the user's own words allowing a map from a MusicXML that has not passed completeness_check.py")
     a = ap.parse_args()
     at = lambda f: os.path.join(a.folder, f)
+    # SKILL.md, "A transcription is the whole page": nothing is built from a transcription that has not passed the check
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import completeness_check
+    if not completeness_check.stamped(at(a.xml)):
+        if not a.incomplete_ok:
+            sys.exit(f'{a.xml}: no passing completeness_check.py stamp for this file as it is now. Run the check '
+                     '(SKILL.md, "A transcription is the whole page"), or pass --incomplete-ok with the user\'s words.')
+        print(f'map from an unchecked MusicXML; the user wrote: "{a.incomplete_ok}"')
     stems = dict(s.split('=', 1) for s in a.stems)
 
     xbars, attacks = read_xml(at(a.xml))

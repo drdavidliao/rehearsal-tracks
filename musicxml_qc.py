@@ -17,7 +17,7 @@ def load(path):
     return ET.parse(path).getroot()
 
 # A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
-OK_CHARS=re.compile(r"^[\"'’‘“]?[A-Za-z][A-Za-z'’‘\-\.,!?;:\"”…]*$")   # curly quotes and an ellipsis are punctuation too
+OK_CHARS=re.compile(r"^\(?[\"'’‘“]?[A-Za-z][A-Za-z'’‘\-\.,!?;:\"”…]*\)?[.,!?;:]?$")   # curly quotes and an ellipsis are punctuation too; a verse printed in parentheses
 
 def syllable_onsets(part):
     """Where each syllable of one part starts (quarters from the start), and whether any staff of
@@ -70,13 +70,14 @@ def qc(path):
             pos=F(0); mx=F(0)
             for e in m:
                 if e.tag=='note':
-                    if e.find('chord') is None: pos+=F(int(e.find('duration').text),div)
+                    if e.find('chord') is None and e.find('duration') is not None: pos+=F(int(e.find('duration').text),div)
                 elif e.tag=='backup': pos-=F(int(e.find('duration').text),div)
                 elif e.tag=='forward': pos+=F(int(e.find('duration').text),div)
                 mx=max(mx,pos)
             if ts:
                 exp=F(ts[0]*4,ts[1])
-                if mx and mx!=exp:
+                # a pickup (or any bar marked implicit, as a printed short bar is) may be short; never overfull
+                if mx and mx!=exp and not (m.get('implicit')=='yes' and mx<exp):
                     kind='SHORT' if mx<exp else 'OVERFULL'
                     issues['bar length'].append(f"{pid} m{num}: {mx} beats in a {ts[0]}/{ts[1]} bar ({kind})")
             # --- lyrics + octave continuity ---

@@ -262,6 +262,62 @@ the diff for the titles of the pieces worked on in the session.
 The only thing fetched from the network is the MusicXML schema, at verification
 time (Step 5).
 
+## Design before you build
+
+Before writing a script or running a process that produces something (a transcription, a stem, a player map), write
+down what the output is, piece by piece, and for each piece what evidence fixes it. Wherever no evidence fixes a piece,
+say what will check it instead. List every way a piece can come out wrong, derived from that account rather than
+remembered from past faults. Each failure gets a check that runs on every build and covers everything the user sees,
+not only what is easy to score. Name the assumptions that only data can settle, with the test for each. Agree the design
+with the user before running anything.
+
+When a fault turns up anyway, find which step of the design missed it. Fix that step, turn the lesson into a check, and
+run it over every output already made before calling the fix done. A fault the user finds is a gap in the design, not
+just a bad item; a fix that names one bar or one song has fixed the item and left the design as it was. A sentence of
+advice in a README fails the same way when it could have been a check. So every correction from the user becomes three
+things: a rule here, an automatic check wherever one is possible, and a sweep of every existing output.
+
+Say what a claim was read from. "The MusicXML has no piano part" is what a part list shows; "the song has no piano" needs
+the score read.
+
+Example: the player maps were checked by `pitch_guide.py check`, which scores sung notes only. The beats that fit is
+least sure of are the ones no voice sings, so the check couldn't see them. Fixing one song's intro, then its middle
+section, one at a time, left the same fault in 26 of 30 maps until `player/unvoiced_check.py` looked at all of them.
+
+## A transcription is the whole page
+
+Transcribe every staff of every system, piano included, and everything printed on them: notes, rests, ties, slurs,
+dynamics, hairpins, articulations, fermatas, tempo and expression words, staff text, boxed rehearsal marks, repeat and
+ending marks, chord symbols, and lyrics. Never transcribe only the voices, or only the staves the job at hand seems to
+need. The only exception is one the user writes explicitly for that piece. A voice-only transcription left the player
+maps' voiceless bars with no written accompaniment to time them against: the piano that fixes those bars was printed
+in the scan and missing from the file.
+
+Where the print itself leaves a syllable out (a hyphen under a note with no syllable, while every other part sings the
+word whole), keep the sung syllable and list the place in the handback: the user's decision, 2026-11-14.
+
+**How a whole-page transcription is built and checked** (seven scanned octavos, 2026-11-14):
+
+1. Type the whole score in one `chorale.fullscore` file (its docstring is the format: notes as score text, then
+   `@part`, `@dir`, credits, `@credit-page`). Build it with `python3 -m chorale.fullscore` and nothing else. When the
+   page prints something the builder cannot write, extend the builder in the repo and rebuild; never patch the
+   MusicXML afterwards in a song's folder, and never stand in invented text for a mark ("three tremolo strokes" written
+   as words is wrong twice: the words are not printed and the strokes are missing).
+2. Proofread every staff with scanproof (1.2), the piano included, reading pitches from `scanproof zoom` against the
+   named guides: the automatic head reader is a donor at most (it read A5 for E6 in one bar of sixteenths).
+3. Write `completeness.json` (every printed staff, every system's staves and bars) and run `completeness_check.py`.
+   For a scan, the marks check needs `marks.tsv`, typed by a second reader who never sees the transcription. Its
+   disagreements are settled on the page, one crop each: on the first seven songs it found missed tenutos, accents on
+   the wrong staff, an extra dynamic, lost chord suffixes and marks a bar early, and was itself wrong as often.
+   A finding goes into `reviewed.tsv` only with what the page shows; a checker or builder limit is fixed in the
+   repo, not noted away.
+4. Anything printed that the file still lacks goes into `completeness.json`'s `known_missing`, which fails the check
+   until it is empty. A stamp means complete, not "complete except".
+
+`completeness_check.py` compares a MusicXML with its score (Step 5) and runs on every transcription; nothing built from a
+transcription (a player map, parts, a lyric sheet, a video) is made from one that has not passed it. A map with no
+rehearsal marks while its score prints them is a transcription error, fixed in the transcription.
+
 ## Step 0 — Triage. This decides everything.
 
 Do not start converting until you know which kind of PDF you have.
@@ -318,7 +374,7 @@ worth keeping only for the **piano**, and even that needed twenty hand repairs.
 The vocal staves were faster to transcribe from scratch against image crops than
 to audit: the OMR had dropped a chord tone here, read G3 for B3 there, A4 for
 G4, C♮ for C♯ — and nothing in the file tells you which readings it got right.
-Budget the job as *transcribe the voices, repair the piano*.
+Budget the job as *transcribe the voices, repair the piano*; the piano is never left out (see "A transcription is the whole page").
 
 Hand-transcription wants a compact text source you can read and diff, not XML.
 A one-token-per-note line format (`B3q=hap- B3s=-py F#3e. E3q=day`, `R`
@@ -1119,6 +1175,10 @@ the end of the note validates nowhere. Write a normaliser that reorders children
 to the canonical sequence and run it as the last step of every build.
 
 ## Step 5 — Verify. All of it, every build.
+
+One check comes before the list below. `completeness_check.py` compares the file with the page: every staff printed
+is a part, every word printed is in the file, every mark is where the page has it (SKILL.md, "A transcription is the
+whole page"). The player's map scripts refuse a file without its passing stamp.
 
 Run the script, on the **print-faithful** file (the Cantai file departs from
 the page by design, and fails check 10 because of it):

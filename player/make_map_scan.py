@@ -59,8 +59,18 @@ def main():
     ap.add_argument('--warp-beat', action='store_true'); ap.add_argument('--guide'); ap.add_argument('--pin', nargs='+', default=[])
     ap.add_argument('--offset', type=float, default=0.0, help='with --warp: roughly where bar 1 starts in the stems')
     ap.add_argument('--out', default='player map.json', help='the map to write, in the song folder')
+    ap.add_argument('--incomplete-ok', metavar='USER_WROTE',
+                    help="the user's own words allowing a map from a MusicXML that has not passed completeness_check.py")
     a = ap.parse_args()
     at = lambda f: os.path.join(a.folder, f)
+    # SKILL.md, "A transcription is the whole page": nothing is built from a transcription that has not passed the check
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    import completeness_check
+    if not completeness_check.stamped(at(a.xml)):
+        if not a.incomplete_ok:
+            sys.exit(f'{a.xml}: no passing completeness_check.py stamp for this file as it is now. Run the check '
+                     '(SKILL.md, "A transcription is the whole page"), or pass --incomplete-ok with the user\'s words.')
+        print(f'map from an unchecked MusicXML; the user wrote: "{a.incomplete_ok}"')
     stems = dict(s.split('=', 1) for s in a.stems)
     stem_of = dict(s.split('=', 1) for s in a.part_stems)
     staves_of = {k: v.split(',') for k, v in (s.split('=', 1) for s in a.staff)}

@@ -141,7 +141,7 @@ def zoom(prj, bar, name, path, x0=None, x1=None, scale=3, steps=(-7, 15)):
         line = s % 2 == 0
         col = (0, 90, 220, 120) if line else (220, 120, 0, 90)
         d.line([(margin + i * 30, yy) for i, yy in enumerate(ys)], fill=col, width=1)
-        label = prj.step_name(s, name)
+        label = prj.step_name(s, name, bar)
         tc = (0, 60, 180) if line else (180, 90, 0)
         d.text((4, ys[0] - 11), label, fill=tc, font=font)
         d.text((margin + big.width + 4, ys[-1] - 11), label, fill=tc, font=font)

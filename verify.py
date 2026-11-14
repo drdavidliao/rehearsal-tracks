@@ -206,6 +206,15 @@ def check_ties(root, names):
         def ties_of(ns, kind):
             return {pitch_midi(x.find('pitch')) for x in ns if x.find('pitch') is not None
                     and kind in {t.get('type') for t in x.findall('tie')}}
+        # endings: a tie into a 2nd (3rd ...) ending comes from the bar before the 1st ending, not from the bar
+        # printed just before it
+        order = [m.get('number') for m in part.findall('measure')]
+        ending_at = {}
+        for m in part.findall('measure'):
+            for e in m.iter('ending'):
+                if e.get('type') == 'start': ending_at[m.get('number')] = e.get('number')
+        firsts = [mn_ for mn_, no in ending_at.items() if no.split(',')[0].strip() == '1']
+        before_first = order[order.index(firsts[0]) - 1] if firsts and order.index(firsts[0]) > 0 else None
         for v, seq in byv.items():
             for i, (mn, ns) in enumerate(seq):
                 for p in ties_of(ns, 'start'):
@@ -214,6 +223,10 @@ def check_ties(root, names):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie start with no matching stop")
                 for p in ties_of(ns, 'stop'):
                     prv = seq[i - 1][1] if i else []
+                    first_in_bar = not i or seq[i - 1][0] != mn
+                    if first_in_bar and ending_at.get(mn, '1').split(',')[0].strip() != '1' and before_first:
+                        from_ = [x for (mm, x) in seq if mm == before_first]
+                        if from_ and p in ties_of(from_[-1], 'start'): continue
                     if p not in ties_of(prv, 'start'):
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie stop with no start")
         # slurs: each start closed by the next stop of the same number, in the same voice. On a shared
@@ -345,7 +358,12 @@ def check_extend_runs(root, names, original=None):
                     e = l.find('extend')
                     if e is None or e.get('type') == 'stop': continue
                     nxt = seq[i + 1][1] if i + 1 < len(seq) else None
-                    if nxt is None or nxt.find('rest') is not None or nxt.find('lyric') is not None:
+                    num = l.get('number') or '1'
+                    # the next note ends the line if it sings a syllable on this line; a lyric with no text (only
+                    # <extend type="stop"/>, where a line's extender ends) is not a syllable
+                    own = nxt is not None and any((l2.get('number') or '1') == num and l2.findtext('text')
+                                                  for l2 in nxt.findall('lyric'))
+                    if nxt is None or nxt.find('rest') is not None or own:
                         bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} extends over no note")
                     if (l.findtext('syllabic') or 'single') in ('begin', 'middle'):
                         # mid-word: a line over a melisma of moving notes, a hyphen over a tie-only hold (2.5)

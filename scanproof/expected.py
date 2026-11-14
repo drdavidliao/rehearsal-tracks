@@ -165,7 +165,6 @@ def events(prj):
     out = {}
     for st in prj.staves:
         name = st['name']
-        bottom = prj.bottom(name)
         for m in bars:
             raw = []
             for s in st.get('source', [name]):
@@ -181,7 +180,7 @@ def events(prj):
                     k = (p['step'], p['oct'])
                     cur = state.get(k, key.get(p['step'], 0))
                     state[k] = p['alter']
-                    hs.append({'step': STEPS.index(p['step']) + 7 * p['oct'] - bottom,
+                    hs.append({'step': STEPS.index(p['step']) + 7 * p['oct'] - prj.bottom(name, m, e['onset']),
                                'alter': p['alter'], 'state_alter': cur,
                                'acc_needed': p['alter'] != cur and not p.get('tie_stop'),
                                'tie_stop': bool(p.get('tie_stop')),

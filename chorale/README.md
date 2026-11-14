@@ -31,6 +31,7 @@ than in a rehearsal.
 | `lyriccheck` | syllables that would print on top of each other |
 | `bench` | build a revoicing bench page from any score |
 | `instructions` | the Revoicing Bench's exported spans, resolved against real notes |
+| `fullscore` | a whole score from one text file: every staff (a piano on two), lyrics on two lines, chord symbols as printed, every direction, per-page credits, pickups; `python3 -m chorale.fullscore score.txt out.musicxml` |
 
 ## Three ways two voices share a staff
 

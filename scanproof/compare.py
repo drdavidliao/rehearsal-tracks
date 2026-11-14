@@ -123,7 +123,7 @@ def check(prj, bars=None):
                 if ei is None:
                     c = cols[ci]
                     findings.append({**where, 'type': 'extra printed column',
-                                     'x': round(c[0]['x']), 'printed': [prj.step_name(h['step'], name) for h in c],
+                                     'x': round(c[0]['x']), 'printed': [prj.step_name(h['step'], name, m) for h in c],
                                      'kind': c[0]['kind']})
                     continue
                 ev = evs[ei]
@@ -137,7 +137,7 @@ def check(prj, bars=None):
                 a = sorted(h['step'] for h in c)
                 if a != [h['step'] for h in ev['heads']]:
                     findings.append({**where, 'type': 'pitch set differs',
-                                     'printed': [prj.step_name(s, name) for s in a],
+                                     'printed': [prj.step_name(s, name, m) for s in a],
                                      'expected': [h['name'] for h in ev['heads']]})
                 if c[0]['kind'] != ev['kind']:
                     findings.append({**where, 'type': 'notehead kind differs',

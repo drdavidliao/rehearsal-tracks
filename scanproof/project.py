@@ -23,7 +23,8 @@ The config is JSON; paths in it are relative to the config file.
 
 `source` names score-text blocks, or for MusicXML {"part": id-or-name, "staff": n}
 entries; several sources on one staff are merged (two parts sharing a staff).
-Clefs: G, G8 (treble 8vb), F, C3 (alto), C4 (tenor).
+Clefs: G, G8 (treble 8vb), F, C3 (alto), C4 (tenor). A staff that changes clef lists the changes:
+"clef_changes": [[2, 2.0, "F"], [9, 0, "G"]] is bass from bar 2 beat 3 and treble again from bar 9.
 """
 import glob
 import json
@@ -114,9 +115,17 @@ class Project:
     def staff_cfg(self, name):
         return self.staves[self.names.index(name)]
 
-    def bottom(self, name):
-        return CLEF_BOTTOM[self.staff_cfg(name).get('clef', 'G')]
+    def bottom(self, name, bar=None, onset=None):
+        """the clef's bottom line on this staff at a bar and onset (quarters into the bar): the staff's "clef", or the
+        last of its "clef_changes" [[bar, onset, clef], ...] at or before that point (a piano's left hand moving between
+        bass and treble). Without a bar, the staff's starting clef."""
+        cfg = self.staff_cfg(name)
+        clef = cfg.get('clef', 'G')
+        if bar is not None:
+            for b, on, c in sorted(cfg.get('clef_changes', []), key=lambda t: (t[0], float(t[1]))):
+                if (b, float(on)) <= (bar, float(onset or 0)): clef = c
+        return CLEF_BOTTOM[clef]
 
-    def step_name(self, step, name):
-        i = step + self.bottom(name)
+    def step_name(self, step, name, bar=None, onset=None):
+        i = step + self.bottom(name, bar, onset)
         return f'{STEPS[i % 7]}{i // 7}'
