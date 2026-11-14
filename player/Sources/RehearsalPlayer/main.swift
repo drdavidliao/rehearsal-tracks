@@ -512,7 +512,7 @@ final class ScoreCanvas: NSView {
         guard let m = player?.map, let doc = pdf.document, let page = pdf.page(for: pt, nearest: true) else { return nil }
         let idx = doc.index(for: page)
         let q = pdf.convert(pt, to: page)
-        let y = m.page_height - q.y
+        let y = pageTop(page) - q.y
         var best: (Double, Note)?
         for n in m.notes ?? [] {
             for h in n.heads where h.page == idx {
@@ -528,7 +528,7 @@ final class ScoreCanvas: NSView {
         guard let m = player?.map, let doc = pdf.document, let page = pdf.page(for: pt, nearest: true) else { return nil }
         let idx = doc.index(for: page)
         let q = pdf.convert(pt, to: page)
-        let y = m.page_height - q.y
+        let y = pageTop(page) - q.y
         let systems = m.systems.filter { $0.page == idx }
         guard let s = systems.min(by: { dist(y, $0) < dist(y, $1) }) else { return nil }
         var best: (Double, Double, Bar)?
@@ -549,8 +549,8 @@ final class ScoreCanvas: NSView {
     func rect(x: Double, bar: Bar) -> NSRect? {
         guard let m = player?.map, let page = pdf.document?.page(at: bar.page),
               let s = m.systems.first(where: { $0.page == bar.page && $0.sys == bar.sys }) else { return nil }
-        let a = pdf.convert(NSPoint(x: x, y: m.page_height - s.top + 10), from: page)
-        let b = pdf.convert(NSPoint(x: x, y: m.page_height - s.bottom - 8), from: page)
+        let a = pdf.convert(NSPoint(x: x, y: pageTop(page) - s.top + 10), from: page)
+        let b = pdf.convert(NSPoint(x: x, y: pageTop(page) - s.bottom - 8), from: page)
         return NSRect(x: a.x, y: min(a.y, b.y), width: 0, height: abs(a.y - b.y))
     }
 }
@@ -632,8 +632,8 @@ extension Overlay {
                 at = end + 1
                 guard let page = doc.page(at: a.page), c.pdf.visiblePages.contains(page),
                       let s = m.systems.first(where: { $0.page == a.page && $0.sys == a.sys }) else { continue }
-                let p0 = c.pdf.convert(NSPoint(x: a.xa, y: m.page_height - s.top + 14), from: page)
-                let p1 = c.pdf.convert(NSPoint(x: b.xb, y: m.page_height - s.bottom - 22), from: page)
+                let p0 = c.pdf.convert(NSPoint(x: a.xa, y: pageTop(page) - s.top + 14), from: page)
+                let p1 = c.pdf.convert(NSPoint(x: b.xb, y: pageTop(page) - s.bottom - 22), from: page)
                 NSRect(x: p0.x, y: min(p0.y, p1.y), width: p1.x - p0.x, height: abs(p0.y - p1.y)).fill()
             }
         }
@@ -658,7 +658,7 @@ extension Overlay {
             let col: NSColor = p.bypass ? .systemGray : (f.mute ? .systemRed : .systemOrange)
             for h in n.heads {
                 guard let page = doc.page(at: h.page), c.pdf.visiblePages.contains(page) else { continue }
-                let pt = c.pdf.convert(NSPoint(x: h.x, y: m.page_height - h.y), from: page)
+                let pt = c.pdf.convert(NSPoint(x: h.x, y: pageTop(page) - h.y), from: page)
                 let ring = NSBezierPath(ovalIn: NSRect(x: pt.x - 9, y: pt.y - 9, width: 18, height: 18))
                 col.setStroke(); ring.lineWidth = 1.5; ring.stroke()
                 let text = f.mute ? "✕" : (f.semitones > 0 ? "+\(f.semitones)" : "\(f.semitones)".replacingOccurrences(of: "-", with: "−"))
@@ -1095,3 +1095,8 @@ let delegate = AppDelegate()
 let app = NSApplication.shared
 app.delegate = delegate
 app.run()
+
+/// the y of a page's top edge in its own PDF space. The map gives y down from the top of each page; a score's pages
+/// need not all be one size (a scan whose first music page is larger than the text page before it), so each page's
+/// own height is used, never one height for the whole file
+func pageTop(_ page: PDFPage) -> Double { Double(page.bounds(for: .mediaBox).maxY) }
