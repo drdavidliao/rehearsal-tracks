@@ -108,6 +108,19 @@ Predominant mixes duck it, and levels taken from them are far too soft.
 | ⌘2 | two pages side by side |
 | ⌘O | open a song folder (File > Recent Songs has the last 12) |
 | ⇧⌘O | find a song by its tags |
+| ⌘] ⌘[ | next or previous song in the set list being run |
+
+## Set lists
+
+File ▸ Set Lists… makes and edits them: + for a new one, its name above its songs, and every song on this Mac (found as for
+Find Songs, by name or tag) to double-click into it. Drag a song, or use the arrows, to change the order; − or Delete takes
+it out. A song can be in a list twice. Add Intermission puts a break after the song chosen, or at the end.
+
+Set List, folded at the foot of the sidebar, chooses the list being run (None to run none) and lists its songs, the open one in
+bold; click one to open it. While the open song is in that list, its first page has a button back to the song before and its last
+page a button on to the next, with the name; past an intermission it says so. Playing when the button is clicked carries on
+into the next song from its first bar, for an attacca or a run straight through, but not across an intermission. A song whose
+folder can't be found is dimmed and passed over. The lists and the one being run are kept in the app's settings on this Mac.
 
 ## Finding a song
 

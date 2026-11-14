@@ -106,6 +106,11 @@ stem before playing, made people wait for no reason. Instead:
 **Looping.** Boxes for a start and end bar, or letters, where a letter as the end means the end of that letter. Lines on the score
 mark it. Reaching the end by playing goes back to the start. A click past the end plays on, and a click before the start plays into it.
 
+**Set lists.** Any number of named lists of song folders in running order, a song allowed twice, with intermissions between
+songs, and one list chosen to run. On the open song's last page (the last page with bars, not a page of notes after it) a button
+opens the next song in that list, and on its first page one opens the song before, each naming the song; intermissions are
+stepped over and the button says so. If it's playing at the click, the new song plays from its start, except across an intermission.
+
 **Fixing a note.** Right-clicking a note on a voice's staff offers Mute, Up a Semitone and Down a Semitone, and once it has a fix,
 nudging its start or end by 20 ms and removing the fix. Only that voice's stem changes, and tied notes count as one. A ring on the
 note shows the fix. A menu command plays the song without fixes. Mute fades over up to 12 ms inside the note. Transpose pitch-shifts

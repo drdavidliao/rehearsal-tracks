@@ -164,7 +164,12 @@ final class Player: ObservableObject {
     var started = false
     weak var score: ScoreCanvas?
 
-    func open(folder: URL) {
+    /// whether the score shows the song's first or last page of music, for the set list's Previous and Next buttons
+    @Published var onFirstPage = false
+    @Published var onLastPage = false
+
+    /// `setIndex`: the song's place in the current set list, when it was opened from there
+    func open(folder: URL, setIndex: Int? = nil) {
         do {
             let data = try Data(contentsOf: folder.appendingPathComponent("player map.json"))
             let m = try JSONDecoder().decode(SongMap.self, from: data)
@@ -212,6 +217,7 @@ final class Player: ObservableObject {
             let recent = UserDefaults.standard.stringArray(forKey: "recentFolders") ?? []
             UserDefaults.standard.set(Array(([folder.path] + recent.filter { $0 != folder.path }).prefix(12)), forKey: "recentFolders")
             SongLibrary.shared.add(folder.path)
+            SetLists.shared.opened(folder.path, index: setIndex)
             score?.reload()
         } catch {
             self.error = "\(folder.lastPathComponent) has no usable player map.json. (\(error.localizedDescription))"
@@ -480,6 +486,13 @@ final class ScoreCanvas: NSView {
             }
             lastPage = pg
         }
+        // the pages showing, against the pages the music starts and ends on (a page of notes before or after doesn't count)
+        let shown = pdf.visiblePages.map { doc.index(for: $0) }
+        if let lo = shown.min(), let hi = shown.max(), let first = m.bars.map(\.page).min(), let last = m.bars.map(\.page).max() {
+            let f = lo <= first, l = hi >= last
+            if f != p.onFirstPage { p.onFirstPage = f }
+            if l != p.onLastPage { p.onLastPage = l }
+        }
         overlay.needsDisplay = true
     }
 
@@ -738,6 +751,7 @@ struct Controls: View {
     @AppStorage("sidebarChyronOpen") var chyronOpen = false
     @State var editingAnnouncement = false
     @AppStorage("sidebarTagsOpen") var tagsOpen = false
+    @AppStorage("sidebarSetListOpen") var setListOpen = false
     // back to the score's keys (space, arrows and so on) once a box has been used
     func leave() { editing = false; editingBar = false; editingVol = false; editingBar2 = false; NSApp.keyWindow?.makeFirstResponder(nil) }
     func volString(_ v: Double) -> String { v == v.rounded() ? String(Int(v)) : String(format: "%.1f", v) }
@@ -833,6 +847,10 @@ struct Controls: View {
                 // folded away until opened, being set once and left alone or not wanted in the midst of rehearsing; whether
                 // each is open is remembered. The voice-file switch is changed often enough to stay out.
                 rule()
+                DisclosureGroup(isExpanded: $setListOpen) {
+                    SetListPanel(p: p) { (NSApp.delegate as? AppDelegate)?.editSetLists() }.padding(.top, 4)
+                } label: { Label("Set List", systemImage: "list.number").font(.caption).foregroundStyle(.secondary) }
+                .stretches()
                 DisclosureGroup(isExpanded: $chyronOpen) {
                     VStack(alignment: .leading, spacing: 6) {
                         Toggle("Note names 🇬🇧 🇨🇦", isOn: $p.notesCard).toggleStyle(.checkbox)
@@ -905,6 +923,7 @@ struct RootView: View {
                             }
                         }.padding(6)
                     }
+                    .overlay(alignment: .bottom) { if p.map != nil && p.error == nil { SetListButtons(p: p) } }
             }
         }
         .ignoresSafeArea()
@@ -990,6 +1009,21 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         findWindow?.makeKeyAndOrderFront(nil)
     }
+    var setListWindow: NSWindow?
+    @objc func editSetLists() {
+        if setListWindow == nil {
+            let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 820, height: 520), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
+            w.title = "Set Lists"
+            w.isReleasedWhenClosed = false
+            w.contentView = NSHostingView(rootView: SetListEditor(p: player))
+            w.center()
+            w.setFrameAutosaveName("set lists")
+            setListWindow = w
+        }
+        setListWindow?.makeKeyAndOrderFront(nil)
+    }
+    @objc func nextInSet() { player.nextInSet() }
+    @objc func previousInSet() { player.previousInSet() }
     @objc func toggleBypass(_ item: NSMenuItem) {
         player.bypass.toggle()
         item.state = player.bypass ? .on : .off
@@ -1020,6 +1054,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         rm.addItem(withTitle: "No Recent Songs", action: nil, keyEquivalent: "").isEnabled = false
         fm.addItem(withTitle: "Recent Songs", action: nil, keyEquivalent: "").submenu = rm
         fm.addItem(withTitle: "Find Songs…", action: #selector(findSongs), keyEquivalent: "O")
+        fm.addItem(.separator())
+        fm.addItem(withTitle: "Set Lists…", action: #selector(editSetLists), keyEquivalent: "")
+        fm.addItem(withTitle: "Next Song in Set List", action: #selector(nextInSet), keyEquivalent: "]")
+        fm.addItem(withTitle: "Previous Song in Set List", action: #selector(previousInSet), keyEquivalent: "[")
         file.submenu = fm
         let view = NSMenuItem(); main.addItem(view)
         let vm = NSMenu(title: "View"); vm.addItem(withTitle: "Two Pages Side by Side", action: #selector(toggleTwo), keyEquivalent: "2")
