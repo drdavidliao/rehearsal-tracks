@@ -76,7 +76,12 @@ octave): over 0.9 is right, far less is not. For such a song, make the map once,
 `--warp --warp-beat --guide GUIDE.txt` keeps the attack fit within 0.35 s of it (`--from BAR` limits the guide to where it's
 needed). The guide follows the bars as sung and writes a bar's later passes with a `'`, which `make_map.py` leaves out. It
 finds each stem's part by the stem's key or, where the key isn't a part's name (`T1`), by the map's voice name, and gives no
-times before the first sung note. So check the bars before the voices come in yourself: compare the accompaniment's attacks and pitches with the score's piano there and `--pin` them. On two of nine separated sets the fit had the intro a beat out. Some sets, not all, open with the parts' starting notes given one at a time, or click pulses, before the music (10–13 s on three of these nine): leave them before bar 1, timed at its tempo, rather than stretching bar 1 over them. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
+times before the first sung note. So check the bars before the voices come in yourself: compare the accompaniment's attacks and pitches with the score's piano there and `--pin` them. On two of nine separated sets the fit had the intro a beat out. Some sets, not all, open with the parts' starting notes given one at a time, or click pulses, before the music (10–13 s on three of these nine): leave them before bar 1, timed at its tempo, rather than stretching bar 1 over them. The same holds for any bar where
+every voice rests or only holds a note from the bar before: the guide's times there are filler, and the warp squeezed or
+stretched such bars by up to 75% (Fairytale of New York's m36–41, 66–71 and 88–93; Walking in The Air's m22, 37 and 54, after a
+held whole note). List bars whose beats run more than about 12% off their neighbours', check each against the accompaniment
+(a repeated piano bar can be matched to one whose start the voices fix; a held note's release marks the next barline) and
+pin every beat of them. Separated stems come from mp3s whose accompaniment track may start earlier than the singing
 (1.000 s in several of Matthew Curtis's sets, 0.000 s in others): measure it by cross-correlating the accompaniment with a
 Predominant mix before using it as `I`. The voice stems keep their mix's stereo: in some of his sets the part is on the left
 channel and every other voice on the right, in others each part sits at its seat (tenors left, basses right).
