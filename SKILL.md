@@ -277,6 +277,16 @@ just a bad item; a fix that names one bar or one song has fixed the item and lef
 advice in a README fails the same way when it could have been a check. So every correction from the user becomes three
 things: a rule here, an automatic check wherever one is possible, and a sweep of every existing output.
 
+Write down every property of the input the design relies on, and check each one against every input, not the first:
+nothing about a file is constant until it has been measured to be. A scan's pages need not share a size (in one TTB
+octavo pages 2 and 4 are 1224 pt tall and the other five 1008 pt), a page's crop box need not
+be its media box, and a score's systems, clefs, keys, meters and first bar (a pickup) change within it. The player took
+one page height for the whole PDF and drew every cursor on the taller pages 216 pt below the music.
+
+Bound the scope by what the inputs plausibly are, say so, and check the boundary with the user while designing: the
+user's boundary for score PDFs is "anything that reads in forScore on an iPad without nasty surprises", which rules out sideways
+pages and rules in mixed page sizes and crop boxes.
+
 Say what a claim was read from. "The MusicXML has no piano part" is what a part list shows; "the song has no piano" needs
 the score read.
 

@@ -14,7 +14,7 @@ struct VoiceSpec: Codable { let key: String; let name: String?; let section: Str
 struct SongMap: Codable {
     let notes: [Note]?
     let score_dark: String?
-    let score: String; let stems: [String: String]; let offset: Double; let page_height: Double; let pages: Int
+    let score: String; let stems: [String: String]; let offset: Double; let page_height: Double; let pages: Int   // page_height: the first page's only; pages differ, use pageTop(page)
     let tempo: Double; let music_end: Double; let systems: [Sys]; let bars: [Bar]
     /// the voice stems in score order. A map without this has stems S, A, T, B and an optional A2 (a second alto, or a soloist).
     let voices: [VoiceSpec]?
