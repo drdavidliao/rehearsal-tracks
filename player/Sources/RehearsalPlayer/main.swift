@@ -887,8 +887,11 @@ struct Controls: View {
                     .stretches()
                 }
             }
-            .padding(.horizontal, 10).padding(.top, 34).padding(.bottom, 10)     // the top clears the window's buttons
+            .padding(.horizontal, 10).padding(.top, 6).padding(.bottom, 10)
         }
+        // the scroll view starts below the window's buttons, so the controls scroll out of sight under the title bar's
+        // strip instead of sliding beneath the red, yellow and green buttons
+        .padding(.top, 28)
         .fixedSize(horizontal: true, vertical: false)
         .onChange(of: p.bpm) { tempoText = String(Int($0)) }
         .onChange(of: p.volume) { if !editingVol { volText = volString($0) } }
