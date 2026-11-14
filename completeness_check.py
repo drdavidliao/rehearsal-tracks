@@ -109,6 +109,8 @@ def xml_facts(root):
         parts[sp.get('id')] = [(sp.findtext('part-name') or '').strip(), 1]
     marks = collections.defaultdict(list)
     onsets = collections.defaultdict(list)  # bar -> [(part, staff, kind, onset in divisions)] for marks on notes
+    dyn_at = []                               # (part, staff, bar, onset in divisions, value) of every dynamic
+    starts = collections.defaultdict(set)     # (part, staff, bar) -> onsets (divisions) where a note starts
     lyric_words, other_text = [], []
     lyr = collections.Counter()  # (part id, bar) -> syllables sung there
     verses = collections.defaultdict(list)  # (part id, verse number) -> [(bar, text)] in order
@@ -132,6 +134,9 @@ def xml_facts(root):
                 if el.tag == 'backup': pos -= int(el.findtext('duration') or 0); continue
                 if el.tag == 'forward': pos += int(el.findtext('duration') or 0); continue
                 if el.tag == 'direction':
+                    off_ = int(el.findtext('offset') or 0)
+                    for dyn_ in el.iter('dynamics'):
+                        for k_ in dyn_: dyn_at.append((pid, staff, num, pos + off_, k_.tag))
                     for dt in el.findall('direction-type'):
                         for d in dt:
                             if d.tag == 'dynamics':
@@ -165,6 +170,9 @@ def xml_facts(root):
                     if k is not None and k.get('text'): other_text.append(k.get('text'))
                 elif el.tag == 'note':
                     on = last_on if el.find('chord') is not None else pos
+                    if el.find('rest') is None and el.find('grace') is None and \
+                            not any(t_.get('type') == 'stop' for t_ in el.findall('tie')):
+                        starts[(pid, staff, num)].add(on)
                     if el.find('chord') is None and el.find('grace') is None:
                         last_on = pos; pos += int(el.findtext('duration') or 0)
                     n = el.find('notations')
@@ -195,6 +203,7 @@ def xml_facts(root):
         for (_, _, k, v) in m:
             if k == 'dyn' and v: bag.add(norm(v))
     lbag = {norm(w) for w in lyric_words if norm(w)}
+    xml_facts.dyn_at, xml_facts.starts = dyn_at, starts
     return parts, marks, bag, last, lyr, lbag, verses, onsets
 
 
@@ -623,6 +632,15 @@ def main():
             for k in sorted(set(typed) | set(have), key=str):
                 if typed[k] != have[k]:
                     finding('marks', f'bar {k[0]} staff {k[1]} {k[2]} {k[3]!r}: {typed[k]} typed from the page, {have[k]} in the MusicXML')
+    # -- dynamics on the right staff: a dynamic marks the part it stands with, so that part has a note starting at it
+    # or within the next beat (an entry after a rest). A dynamic on a part that is resting there was put on the
+    # wrong staff: one reader read every voice's dynamics one staff low. Divisions per quarter from the file.
+    divs = [int(d.text) for d in load_xml(xml_path).iter('divisions')]
+    div_ = divs[0] if divs else 1
+    for (pid, st, b, on, val) in xml_facts.dyn_at:
+        if parts.get(pid, ('', 0))[0].lower().startswith(('piano', 'pno', 'keyboard')): continue
+        if not any(0 <= x - on <= div_ for x in xml_facts.starts.get((pid, st, b), ())):
+            finding('dynstaff', f'bar {b} {parts[pid][0]}: {val} where the part has no note starting (within a beat)')
     # -- what is known to be printed and not yet in the file (a builder that cannot write it yet): listed so the check
     # cannot pass while it is missing
     for k in cfg.get('known_missing', []):
@@ -637,7 +655,7 @@ def main():
     exc = cfg.get('exceptions', [])
     ok = not fails
     print(f'{os.path.basename(xml_path)} against {os.path.basename(pdf)} ({"vector" if vector else "scan"})')
-    for chk in ('staves', 'bars', 'boxes', 'text', 'lyrics', 'glyphs', 'marks', 'known'):
+    for chk in ('staves', 'bars', 'boxes', 'text', 'lyrics', 'glyphs', 'marks', 'dynstaff', 'known'):
         f, n = fails.get(chk, []), notes.get(chk, [])
         print(f'  {chk:7s} {"FAIL" if f else "ok"}' + (f' ({len(f)})' if f else '') + (f', {len(n)} noted' if n else ''))
         for t in f[:60]: print('      ' + t)

@@ -292,6 +292,7 @@ def dot_count(pm, heads, x_right, s, dots_all, taken):
 class Reader:
     def __init__(self, path, pages, nstaves=6, staff_names=None, lyric_font=None, lyric_size=None):
         self.pdf = pdfplumber.open(path)
+        self.page_numbers = [i + 1 for i in pages]
         self.pms = [PageModel(self.pdf.pages[i], nstaves) for i in pages]
         self.nstaves = nstaves
         self.bars = []           # one dict per bar
@@ -839,6 +840,8 @@ class Reader:
 
     # -------------------------------------------------------------- pass 5: lyrics
     def lyrics(self, vocal_staves, font_re, size):
+        self.lyric_font_re = font_re
+        self.vocal_staves = list(vocal_staves)
         self.lyric_pt = size
         self.lyric_size = size
         self.notes = getattr(self, 'notes', [])
@@ -854,6 +857,8 @@ class Reader:
                     # next sung staff (which has no words above it), but never into the chord symbols over the piano
                     hi = sy[k + 1]['top'] - sp if k + 1 in vocal_staves else (s['bot'] + lim) / 2
                     band = [c for c in cs if s['bot'] < c['top'] < hi and s['x0'] - 5 < c['x0'] < s['x1'] + 5]
+                    self.lyric_boxes = getattr(self, 'lyric_boxes', [])
+                    self.lyric_boxes += [(pi, c['x0'], c['top'], c['x1'], c['bottom']) for c in band]
                     # a word set at the very end of the system can run on past it: keep the letters joined to it
                     for c in sorted((c for c in cs if s['bot'] < c['top'] < hi and c['x0'] >= s['x1'] + 5), key=lambda c: c['x0']):
                         if any(abs(c['top'] - b['top']) < 1.0 and -0.1 < c['x0'] - b['x1'] < 0.25 for b in band): band.append(c)
@@ -976,14 +981,61 @@ class Reader:
         it = min(its, key=lambda it: abs(it['x'] - x))
         return bar, it['on']
 
+    def owner_candidates(self, pm, y_top, y_bot, s):
+        """(staff above, staff below) when a dynamic or hairpin stands between two staves with a line of words under
+        the upper one, else None. Nearest staff lines do not decide these: an engraving may hang a voice's dynamics
+        under its words (nearer the next staff's lines) or set them over its staff (nearer the words above)."""
+        sy = pm.systems[s['sys']]
+        above = [t for t in sy if t['bot'] <= y_top]
+        below = [t for t in sy if t['top'] >= y_bot]
+        if not above or not below or not getattr(self, 'lyric_font_re', None): return None
+        A, B = above[-1], below[0]
+        words = [c for c in pm.text if re.search(self.lyric_font_re, c['fontname']) and abs(c['size'] - self.lyric_size) < 0.15
+                 and c['top'] > A['bot'] and c['bottom'] <= y_top + 1 and A['x0'] - 5 < c['x0'] < A['x1'] + 5]
+        return (A, B) if words else None
+
+    def note_at(self, pi, st, x):
+        """whether staff st has a note starting within a staff space of x (a dynamic sits under or over the note it
+        marks)"""
+        bars = [b for b in self.bars if b['page'] == pi and b['sys'] == st['sys'] and b['xa'] - 2 <= x <= b['xb'] + 1]
+        return any(it['kind'] == 'chord' and abs((it['x'] + it.get('xr', it['x'])) / 2 - x) < 1.2 * st['sp']
+                   for b in bars for it in b['staves'][st['k']]['items'])
+
+    def owners(self):
+        """{(page, id(mark)): staff} for every dynamic and hairpin standing between a staff's words and the next staff.
+        A mark goes to the one of the two staves with a note starting under it; where both or neither have one, to the
+        side this engraving uses, counted from the marks the notes decided (its words' side, or the staff's own side)."""
+        cands, votes = [], collections.Counter()
+        for pi, pm in enumerate(self.pms):
+            marks = [(g, g.y - 1.5 * g.staff['sp'], g.y, g.cx, g.staff) for g in pm.glyphs if g.code in DYN]
+            marks += [(w, w['y'] - 0.6 * pm.nearest_staff(w['y'])['sp'], w['y'] + 0.6 * pm.nearest_staff(w['y'])['sp'],
+                       w['x0'] + 2, pm.nearest_staff(w['y'])) for w in pm.wedges]
+            for m, yt, yb, x, s in marks:
+                c = self.owner_candidates(pm, yt, yb, s)
+                if not c: continue
+                A, B = c
+                a, b = self.note_at(pi, A, x), self.note_at(pi, B, x)
+                cands.append((pi, m, A, B, a, b))
+                if a != b: votes['upper' if a else 'lower'] += 1
+        side = 'upper' if votes['upper'] > votes['lower'] else 'lower'
+        self.notes.append(f"DYN placement: {votes['upper']} marks belong to the staff above them (under its words), "
+                          f"{votes['lower']} to the staff below; the rest follow the {side} side")
+        out = {}
+        for pi, m, A, B, a, b in cands:
+            out[(pi, id(m))] = A if (a and not b) else B if (b and not a) else (A if side == 'upper' else B)
+        return out
+
     def marks(self, chord_staff=None, chord_font=None, chord_size=None):
         self.chord_staff = chord_staff
         self.dirs = collections.defaultdict(list)     # (bar num, k) -> [dict(on, kind, ...)]
         self.harm = collections.defaultdict(list)     # bar num -> [(on, root, alter, kind text, bass, bass alter)]
+        self.notes = getattr(self, 'notes', [])
+        own = self.owners()
         for pi, pm in enumerate(self.pms):
             for g in pm.glyphs:
                 s = g.staff; si, k = s['sys'], s['k']
                 if g.code in DYN:
+                    s = own.get((pi, id(g)), s); si, k = s['sys'], s['k']
                     bar, on = self.locate(pi, si, k, g.x0)
                     place = 'above' if g.y < s['top'] else 'below'
                     self.dirs[(bar['num'], k)].append(dict(on=on, kind='dyn', val=DYN[g.code], place=place))
@@ -1005,7 +1057,7 @@ class Reader:
                 elif g.code == 0xECA5:
                     pass
             for w in pm.wedges:
-                s = pm.nearest_staff(w['y']); si, k = s['sys'], s['k']
+                s = own.get((pi, id(w)), pm.nearest_staff(w['y'])); si, k = s['sys'], s['k']
                 if w.get('open_left') and w['x0'] < s['x0'] + 30:
                     continue          # the rest of a hairpin from the previous system: its stop is set from there
                 b0, on0 = self.locate(pi, si, k, w['x0'])
@@ -1026,6 +1078,24 @@ class Reader:
                             self.problems.append(f"bar {b0['num']} staff {k}: hairpin runs off the system with no continuation")
                 end_on = self.end_onset(end[0], end[1], k, end[2])
                 self.dirs[(end_on[0]['num'], k)].append(dict(on=end_on[1], kind='wedge', val='stop', place=place))
+            vocal = set(getattr(self, 'vocal_staves', []))
+            top_m = min(s_['top'] for s_ in pm.staves) - 32 if pm.staves else 0
+            bot_m = max(s_['bot'] for s_ in pm.staves) + 30 if pm.staves else 1e9
+
+            sung = [b_ for b_ in getattr(self, 'lyric_boxes', []) if b_[0] == pi]
+
+            def plain_word(wd, s, k):
+                t = wd['text']
+                if wd['bottom'] < top_m or wd['top'] > bot_m: return False                 # a header or footer
+                if not re.search(r'[A-Za-z]', t): return False                               # numbers, "=", hyphens
+                if wd['x1'] < s['x0'] + 1: return False                                       # a staff label
+                if re.fullmatch(r'[A-G][#b\u266f\u266d]?[\w()#b+/\u266f\u266d\u00b0\u00f8-]{0,10}', t): return False   # a chord symbol
+                if re.fullmatch(r'\(?(?:add|omit|maj|min|sus|dim|aug|alt|no)?[#b\u266f\u266d+]?\d*(?:[#b\u266f\u266d,+ ]*\d+)*\)?', t) \
+                        and re.search(r'\d|add|omit|maj|sus|dim|aug|alt', t): return False         # a chord symbol's raised suffix
+                # the words sung: any letter the lyric reader took
+                if any(b_[1] < wd['x1'] and wd['x0'] < b_[3] and b_[2] < wd['bottom'] and wd['top'] < b_[4] for b_ in sung):
+                    return False
+                return True
             # text: rehearsal marks (bold letters), tempo, other words
             # faux bold strikes every letter twice in one place ("rriitt.."): read each once
             words = pm.page.dedupe_chars(tolerance=0.3).extract_words(extra_attrs=['fontname', 'size'], x_tolerance=1.5)
@@ -1045,11 +1115,26 @@ class Reader:
                     bar, on = self.locate(pi, si, k, wd['x0'])
                     self.dirs[(bar['num'], k)].append(dict(on=on, kind='words', val=wd['text'], bold=True,
                                                            place='above' if wd['bottom'] < s['top'] else 'below', x=wd['x0']))
-        # merge adjacent bold words into one direction
+                elif plain_word(wd, s, k):
+                    # words in a plain weight ("pedal ad lib.", "cresc."): not the words sung (a sung staff's line of
+                    # words, in the lyric font and size), not a bar number, not a chord symbol (read with the chords),
+                    # not the page's margins (page_text)
+                    bar, on = self.locate(pi, si, k, wd['x0'])
+                    self.dirs[(bar['num'], k)].append(dict(on=on, kind='words', val=wd['text'], plain=True,
+                                                           italic='Italic' in fn,
+                                                           place='above' if wd['bottom'] < s['top'] else 'below', x=wd['x0']))
+                    self.notes.append(f"WORDS bar {bar['num']} {self.label(k)}: {wd['text']!r} in a plain weight, read as staff text")
+        # merge the words of one phrase into one direction: bold with bold, plain with plain, and only where they stand
+        # together (on one line, a word's width apart), so "rit." and "pedal ad lib." in one bar stay two
         for key_, lst in self.dirs.items():
-            ws = sorted([d for d in lst if d['kind'] == 'words'], key=lambda d: d['x'])
-            if len(ws) > 1:
-                for d in ws[1:]: ws[0]['val'] += ' ' + d['val']; lst.remove(d)
+            for plain in (False, True):
+                ws = sorted([d for d in lst if d['kind'] == 'words' and bool(d.get('plain')) == plain], key=lambda d: d['x'])
+                head = None
+                for d in ws:
+                    if head is not None and d['place'] == head['place'] and d['x'] - head['x'] < 18 * (1 + len(head['val'])):
+                        head['val'] += ' ' + d['val']; lst.remove(d)
+                    else:
+                        head = d
         # tempo
         pm = self.pms[0]
         met = [g for g in pm.glyphs if g.code == 0xECA5]
@@ -1238,6 +1323,29 @@ class Reader:
             out.append((lvl, 'begin' if at0 else ('end' if at1 else 'continue')))
         return out
 
+    def page_text(self):
+        """[(page number, line of text)] printed in a page's top margin (over the first system's tempo and rehearsal
+        marks) or bottom margin (under the last system's marks): headers, footers, page numbers"""
+        out = []
+        for pi, pm in enumerate(self.pms):
+            if not pm.staves: continue
+            top = min(s['top'] for s in pm.staves) - 32
+            bot = max(s['bot'] for s in pm.staves) + 30
+            cs = verify.dedupe_chars([c for c in pm.text if c['bottom'] < top or c['top'] > bot])
+            rows = []
+            for c in sorted(cs, key=lambda c: (round(c['top']), c['x0'])):
+                if rows and abs(rows[-1][-1]['top'] - c['top']) < 2 and c['x0'] - rows[-1][-1]['x1'] < 20: rows[-1].append(c)
+                else: rows.append([c])
+            for r_ in rows:
+                r_.sort(key=lambda c: c['x0'])
+                t = ''
+                for i, c in enumerate(r_):
+                    if i and c['x0'] - r_[i - 1]['x1'] > 0.25 * c['size']: t += ' '
+                    t += c['text']
+                t = re.sub(r'\s+', ' ', t).strip()      # some exports set the word spaces as tabs
+                if t: out.append((self.page_numbers[pi], t))
+        return out
+
     def emit(self, path, meta, parts):
         """parts: [(name, abbrev, [staff indices], midi program)]"""
         DIV = 24
@@ -1273,6 +1381,32 @@ class Reader:
                 (f'<credit-words default-x="600" default-y="70" justify="center" valign="bottom" font-size="6">' if i == 0
                  else '<credit-words>') + esc(l) + ('\n' if i < len(cl) - 1 else '') + '</credit-words>'
                 for i, l in enumerate(cl)) + '</credit>')
+        # plain-weight words that are part of the credits (an "Arranged by" line set low, beside the first system) are
+        # credits, not staff text
+        creds = re.sub(r'\W', '', ' '.join([meta.get('title', '')] + list(meta.get('credit_lines', []))
+                                            + list(meta.get('copyright', [])))).lower()
+        for key_, lst in self.dirs.items():
+            for d in [d for d in lst if d['kind'] == 'words' and d.get('plain')]:
+                if re.sub(r'\W', '', d['val']).lower() in creds:
+                    lst.remove(d); self.notes.append(f"WORDS bar {key_[0]}: {d['val']!r} is part of the credits, not staff text")
+        for key_, lst in list(self.dirs.items()):
+            for d in [d for d in lst if d['kind'] == 'words' and d.get('plain')]:
+                n_ = re.sub(r'\W', '', d['val']).lower()
+                same = [e for (b_, k_), l2 in self.dirs.items() if b_ == key_[0] for e in l2
+                        if e is not d and e['kind'] == 'words' and not e.get('plain')
+                        and re.sub(r'\W', '', e['val']).lower() == n_]
+                # ... or as the words of a tempo mark (tempo_marks())
+                same += [tm for tm in getattr(self, 'tempi', {}).get(key_[0], [])
+                         if n_ and n_ in re.sub(r'\W', '', str(tm.get('words') or '')).lower()]
+                if same: lst.remove(d)
+        # what each page prints above its first system and below its last: running headers ("Full score", the title
+        # and page number), footers. SKILL.md, "A transcription is the whole page"; the title block on page 1 is above.
+        said = {re.sub(r'\W', '', str(v)).lower() for v in [meta.get('title', '')] + list(meta.get('credit_lines', []))
+                + list(meta.get('copyright', []))}
+        for (page, text) in self.page_text():
+            t_ = re.sub(r'\W', '', text).lower()
+            if t_ in said or (len(t_) > 6 and t_ in creds): continue     # already a credit (a line of it)
+            w(f'<credit page="{page}"><credit-words>{esc(text)}</credit-words></credit>')
         w('<part-list>')
         vocal = [p for p in parts if len(p[2]) == 1]
         if len(vocal) > 1:
@@ -1520,15 +1654,24 @@ def direction_xml(d, off, staff, DIV):
     if d['kind'] == 'wedge':
         return f'<direction placement="{d["place"]}"><direction-type><wedge type="{d["val"]}" number="1"/></direction-type>{o}{stf}</direction>'
     if d['kind'] == 'words':
-        b = ' font-weight="bold"' if d.get('bold') else ''
+        b = (' font-weight="bold"' if d.get('bold') else '') + (' font-style="italic"' if d.get('italic') else '')
         return f'<direction placement="{d["place"]}"><direction-type><words{b}>{esc(d["val"])}</words></direction-type>{o}{stf}</direction>'
     if d['kind'] == 'swing':
-        return (f'<direction placement="above"><direction-type><words>{SWING_WORDS[d["val"]]}</words></direction-type>{o}{stf}'
+        return (f'<direction placement="above">{swing_figure(d["val"])}{o}{stf}'
                 f'<sound>{SWING_XML[d["val"]]}</sound></direction>')
     raise ValueError(d)
 
 
-SWING_WORDS = {'swing': 'Swing (two eighths = triplet quarter + eighth)', 'straight': 'Straight eighths (two eighths = two eighths)'}
+def swing_figure(kind):
+    """the printed figure as MusicXML draws it: two beamed eighths = a triplet quarter and eighth (swing), or = two
+    beamed eighths (straight). The page prints the figure, not words; words standing in for it would be text the page
+    does not print."""
+    note = lambda t, inner='': f'<metronome-note><metronome-type>{t}</metronome-type>{inner}</metronome-note>'
+    pair = (note('eighth', '<metronome-beam number="1">begin</metronome-beam>')
+            + note('eighth', '<metronome-beam number="1">end</metronome-beam>'))
+    trip = lambda ty: f'<metronome-tuplet type="{ty}" bracket="yes"><actual-notes>3</actual-notes><normal-notes>2</normal-notes></metronome-tuplet>'
+    right = (note('quarter', trip('start')) + note('eighth', trip('stop'))) if kind == 'swing' else pair
+    return f'<direction-type><metronome>{pair}<metronome-relation>equals</metronome-relation>{right}</metronome></direction-type>'
 SWING_XML = {'swing': '<swing><first>2</first><second>1</second><swing-type>eighth</swing-type></swing>',
              'straight': '<swing><straight/></swing>'}
 
@@ -1543,7 +1686,7 @@ def tempo_xml(tm, DIV):
     sw = tm.get('swing')
     s = (f'<direction placement="above"><direction-type><metronome><beat-unit>{unit}</beat-unit>' + ('<beat-unit-dot/>' if tm['dot'] else '')
          + f'<per-minute>{tm["bpm"]}</per-minute></metronome></direction-type>'
-         + (f'<direction-type><words>{SWING_WORDS[sw]}</words></direction-type>' if sw else '') + o
+         + (swing_figure(sw) if sw else '') + o
          + (f'<sound tempo="{qs}">{SWING_XML[sw]}</sound>' if sw else f'<sound tempo="{qs}"/>') + '</direction>')
     if tm.get('words'):
         s += f'<direction placement="above"><direction-type><words>{esc(tm["words"])}</words></direction-type>{o}</direction>'

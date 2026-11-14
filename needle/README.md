@@ -65,6 +65,7 @@ Two rules for whoever keeps the steps file:
 - **Done means checked.** A step gets its `end` only once its output is checked and in place. A first draft still being
   checked or fixed stays running, with a `state` that says so ("draft made; fixing caption collisions"). Marking the draft
   done shows a finish that isn't real, and the reader will notice.
+- **A future time is never in the past.** The page shows clock times only; an estimate or band end that reads earlier than now is past midnight (a slow end 13 hours ahead was once read as that morning and drew the band backwards round the dial).
 - **No hand-typed bands.** Write guesses only as relative sizes and let the measured steps set the needle and band.
   Hand-set bands, skewed by intuition before any data, missed the real finish every time they were tried; if a band
   must be typed, its reason goes in `basis`.

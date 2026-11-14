@@ -42,7 +42,10 @@ function dial(n, nowMin) {
   // minutes since midnight; a time more than 12 hours before now is tomorrow's
   const min = s => { if (!s || !s.includes(':')) return null; const [h, m] = s.split(':').map(Number); let v = h * 60 + m; if (v < nowMin - 720) v += 1440; return v };
   const items = n.items || [], left = items.filter(x => !x.done);
-  const ts = [nowMin, min(n.estimate), ...(n.band || []).map(min), ...items.map(x => min(x.time))].filter(v => v != null);
+  // an estimate and a band are never earlier than now: one that reads earlier is past midnight (a slow end 13 hours
+  // ahead read as this morning drew the band backwards round the dial)
+  const ahead = s => { const v = min(s); return v == null ? null : (v < nowMin ? v + 1440 : v) };
+  const ts = [nowMin, ahead(n.estimate), ...(n.band || []).map(ahead), ...items.map(x => x.done ? min(x.time) : ahead(x.time))].filter(v => v != null);
   let lo = Math.min(...ts), hi = Math.max(...ts);
   const step = hi - lo > 240 ? 60 : hi - lo > 90 ? 30 : 15;
   lo = Math.floor(lo / step) * step; hi = Math.max(Math.ceil(hi / step) * step, lo + 2 * step);
@@ -58,7 +61,7 @@ function dial(n, nowMin) {
     el('path', {d: `M${x1} ${y1} A${r2} ${r2} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${r1} ${r1} 0 0 0 ${x4} ${y4}Z`, fill: f});
   };
   arc(lo, hi, 100, 130, css('--track'));
-  if (left.length && n.band && n.band.length === 2) arc(min(n.band[0]), min(n.band[1]), 100, 130, css('--band'));
+  if (left.length && n.band && n.band.length === 2) arc(ahead(n.band[0]), ahead(n.band[1]), 100, 130, css('--band'));
   for (let x = lo; x <= hi; x += step) {
     const [x1, y1] = pt(x, 131), [x2, y2] = pt(x, 138), [lx, ly] = pt(x, 152);
     el('line', {x1, y1, x2, y2, stroke: css('--muted')});
@@ -67,10 +70,10 @@ function dial(n, nowMin) {
   const [nx, ny] = pt(nowMin, 132);
   el('line', {x1: cx, y1: cy, x2: nx, y2: ny, stroke: css('--muted'), 'stroke-dasharray': '3 3'});
   const marks = document.createElementNS(ns, 'g');
-  items.forEach((x, i) => { const m = min(x.time); if (m != null) { const [px, py] = pt(m, 115); marks.insertAdjacentHTML('beforeend', markerSVG(i, x.done, px, py, 5.5)) } });
+  items.forEach((x, i) => { const m = x.done ? min(x.time) : ahead(x.time); if (m != null) { const [px, py] = pt(m, 115); marks.insertAdjacentHTML('beforeend', markerSVG(i, x.done, px, py, 5.5)) } });
   const target = left.length || !items.length ? n.estimate : items.map(x => x.time).filter(Boolean).sort((a, b) => min(a) - min(b)).pop();
   if (target) {
-    const [tx, ty] = pt(min(target), 96);
+    const [tx, ty] = pt(left.length ? ahead(target) : min(target), 96);
     el('line', {x1: cx, y1: cy, x2: tx, y2: ty, stroke: css('--ink'), 'stroke-width': 3, 'stroke-linecap': 'round'});
   }
   svg.appendChild(marks);   // over the needle, so a marker at the estimate stays visible
