@@ -107,7 +107,7 @@ stem before playing, made people wait for no reason. Instead:
 mark it. Reaching the end by playing goes back to the start. A click past the end plays on, and a click before the start plays into it.
 
 **Set lists.** Any number of named lists of song folders in running order, a song allowed twice, with intermissions between
-songs, and one list chosen to run. On the open song's last page (the last page with bars, not a page of notes after it) a button
+songs, and one list chosen to run. Songs to add are found by name or narrowed by tags, a song needing all the tags chosen. On the open song's last page (the last page with bars, not a page of notes after it) a button
 opens the next song in that list, and on its first page one opens the song before, each naming the song; intermissions are
 stepped over and the button says so. If it's playing at the click, the new song plays from its start, except across an intermission.
 

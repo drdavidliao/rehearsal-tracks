@@ -113,7 +113,9 @@ Predominant mixes duck it, and levels taken from them are far too soft.
 ## Set lists
 
 File ▸ Set Lists… makes and edits them: + for a new one, its name above its songs, and every song on this Mac (found as for
-Find Songs, by name or tag) to double-click into it. Drag a song, or use the arrows, to change the order; − or Delete takes
+Find Songs, by name or tag) to double-click into it. Above those songs, the folder tags and your own tags narrow them: click
+one or more and only songs with all of them are left, each tag giving how many that would leave; Clear Tags shows every song
+again, and the tags fold away under their heading. Drag a song, or use the arrows, to change the order; − or Delete takes
 it out. A song can be in a list twice. Add Intermission puts a break after the song chosen, or at the end.
 
 Set List, folded at the foot of the sidebar, chooses the list being run (None to run none) and lists its songs, the open one in

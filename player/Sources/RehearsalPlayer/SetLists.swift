@@ -193,10 +193,29 @@ struct SetListEditor: View {
     @State var entry: SetEntry.ID?
     @State var song: String?
     @State var search = ""
+    /// the tags chosen above the songs: a song must have all of them. Kept apart from the Find window's.
+    @State var tags = Set(UserDefaults.standard.stringArray(forKey: "setListTags") ?? []) {
+        didSet { UserDefaults.standard.set(Array(tags), forKey: "setListTags") }
+    }
+    @AppStorage("setListTagsOpen") var tagsOpen = true
     var index: Int? { sets.lists.firstIndex { $0.id == chosen } }
-    var found: [Song] {
+    /// the songs the search box lets through, before the tags
+    var typed: [Song] {
         let t = search.trimmingCharacters(in: .whitespaces)
         return t.isEmpty ? lib.songs : lib.songs.filter { s in s.name.localizedCaseInsensitiveContains(t) || s.all.contains { $0.localizedCaseInsensitiveContains(t) } }
+    }
+    var found: [Song] { typed.filter { tags.isSubset(of: $0.all) } }
+    func tagCloud(_ title: String, _ list: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            caption(title)
+            Flow {
+                ForEach(list, id: \.self) { t in
+                    let on = tags.contains(t), n = typed.filter { tags.union([t]).isSubset(of: $0.all) }.count
+                    Chip(text: "\(t)  \(n)", on: on) { if on { tags.remove(t) } else { tags.insert(t) } }
+                        .disabled(n == 0 && !on).opacity(n == 0 && !on ? 0.35 : 1)
+                }
+            }
+        }
     }
     func add(_ path: String) {
         guard let c = chosen else { return }
@@ -283,7 +302,24 @@ struct SetListEditor: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 TextField("Find a song or tag", text: $search).textFieldStyle(.roundedBorder)
-                caption("Double-click a song to add it")
+                DisclosureGroup(isExpanded: $tagsOpen) {
+                    ScrollView(.vertical) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            if !lib.folderTagList.isEmpty { tagCloud("Folders", lib.folderTagList) }
+                            if !lib.userTagList.isEmpty { tagCloud("Your tags", lib.userTagList) }
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading).padding(.top, 4)
+                    }
+                    .frame(maxHeight: 150)
+                } label: {
+                    caption(tags.isEmpty ? "Tags" : "Tags: " + tags.sorted { $0.localizedStandardCompare($1) == .orderedAscending }.joined(separator: ", "))
+                        .lineLimit(1)
+                }
+                HStack {
+                    caption("\(found.count) of \(lib.songs.count) songs. Double-click one to add it")
+                    Spacer()
+                    if !tags.isEmpty { Button("Clear Tags") { tags = [] }.controlSize(.small) }
+                }
                 List(found, selection: $song) { s in
                     Text(s.name)
                         .frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
@@ -303,6 +339,12 @@ struct SetListEditor: View {
         }
         .padding(14)
         .frame(minWidth: 760, minHeight: 420)
-        .onAppear { SongLibrary.shared.refresh(); if chosen == nil { chosen = sets.currentID ?? sets.lists.first?.id } }
+        .onAppear {
+            SongLibrary.shared.refresh()
+            if chosen == nil { chosen = sets.currentID ?? sets.lists.first?.id }
+            // a tag no song has any more would hide every song with no chip left to unchoose
+            let known = Set(lib.songs.flatMap(\.all))
+            if !lib.songs.isEmpty && !tags.isSubset(of: known) { tags.formIntersection(known) }
+        }
     }
 }
