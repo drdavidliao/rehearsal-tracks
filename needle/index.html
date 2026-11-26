@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Progress</title>
+<style>
+:root{--bg:#fcfcfb;--ink:#0b0b0b;--ink2:#52514e;--muted:#898781;--track:#efeee9;--band:#85B7EB;--done:#1D9E75}
+@media (prefers-color-scheme:dark){:root{--bg:#1a1a19;--ink:#f0efec;--ink2:#c3c2b7;--muted:#898781;--track:#2c2c2a;--band:#185FA5;--done:#5DCAA5}}
+body{margin:0;padding:16px;background:var(--bg);color:var(--ink);font:14px/1.5 -apple-system,system-ui,sans-serif}
+h1{font-size:16px;font-weight:500;margin:0 0 4px}.sub{color:var(--muted);font-size:12px;margin:0 0 8px}
+h2{font-size:14px;font-weight:500;margin:20px 0 0}
+svg{width:100%;max-width:420px;display:block;margin:0 auto}
+table{width:100%;border-collapse:collapse;font-size:13px;margin-top:8px}td{padding:5px 4px;border-top:1px solid var(--track)}
+td.k{width:16px;padding-right:0}td.k svg{width:14px;height:14px;display:inline;margin:0;vertical-align:-2px}
+td.t{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.done{color:var(--done)}.st{color:var(--ink2)}
+.basis{color:var(--muted);font-size:12px;text-align:center;margin:2px 0 0}
+.lbl{color:var(--ink2);font-size:12px;text-align:center;margin:0 auto;max-width:420px}
+.fc{color:var(--ink2);font-size:12px;text-align:center;margin:4px 0 0}
+.fc svg.fcm{width:11px;height:11px;display:inline;margin:0;vertical-align:-1px}
+</style></head><body>
+<h1 id="title">Progress</h1><p class="sub" id="sub">loading…</p>
+<div id="needles"></div>
+<script>
+// The status (GET /status) is the server's; see README.md. Times are "YYYY-MM-DD HH:MM", placed exactly, or "HH:MM" on
+// today's clock (more than 12 hours before now is tomorrow's).
+let PERIOD = 20000, timer = null;
+const ns = 'http://www.w3.org/2000/svg', cx = 170, cy = 172;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+// each item's marker: its own shape and colour (Okabe-Ito, colour-blind safe), filled when done, an outline while not
+const SHAPES = ['circle', 'square', 'triangle', 'diamond', 'star', 'cross'];
+const HUES = ['#E69F00', '#56B4E9', '#CC79A7', '#009E73', '#D55E00', '#0072B2', '#9a8a00'];
+function markerSVG(i, done, x, y, r) {
+  const c = HUES[i % HUES.length], shape = SHAPES[i % SHAPES.length];
+  const paint = `fill="${done ? c : 'none'}" stroke="${c}" stroke-width="${done ? 1 : 1.8}" stroke-linejoin="round"`;
+  const poly = pts => `<polygon points="${pts.map(([a, b]) => `${(x + a * r).toFixed(2)},${(y + b * r).toFixed(2)}`).join(' ')}" ${paint}/>`;
+  if (shape === 'circle') return `<circle cx="${x}" cy="${y}" r="${r * 0.95}" ${paint}/>`;
+  if (shape === 'square') return poly([[-.85, -.85], [.85, -.85], [.85, .85], [-.85, .85]]);
+  if (shape === 'triangle') return poly([[0, -1.1], [1, .75], [-1, .75]]);
+  if (shape === 'diamond') return poly([[0, -1.15], [1.05, 0], [0, 1.15], [-1.05, 0]]);
+  if (shape === 'star') return poly([...Array(10)].map((_, k) => { const a = -Math.PI / 2 + k * Math.PI / 5, q = k % 2 ? .5 : 1.2; return [q * Math.cos(a), q * Math.sin(a)] }));
+  const w = .35;   // cross
+  return poly([[-w, -1], [w, -1], [w, -w], [1, -w], [1, w], [w, w], [w, 1], [-w, 1], [-w, w], [-1, w], [-1, -w], [-w, -w]]);
+}
+// minutes are counted from the midnight that starts now's day (DAY0, a UTC day number); a time on another day is shown
+// with its weekday ("Tue 01:54")
+let DAY0 = null;
+const WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const dayNo = d => { const [y, mo, dd] = d.split('-').map(Number); return Date.UTC(y, mo - 1, dd) / 864e5 };
+const hhmm = t => String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0');
+const fmt = (m, plain) => {
+  const r = Math.round(m), d = Math.floor(r / 1440), t = r - 1440 * d;
+  return (d && DAY0 != null && !plain ? WD[(((DAY0 + d + 4) % 7) + 7) % 7] + ' ' : '') + hhmm(t);
+};
+// a dated time, in minutes from DAY0's midnight; null if undated
+const datedMin = s => { const m = /^(\d{4}-\d\d-\d\d)[ T](\d\d):(\d\d)/.exec(s || ''); return m && DAY0 != null ? (dayNo(m[1]) - DAY0) * 1440 + (+m[2]) * 60 + (+m[3]) : null };
+
+function dial(n, nowMin) {
+  // minutes since midnight; a time more than 12 hours before now is tomorrow's
+  const min = s => { const d = datedMin(s); if (d != null) return d; if (!s || !s.includes(':')) return null; const [h, m] = s.split(':').map(Number); let v = h * 60 + m; if (v < nowMin - 720) v += 1440; return v };
+  const items = n.items || [], left = items.filter(x => !x.done);
+  // an estimate and a band are never earlier than now: one that reads earlier is past midnight (a slow end 13 hours
+  // ahead read as this morning drew the band backwards round the dial)
+  // a done item's undated time has happened: its most recent occurrence (5 minutes' grace for a clock a little ahead)
+  const past = s => { if (datedMin(s) != null) return datedMin(s); const v = min(s); return v == null ? null : (v > nowMin + 5 ? v - 1440 : v) };
+  const ahead = s => { if (datedMin(s) != null) return datedMin(s); const v = min(s); return v == null ? null : (v < nowMin ? v + 1440 : v) };
+  const at = x => x.done ? past(x.time) : ahead(x.time);
+  const fc = n.forecast, fcAt = fc && fc.time ? ahead(fc.time) : null;
+  const ts = [nowMin, ahead(n.estimate), ...(n.band || []).map(ahead), ...items.map(x => x.done ? past(x.time) : ahead(x.time)), fcAt].filter(v => v != null);
+  let lo = Math.min(...ts), hi = Math.max(...ts);
+  // at most about ten ticks round the dial, whatever the span (a band a day wide drew 28 hourly labels on top of each other)
+  const step = [15, 30, 60, 120, 180, 360, 720].find(st => (hi - lo) / st <= 10) || 1440;
+  lo = Math.floor(lo / step) * step; hi = Math.max(Math.ceil(hi / step) * step, lo + 2 * step);
+  const span = hi - lo;
+  const ang = m => Math.PI - (Math.max(0, Math.min(span, m - lo)) / span) * Math.PI;
+  const pt = (m, r) => [cx + r * Math.cos(ang(m)), cy - r * Math.sin(ang(m))];
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', '-24 0 388 186');   // room for a weekday on the end ticks svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `${n.label || 'Finish time'} dial`);
+  const el = (tag, a, t) => { const e = document.createElementNS(ns, tag); for (const k in a) e.setAttribute(k, a[k]); if (t != null) e.textContent = t; svg.appendChild(e); return e };
+  const arc = (a, b, r1, r2, f) => {
+    const [x1, y1] = pt(a, r2), [x2, y2] = pt(b, r2), [x3, y3] = pt(b, r1), [x4, y4] = pt(a, r1);
+    el('path', {d: `M${x1} ${y1} A${r2} ${r2} 0 0 1 ${x2} ${y2} L${x3} ${y3} A${r1} ${r1} 0 0 0 ${x4} ${y4}Z`, fill: f});
+  };
+  arc(lo, hi, 100, 130, css('--track'));
+  if (left.length && n.band && n.band.length === 2) arc(ahead(n.band[0]), ahead(n.band[1]), 100, 130, css('--band'));
+  let lastDay = 0;   // a tick on another day than now's says which, on that day's first tick only
+  for (let x = lo; x <= hi; x += step) {
+    const [x1, y1] = pt(x, 131), [x2, y2] = pt(x, 138), [lx, ly] = pt(x, 152), d = Math.floor(x / 1440);
+    el('line', {x1, y1, x2, y2, stroke: css('--muted')});
+    el('text', {x: lx, y: ly + 4, 'text-anchor': 'middle', 'font-size': 11, fill: css('--ink2')}, fmt(x, d === lastDay));
+    lastDay = d;
+  }
+  if (fcAt != null && left.length) {
+    // the forecast: when the band should be a quarter as wide, a small open triangle outside the dial
+    const [fx, fy] = pt(fcAt, 98), a = ang(fcAt), q = (r, da) => [cx + r * Math.cos(a + da), cy - r * Math.sin(a + da)];
+    const [p1, p2, p3] = [q(99, 0), q(91, 0.035), q(91, -0.035)];
+    el('polygon', {points: [p1, p2, p3].map(p => p.map(v => v.toFixed(1)).join(',')).join(' '), fill: 'none', stroke: css('--band'), 'stroke-width': 1.6, 'stroke-linejoin': 'round'});
+  }
+  const [nx, ny] = pt(nowMin, 132);
+  el('line', {x1: cx, y1: cy, x2: nx, y2: ny, stroke: css('--muted'), 'stroke-dasharray': '3 3'});
+  const marks = document.createElementNS(ns, 'g');
+  items.forEach((x, i) => { const m = x.done ? past(x.time) : ahead(x.time); if (m != null) { const [px, py] = pt(m, 115); marks.insertAdjacentHTML('beforeend', markerSVG(i, x.done, px, py, 5.5)) } });
+  const target = left.length || !items.length ? n.estimate : items.map(x => x.time).filter(Boolean).sort((a, b) => past(a) - past(b)).pop();
+  if (target) {
+    const [tx, ty] = pt(left.length ? ahead(target) : past(target), 96);
+    el('line', {x1: cx, y1: cy, x2: tx, y2: ty, stroke: css('--ink'), 'stroke-width': 3, 'stroke-linecap': 'round'});
+  }
+  svg.appendChild(marks);   // over the needle, so a marker at the estimate stays visible
+  el('circle', {cx, cy, r: 7, fill: css('--ink')});
+  const finished = items.length && !left.length;
+  el('text', {x: 170, y: 150, 'text-anchor': 'middle', 'font-size': 26, 'font-weight': 500, fill: css('--ink')}, (finished ? 'done ' : '') + (target ? fmt(left.length ? ahead(target) : past(target)) : '—'));
+  const box = document.createElement('section');
+  if (n.title) box.innerHTML = `<h2>${esc(n.title)}</h2>`;
+  box.appendChild(svg);
+  // the label is HTML under the dial, so a long one wraps
+  box.insertAdjacentHTML('beforeend', `<p class="lbl">${esc((n.label || 'all done') + (finished ? '' : ', best guess'))}</p>`);
+  if (fc && !finished) box.insertAdjacentHTML('beforeend', `<p class="fc">${fc.time ?
+    `band now ${fc.width} min wide; a quarter as wide (about ${fc.narrow} min) near ${fmt(fcAt)} <svg class="fcm" viewBox="0 0 12 12" aria-hidden="true"><polygon points="6,10 2,3 10,3" fill="none" stroke="${css('--band')}" stroke-width="1.6" stroke-linejoin="round"/></svg>, once ${esc(fc.after)} is done (at the median pace)` :
+    `band now ${fc.width} min wide; it stays wide until the end`}</p>`);
+  if (n.basis && !finished) box.insertAdjacentHTML('beforeend', `<p class="basis">band: ${esc(n.basis)}</p>`);
+  if (items.length) box.insertAdjacentHTML('beforeend', '<table>' + items.map((x, i) => [x, i])
+    // in the order the markers sit round the dial, by time; an item with no time keeps its place after them
+    .sort((a, b) => (at(a[0]) ?? 1e9) - (at(b[0]) ?? 1e9) || a[1] - b[1]).map(([x, i]) =>
+    `<tr><td class="k"><svg viewBox="0 0 14 14" aria-hidden="true">${markerSVG(i, x.done, 7, 7, 5)}</svg></td><td>${esc(x.name)}</td><td class="st ${x.done ? 'done' : ''}">${esc(x.done ? 'done' : (x.state || ''))}</td>` +
+    `<td class="t">${x.time ? (x.done ? '' : 'near ') + esc(fmt(x.done ? past(x.time) : ahead(x.time))) : ''}</td></tr>`).join('') + '</table>');
+  return [box, items.length, items.length - left.length];
+}
+
+function draw(s) {
+  if (s.title) { document.getElementById('title').textContent = s.title; document.title = s.title }
+  const dm = /^(\d{4}-\d\d-\d\d)[ T]/.exec(s.now || '');
+  // undated statuses count from today's midnight on this device
+  DAY0 = dm ? dayNo(dm[1]) : (d => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5)(new Date());
+  const [h, m] = s.now.replace(/^.*[ T]/, '').split(':').map(Number), nowMin = h * 60 + m;
+  const root = document.getElementById('needles'); root.innerHTML = '';
+  let all = 0, done = 0;
+  for (const n of s.needles || []) { const [box, a, d] = dial(n, nowMin); root.appendChild(box); all += a; done += d }
+  const hms = d => d.toTimeString().slice(0, 8), c = new Date();
+  document.getElementById('sub').textContent = (all ? `${done} of ${all} done · ` : '') +
+    `checked ${hms(c)} · next check ${hms(new Date(c.getTime() + PERIOD))} · dashed line: now` + (s.note ? ` · ${s.note}` : '');
+}
+
+async function tick() {
+  try {
+    const s = await (await fetch('/status', {cache: 'no-store'})).json();
+    if (s.refresh && s.refresh * 1000 !== PERIOD) { PERIOD = s.refresh * 1000; clearInterval(timer); timer = setInterval(tick, PERIOD) }
+    draw(s);
+  } catch (e) { document.getElementById('sub').textContent = 'server not answering' }
+}
+tick(); timer = setInterval(tick, PERIOD);
+</script></body></html>

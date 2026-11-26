@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>Trainer tests</title>
+<style>body{font:14px monospace;margin:16px} .pass{color:#1e8a4c} .fail{color:#c0392b;font-weight:bold}</style></head>
+<body><h3>Generator and grader checks</h3><div id="out">running…</div>
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+<div id="scratch" style="width:1024px;position:absolute;left:-5000px"></div>
+<script type="module">
+import { KEYS, mod, spelledToMidi, accFor, degree } from './theory.js';
+import { LEVELS, advance, newProgress, aidsFor } from './levels.js';
+import { render, PALETTE, MARK_ROOM } from './render.js';
+import { generate, TEXTURES } from './generate.js';
+import { gradeSegment, simulate } from './grade.js';
+import { batonAt, seenAt, patternFor, OUTWARD_MAX } from './conductor.js';
+import { choirPlan, choirLines, rushLine, RUSH, LEAD_JITTER, DRAG } from './choir.js';
+import { rng } from './theory.js';
+
+const rows = [];
+const fails = {};
+const check = (name, ok, detail) => { if (!ok) { (fails[name] = fails[name] || []).push(detail); } rows[name] = (rows[name] || 0) + 1; };
+const DURS = new Set([4, 3, 2, 1.5, 1, 0.5]);
+const RANGES = { treble: [52, 84], treble8: [45, 72], bass: [36, 67] };
+
+let n = 0;
+const t0 = performance.now();
+for (const keyName of Object.keys(KEYS)) for (const texture of Object.keys(TEXTURES)) for (const beats of [3, 4]) for (const density of ['slow', 'medium', 'fast']) for (let s = 0; s < 3; s++) {
+  const seed = 1000 * n + 7; n++;
+  let ex;
+  try { ex = generate({ keyName, texture, beats, density, nBars: 16, seed }); } catch (e) { check('generates', false, `${keyName} ${texture} ${beats} ${density} ${seed}: ${e.message}`); continue; }
+  check('generates', true);
+  const id = `${keyName} ${texture} ${beats}/4 ${density} seed ${seed}`;
+  // harmony covers the piece, cadences
+  const H = ex.harmony;
+  let t = 0; H.forEach((h) => { check('harmony contiguous', h.start === t, id); t += h.dur; });
+  check('harmony covers', t === 16 * beats, id);
+  const tonic = ex.key.mode === 'major' ? 'I' : 'i';
+  for (let p = 1; p <= 4; p++) {
+    const last = H.filter((h) => h.start < p * 4 * beats).pop();
+    check('phrase ends on I or V', [tonic, 'V'].includes(last.chord.roman), `${id} phrase ${p}: ${last.chord.roman}`);
+  }
+  check('piece ends on tonic', H[H.length - 1].chord.roman === tonic, id);
+  // voicing: chord tones, no parallels
+  H.forEach((h, i) => {
+    check('voicing in chord', h.voicing.every((m) => h.chord.pcs.has(mod(m, 12))), id);
+    if (!i || texture === 'P') return;
+    const p = H[i - 1].voicing; const c = h.voicing;
+    for (let a = 0; a < 4; a++) for (let b = a + 1; b < 4; b++) {
+      const ip = mod(p[b] - p[a], 12); const ic = mod(c[b] - c[a], 12);
+      const par = ip === ic && (ip === 0 || ip === 7) && p[a] !== c[a] && p[b] !== c[b] && Math.sign(c[a] - p[a]) === Math.sign(c[b] - p[b]);
+      check('no parallel 5ths/8ves', !par, `${id} at ${h.start}: voices ${a},${b}`);
+    }
+  });
+  // notes
+  ex.staves.forEach((st) => st.voices.forEach((v) => {
+    let tt = 0;
+    v.notes.forEach((nt, k) => {
+      check('voice contiguous', nt.start === tt, `${id} ${st.clef} at ${nt.start} expected ${tt}`); tt = nt.start + nt.dur;
+      check('duration allowed', DURS.has(nt.dur), `${id} dur ${nt.dur}`);
+      const barStart = Math.floor(nt.start / beats) * beats;
+      check('no note crosses barline', nt.start + nt.dur <= barStart + beats, `${id} at ${nt.start}`);
+      nt.spells.forEach((sp, j) => {
+        check('spelling matches pitch', spelledToMidi(sp) === nt.midis[j], `${id} ${JSON.stringify(sp)} vs ${nt.midis[j]}`);
+        check('accidental at most double', Math.abs(sp.acc) <= 2, id);
+      });
+      const [lo, hi] = RANGES[st.clef];
+      nt.midis.forEach((m) => check('register fits clef', m >= lo && m <= hi, `${id} ${st.clef} ${m}`));
+      // chord tones sounding at each change
+      const h = H.find((x) => x.start === nt.start);
+      if (h) nt.midis.forEach((m) => check('chord tone on each change', h.chord.pcs.has(mod(m, 12)), `${id} at ${nt.start} ${m} in ${h.roman}`));
+      if (nt.nct) {
+        const prev = v.notes[k - 1]; const next = v.notes[k + 1];
+        const d1 = Math.abs(nt.midis[0] - prev.midis[0]); const d2 = next ? Math.abs(next.midis[0] - nt.midis[0]) : 1;
+        check('non-chord tones move by step', [1, 2].includes(d1) && [1, 2].includes(d2), `${id} at ${nt.start}`);
+      }
+    });
+    check('voice fills piece', tt === 16 * beats, `${id} ${st.clef} ends ${tt}`);
+  }));
+  // grader on this piece at two tempi
+  for (const bpm of [60, 100]) {
+    const beatMs = 60000 / bpm;
+    const segs = H.map((h) => ({ t: 1000 + h.start * beatMs, dur: h.dur * beatMs, pcs: h.chord.pcs, rootPc: h.chord.root.pc, bassPc: mod(h.voicing[0], 12) }));
+    const g = (kind) => { const ev = simulate(kind, segs, H, beatMs); return segs.map((sg, i) => gradeSegment(sg, segs[i + 1], ev, beatMs)); };
+    const expect = (kind, want, filter = () => true) => g(kind).forEach((r, i) => { if (filter(i)) check(`grader: ${kind} → ${want}`, r.result === want, `${id} ♩=${bpm} change ${i} (${H[i].roman}) got ${r.result}: ${r.why}`); });
+    const expectPts = (kind, want, filter = () => true) => g(kind).forEach((r, i) => { if (filter(i)) check(`points: ${kind} → ${want} of 4`, r.points === want && r.max === 4, `${id} ♩=${bpm} change ${i} (${H[i].roman}) got ${r.points}: ${r.why}`); });
+    expectPts('perfect', 4); expectPts('roots', 4); expectPts('bassonly', 2); expectPts('wrongnote', 3); expectPts('nothing', 0);
+    // late notes of a one-beat chord spill into the next change's early window, so only judge changes after long chords
+    const lateOk = (i) => H[i].dur >= 2 && (i === 0 || H[i - 1].dur >= 2);
+    expectPts('late', 2, lateOk);
+    expect('perfect', 'hit');
+    expect('roots', 'hit');
+    expect('bassonly', 'partial');
+    expect('wrongnote', 'partial');
+    expect('nothing', 'miss');
+    expect('late', 'late', lateOk);
+  }
+}
+
+// ---------- levels ----------
+const scaleOf = (key) => new Set([0, 1, 2, 3, 4, 5, 6].map((d) => degree(key, d).pc));
+LEVELS.forEach((lv) => {
+  for (let k = 0; k < 200; k++) {
+    const seed = 99991 * lv.n + k;
+    const keyName = lv.keys[k % lv.keys.length]; const texture = lv.textures[k % lv.textures.length]; const beats = lv.meters[k % lv.meters.length];
+    let ex;
+    try { ex = generate({ keyName, texture, beats, nBars: 8, density: lv.density, chords: lv.chords, inversions: lv.inversions, chromatic: lv.chromatic, misprint: lv.misprint, piano: lv.piano, seed }); }
+    catch (e) { check(`level ${lv.n}: generates`, false, `${keyName} ${texture} seed ${seed}: ${e.message}`); continue; }
+    check(`level ${lv.n}: generates`, true);
+    const id = `L${lv.n} ${keyName} ${texture} ${beats}/4 seed ${seed}`;
+    ex.harmony.forEach((h) => {
+      check('levels: chords in the level', lv.chords.includes(h.chord.roman), `${id}: ${h.chord.roman}`);
+      if (!lv.inversions) check('levels: root in bass when no inversions', h.bassRole === 'R', `${id}: ${h.roman}`);
+    });
+    for (let b = 0; b < 8; b++) {
+      const sl = ex.harmony.filter((h) => h.bar === b);
+      if (lv.density === 'one') check('levels: one change a bar', sl.length === 1, `${id} bar ${b + 1}`);
+      if (lv.density === 'some2') check('levels: at most two changes a bar', sl.length <= 2, `${id} bar ${b + 1}`);
+    }
+    if (texture === 'P') {
+      const [rhS, lhS] = ex.staves;
+      ex.harmony.forEach((h, i) => {
+        const l = lhS.voices[0].notes[i]; const r = rhS.voices[0].notes[i];
+        check('printed as played: left hand is the root alone', l.midis.length === 1 && mod(l.midis[0], 12) === h.chord.root.pc, id);
+        const pcs = new Set(r.midis.map((m) => mod(m, 12)));
+        const triad = h.chord.tones.slice(0, 3).map((t) => t.pc);
+        check('printed as played: right hand is the close triad', r.midis.length === 3 && triad.every((pc) => pcs.has(pc)) && r.midis[2] - r.midis[0] < 12, id);
+      });
+    }
+    // misprints
+    const flagged = [];
+    ex.staves.forEach((st, si) => st.voices.forEach((v, vi) => v.notes.forEach((n) => { if (n.misprint) flagged.push({ n, si, vi }); })));
+    if (lv.misprint && ['L1', 'L2', 'L4'].includes(texture)) {
+      check('misprint: exactly one', flagged.length === 1 && ex.misprint, `${id}: ${flagged.length}`);
+      if (flagged.length === 1 && ex.misprint) {
+        const { n, si, vi } = flagged[0]; const mp = ex.misprint; const h = ex.harmony[mp.change];
+        check('misprint: at a change', n.start === h.start, id);
+        check('misprint: outside the chord', !h.chord.pcs.has(mod(n.midis[0], 12)), id);
+        check('misprint: a half step off', Math.abs(mp.to - mp.from) === 1 && n.midis[0] === mp.to, id);
+        const inner = texture === 'L4' ? (si === 1 || si === 2) : ((si === 0 && vi === 1) || (si === 1 && vi === 0));
+        check('misprint: alto or tenor', inner, `${id}: staff ${si} voice ${vi}`);
+        check('misprint: spelled to its pitch', spelledToMidi(n.spells[0]) === n.midis[0], id);
+      }
+    } else check('misprint: none where not asked', flagged.length === 0, id);
+    // landmines
+    const sc = scaleOf(ex.key);
+    ex.staves.forEach((st) => st.voices.forEach((v) => v.notes.forEach((n) => n.midis.forEach((m, j) => {
+      check('landmine flag matches its definition', n.landmine[j] === (!n.nct && !n.misprint && !sc.has(mod(m, 12))), id);
+    }))));
+    // hand modes on this exercise
+    const beatMs = 1000;
+    const segs = ex.harmony.map((h) => ({ t: 1000 + h.start * beatMs, dur: h.dur * beatMs, pcs: h.chord.pcs, rootPc: h.chord.root.pc, bassPc: mod(h.voicing[0], 12) }));
+    const g = (kind, hand) => { const ev = simulate(kind, segs, ex.harmony, beatMs); return segs.map((sg, i) => gradeSegment(sg, segs[i + 1], ev, beatMs, hand).result); };
+    if (k < 20) {
+      check('hands: root alone passes left-hand levels', g('leftonly', 'left').every((x) => x === 'hit'), id);
+      check('hands: root alone does not pass right-hand levels', g('leftonly', 'right').every((x) => x !== 'hit'), id);
+      const gp = (kind, hand) => { const ev = simulate(kind, segs, ex.harmony, beatMs); return segs.map((sg, i) => gradeSegment(sg, segs[i + 1], ev, beatMs, hand)); };
+      check('points: root alone on a left-hand level is 2 of 2', gp('leftonly', 'left').every((r) => r.points === 2 && r.max === 2), id);
+      check('points: root alone on a right-hand level is 1 of 2', gp('leftonly', 'right').every((r) => r.points === 1 && r.max === 2), id);
+      check('points: third and fifth on a right-hand level is 2 of 2', gp('rightonly', 'right').every((r) => r.points === 2), id);
+      check('hands: third and fifth pass right-hand levels', g('rightonly', 'right').every((x) => x === 'hit'), id);
+      check('hands: third and fifth do not pass left-hand levels (root-position chords)', g('rightonly', 'left').every((x, i) => x === 'miss' || ex.harmony[i].bassRole !== 'R'), id);
+      for (const hand of ['left', 'right', 'both']) check('hands: everything printed passes every mode', g('perfect', hand).every((x) => x === 'hit'), `${id} ${hand}`);
+    }
+  }
+});
+
+// ---------- voices over piano ----------
+{
+  const RH = { 1: ['pulse', 'broken'], 2: ['arp', 'afterbeat', 'melody'], 3: ['pop'] };
+  const LH = { 1: ['held', 'octaves'], 2: ['oompah', 'arp'], 3: ['reduction', 'line'] };
+  const allowed = (t, lvl) => Object.entries(t).filter(([k]) => +k <= lvl).flatMap(([, v]) => v);
+  for (const piano of [1, 2, 3]) for (const choir of ['SATB', 'TTBB']) {
+    const seenR = new Set(); const seenL = new Set();
+    for (let k = 0; k < 60; k++) {
+      const keyName = ['C', 'G', 'D', 'A', 'E', 'F', 'Bb', 'Eb', 'Am', 'F#m', 'C#m', 'Cm'][k % 12];
+      const seed = 5150 + 97 * k + piano;
+      let ex;
+      try { ex = generate({ keyName, texture: 'V', piano, choir, beats: k % 3 ? 4 : 3, density: ['slow', 'medium', 'fast'][k % 3], nBars: 8, seed }); }
+      catch (e) { check('voices over piano: generates', false, `${keyName} ${piano} ${choir} ${seed}: ${e.message}`); continue; }
+      check('voices over piano: generates', true);
+      const id = `V${piano} ${choir} ${keyName} seed ${seed}`;
+      seenR.add(ex.figures.rh); seenL.add(ex.figures.lh);
+      check('voices over piano: figures belong to the piano level', allowed(RH, piano).includes(ex.figures.rh) && allowed(LH, piano).includes(ex.figures.lh), `${id}: ${ex.figures.rh} ${ex.figures.lh}`);
+      check('voices over piano: choir, then piano', ex.staves.map((st) => st.group).join() === 'choir,choir,piano,piano' && ex.figures.choir === choir, id);
+      check('voices over piano: choir clefs', ex.staves[0].clef === (choir === 'SATB' ? 'treble' : 'treble8') && ex.staves[1].clef === 'bass', id);
+      // piano bass at each change is the choir's bass note's name (so inversions match)
+      const lh = ex.staves[3].voices[0].notes;
+      ex.harmony.forEach((h) => {
+        const n = lh.find((x) => x.start === h.start);
+        check('voices over piano: piano bass at each change is the choir bass', n && n.midis.length && mod(Math.min(...n.midis), 12) === mod(h.voicing[0], 12), `${id} at ${h.start} (${h.roman})`);
+        const rhs = ex.staves[2].voices.flatMap((v) => v.notes.filter((x) => x.start === h.start && !x.rest));
+        check('voices over piano: right hand sounds at each change', rhs.length > 0 || ex.figures.rh === 'afterbeat', `${id} at ${h.start}`);
+      });
+      ex.staves[3].voices[0].notes.forEach((n) => check('voices over piano: left hand two notes at most, four in a reduction', n.midis.length <= (ex.figures.lh === 'reduction' ? 4 : 2), id));
+    }
+    check(`voices over piano ${piano}: every right-hand figure drawn (${choir})`, allowed(RH, piano).every((x) => seenR.has(x)), [...seenR].join());
+    check(`voices over piano ${piano}: every left-hand figure drawn (${choir})`, allowed(LH, piano).every((x) => seenL.has(x)), [...seenL].join());
+  }
+}
+
+// ---------- conductor ----------
+for (const beats of [2, 3, 4]) {
+  const P = patternFor(beats);
+  for (let b = -beats; b < 3 * beats; b++) {
+    const [x, y] = batonAt(beats, b); const want = P.ictus[((b % beats) + beats) % beats];
+    check('conductor: on the beat point at every beat', Math.hypot(x - want[0], y - want[1]) < 1e-6, `${beats}/4 beat ${b}`);
+  }
+  // fastest into the ictus, slowest near the top of the rebound
+  const speed = (b) => { const p = [-0.01, 0, 0.01].map((d) => batonAt(beats, b + d)); return Math.hypot(p[1][0] - p[0][0], p[1][1] - p[0][1]) + Math.hypot(p[2][0] - p[1][0], p[2][1] - p[1][1]); }; // path length: the baton turns at the ictus
+  for (let k = 0; k < beats; k++) check('conductor: faster through the beat than mid-beat', speed(k) > speed(k + 0.5), `${beats}/4 beat ${k + 1}`);
+  // forearm rule: never far outward; the outward beat and the next upbeat nearly in line; the sideways travel inward
+  let maxX = -Infinity; for (let t = 0; t < beats; t += 0.01) maxX = Math.max(maxX, batonAt(beats, t)[0]);
+  check('conductor: hand never past the outward limit', maxX <= OUTWARD_MAX + 0.5, `${beats}/4 reaches x ${maxX.toFixed(1)}`);
+  if (beats === 4) {
+    const [i1, i2, i3, i4] = P.ictus;
+    check('conductor: 4/4 beat 3 and upbeat 4 nearly in line', Math.abs(i3[0] - i4[0]) <= 6, `${i3[0]} vs ${i4[0]}`);
+    check('conductor: 4/4 sideways room mostly 1 to 2', i1[0] - i2[0] >= 2 * (i3[0] - i1[0]), `1→2 ${i1[0] - i2[0]}, 1→3 ${i3[0] - i1[0]}`);
+    // the 4/4 pattern: 2 at the inner end of a horizontal stroke, 3 at the outer end of one, a dwell, 4 where the upbeat starts
+    for (const k of [0, 1]) {
+      const pts = Array.from({ length: 101 }, (_, j) => batonAt(4, k + j / 100));
+      const span = (i) => Math.max(...pts.map((p) => p[i])) - Math.min(...pts.map((p) => p[i]));
+      check('conductor: 4/4 strokes to 2 and to 3 are horizontal', span(1) <= 0.4 * span(0), `${k + 1}→${k + 2}: ${span(0).toFixed(0)} across, ${span(1).toFixed(0)} up and down`);
+    }
+    let far = 0; for (let t = 2; t <= 3; t += 0.01) { const p = batonAt(4, t); far = Math.max(far, Math.hypot(p[0] - i3[0], p[1] - i3[1])); }
+    check('conductor: 4/4 dwell between 3 and 4 is stationary', far < 1e-9, `moves ${far.toFixed(3)} from beat 3`);
+    check('conductor: 4/4 beat 4 starts the upbeat', i4[1] - batonAt(4, 3.5)[1] >= 60, `rises ${(i4[1] - batonAt(4, 3.5)[1]).toFixed(0)} in half a beat`);
+  }
+  if (beats === 3) check('conductor: 3/4 beat 2 and upbeat 3 nearly in line', Math.abs(P.ictus[1][0] - P.ictus[2][0]) <= 6, JSON.stringify(P.ictus));
+  if (beats === 3) {
+    // the 3/4 pattern: 2 at the outer end of a horizontal stroke, a dwell, 3 at the start of a diagonal upstroke
+    const [i1, i2, i3] = P.ictus;
+    const pts = Array.from({ length: 101 }, (_, j) => batonAt(3, j / 100));
+    const span = (i) => Math.max(...pts.map((p) => p[i])) - Math.min(...pts.map((p) => p[i]));
+    check('conductor: 3/4 stroke to 2 is horizontal and outward', span(1) <= 0.4 * span(0) && i2[0] > i1[0], `${span(0).toFixed(0)} across, ${span(1).toFixed(0)} up and down`);
+    let far = 0; for (let t = 1; t <= 2; t += 0.01) { const p = batonAt(3, t); far = Math.max(far, Math.hypot(p[0] - i2[0], p[1] - i2[1])); }
+    check('conductor: 3/4 dwell between 2 and 3 is stationary', far < 1e-9, `moves ${far.toFixed(3)} from beat 2`);
+    // diagonal: from 3 the hand goes up and inward together, never much off the straight line to the top
+    const top = batonAt(3, 2 + P.seg[2].at); let off = 0;
+    for (let t = 2; t <= 2 + P.seg[2].at; t += 0.01) {
+      const [x, y] = batonAt(3, t); const dx = top[0] - i3[0]; const dy = top[1] - i3[1];
+      off = Math.max(off, Math.abs((x - i3[0]) * dy - (y - i3[1]) * dx) / Math.hypot(dx, dy));
+    }
+    check('conductor: 3/4 beat 3 starts a diagonal upstroke', i3[1] - top[1] >= 60 && i3[0] - top[0] >= 15 && off <= 4, `up ${i3[1] - top[1]}, in ${i3[0] - top[0]}, off the line by ${off.toFixed(1)}`);
+  }
+  // every pattern: the downbeat falls straight down, from the top of the upbeat to beat 1
+  {
+    const last = P.seg[beats - 1]; const i1 = P.ictus[0]; let dev = 0; let topY = Infinity;
+    for (let t = beats - 1 + last.at; t <= beats + 1e-9; t += 0.01) { const [x, y] = batonAt(beats, t); dev = Math.max(dev, Math.abs(x - i1[0])); topY = Math.min(topY, y); }
+    check('conductor: downbeat perfectly vertical', dev < 1e-9 && i1[1] - topY >= 100, `${beats}/4: sideways ${dev.toFixed(3)}, falls ${(i1[1] - topY).toFixed(0)}`);
+  }
+  // seen from the front: mirrored, so beat 2 of 4/4 lands to the right of beat 1
+  if (beats === 4) check('conductor: mirrored as you face them', seenAt(4, 1)[0] > seenAt(4, 0)[0], JSON.stringify([seenAt(4, 0), seenAt(4, 1)]));
+  for (let t = 0; t < beats; t += 0.05) { const [x, y] = seenAt(beats, t); check('conductor: baton and hand inside the drawing', x > -250 && x < 250 && y > -94 && y < 88 && y - (-40) < 88, `${beats}/4 at ${t}: ${x},${y}`); }
+}
+
+// ---------- choir ----------
+{
+  const follows = [];
+  let n = 0;
+  for (const [texture, choir] of [['V', 'SATB'], ['V', 'TTBB'], ['L4', null]]) for (const beatMs of [833, 1500]) for (let k = 0; k < 12; k++) {
+    const seed = 777 + 31 * k + beatMs;
+    const ex = generate({ keyName: ['C', 'G', 'D', 'Eb', 'Am', 'F#m'][k % 6], texture, choir, piano: 3, beats: k % 3 ? 4 : 3, density: ['slow', 'medium', 'fast'][k % 3], nBars: 8, seed, misprint: texture === 'L4' && k % 2 === 0 });
+    const id = `${texture} ${choir || ''} ${ex.keyName} ${beatMs} ms seed ${seed}`;
+    const lines = choirLines(ex);
+    const li = (sec) => lines.findIndex((x) => x.section === sec);
+    const written = (e) => lines[li(e.section)].notes[e.k].start * beatMs;
+    for (const opts of [{}, { drag: true }, { rush: true }, { drag: true, rush: true }]) {
+      n++;
+      const P = choirPlan(ex, beatMs, opts);
+      const tag = `${id} ${JSON.stringify(opts)}`;
+      check('choir: sings', P.events.length > 0, tag);
+      check('choir: nobody sings in the count-in', P.events.every((e) => e.t >= 0), tag);
+      const slipped = new Set(P.events.filter((e) => e.mistake).map((e) => `${e.section}/${e.k}`));
+      const rushers = new Set(P.rushing.map((x) => x.section));
+      check(`choir: ${opts.rush ? 'two' : 'no'} sections rushing`, rushers.size === (opts.rush ? 2 : 0), tag);
+      check('choir: one to three mistakes in 8 bars, none in a rushing section', P.mistakes.length >= 1 && P.mistakes.length <= 3 && P.mistakes.every((m) => !rushers.has(m.section)), `${tag}: ${JSON.stringify(P.mistakes)}`);
+      check('choir: mistakes never overlap', P.mistakes.every((a, i) => P.mistakes.every((b, j) => i === j || a.to + 1 <= b.from || b.to + 1 <= a.from)), tag);
+      P.events.forEach((e) => {
+        if (rushers.has(e.section) || slipped.has(`${e.section}/${e.k}`)) return;
+        const d = e.t - written(e);
+        if (e.group === 'lead') check('choir: leaders on the beat (±15 ms)', Math.abs(d) <= LEAD_JITTER + 1e-6 || (written(e) === 0 && d >= 0), `${tag} ${e.section} note ${e.k}: ${d.toFixed(0)} ms`);
+        else { check('choir: followers 20-160 ms late', d >= DRAG.min - 1e-6 && d <= DRAG.max + 1e-6, `${tag}: ${d}`); follows.push(d); }
+      });
+      if (opts.drag) check('choir: with drag, every section has leaders and followers', lines.every((x) => ['lead', 'follow'].every((g) => P.events.some((e) => e.section === x.section && e.group === g))), tag);
+      else check('choir: without drag, no followers', P.events.every((e) => e.group === 'lead'), tag);
+      if (ex.misprint) {
+        const sec = lines[ex.misprint.voice === 'alto' ? 1 : 2].section;
+        const at = P.events.filter((e) => e.section === sec && !e.mistake && lines[li(sec)].notes[e.k].start === ex.misprint.start); // by note, not time: a rushing section sings it early
+        check('choir: sings the right note where your copy has a misprint', at.length > 0 && at.every((e) => e.midi === ex.misprint.from), `${tag}: ${at.map((e) => e.midi)} vs ${ex.misprint.from}`);
+      }
+    }
+  }
+  const mean = follows.reduce((a, b) => a + b, 0) / follows.length;
+  const sd = Math.sqrt(follows.reduce((a, b) => a + (b - mean) ** 2, 0) / follows.length);
+  check('choir: followers drag about 70 ms on average, unevenly (sd ≥ 15 ms)', Math.abs(mean - DRAG.mean) < 10 && sd >= 15, `mean ${mean.toFixed(0)}, sd ${sd.toFixed(0)}`);
+  // the rushing spiral, on its own
+  for (const beatMs of [600, 833, 1500]) for (let k = 0; k < 20; k++) {
+    const line = []; for (let b = 0; b < 32; b++) line.push({ start: b, dur: 1, midi: 60 + (b % 2) }); // "doo doo" quarter notes, 8 bars
+    const { out, backAt } = rushLine(line, beatMs, rng(4000 + k));
+    const tag = `${beatMs} ms run ${k}`;
+    check('rush: they vamp at least once in 8 bars of quarters', backAt.length >= 1, tag);
+    const notes = out.filter((p) => !p.vamp);
+    const ahead = notes.map((p) => line[p.k].start * beatMs - p.t);
+    let accel = true; let ok = true;
+    for (let i = 1; i < notes.length; i++) {
+      const freshStart = backAt.includes(line[notes[i].k].start);
+      if (freshStart) { check('rush: back in exactly on the beat after a vamp', Math.abs(ahead[i]) < 1e-6, `${tag} note ${i}: ${ahead[i]}`); continue; }
+      if (!(ahead[i] > ahead[i - 1])) ok = false;
+      if (i >= 2 && !backAt.includes(line[notes[i - 1].k].start) && ahead[i] - ahead[i - 1] < 0.6 * (ahead[i - 1] - ahead[i - 2])) accel = false;
+    }
+    check('rush: further ahead every note until they vamp', ok, tag);
+    check('rush: speeding up as they get further off (allowing ±20% wobble)', accel, tag);
+    check('rush: they notice at most about RUSH.vampAt of a beat ahead (one note more)', ahead.every((a) => a <= RUSH.vampAt * beatMs * 1.6), `${tag}: max ${Math.max(...ahead).toFixed(0)} ms`);
+    out.filter((p) => p.vamp).forEach((p) => check('rush: a vamp repeats their note', line[p.k].midi === line[p.k].midi && p.dur > 0, tag));
+  }
+}
+
+// ---------- promotion ----------
+{
+  let p = newProgress();
+  const run = (score) => { [p] = advance(p, score); return p; };
+  run(0.9); check('promotion: 85% raises tempo 6', p.bpm === 46 && p.level === 1, JSON.stringify(p));
+  run(0.7); check('promotion: 60-84% holds', p.bpm === 46, JSON.stringify(p));
+  run(0.5); check('promotion: below 60% lowers tempo 6', p.bpm === 40, JSON.stringify(p));
+  run(0.5); check('promotion: one low run at 40 does not offer the level below', !p.offerDown, JSON.stringify(p));
+  p = { ...newProgress(), level: 3 }; run(0.5); run(0.5); check('promotion: two low runs at 40 offer the level below', p.offerDown && p.level === 3, JSON.stringify(p));
+  p = { ...newProgress(), bpm: 70 }; run(0.9); check('promotion: tempo caps at 72', p.bpm === 72 && p.level === 1, JSON.stringify(p));
+  run(0.9); check('promotion: 85% at 72 moves up a level at 40', p.level === 2 && p.bpm === 40 && p.runsAtLevel === 0, JSON.stringify(p));
+  p = { ...newProgress(), level: 12, bpm: 72 }; run(0.95); check('promotion: top stays top', p.level === 12, JSON.stringify(p));
+  p = newProgress(); run(0.7); run(0.7); check('promotion: runs at level count', p.runsAtLevel === 2, JSON.stringify(p));
+}
+
+// ---------- rendering ----------
+{
+  const box = document.getElementById('scratch');
+  // grey harmless notes and tint on level 9, outlines on level 1, screen fit for SATB
+  for (const [lvN, texture, keyName] of [[9, 'L2', 'Gm'], [10, 'L2', 'Bbm'], [1, 'P', 'C'], [10, 'L4', 'Eb'], [6, 'V', 'D'], [9, 'V', 'F#m'], [10, 'V', 'Eb']]) {
+    const lv = LEVELS[lvN - 1]; const aids = aidsFor(lvN);
+    for (let k = 0; k < 10; k++) {
+      const ex = generate({ keyName, texture, beats: 4, nBars: 8, density: lv.density, chords: lv.chords, inversions: lv.inversions, chromatic: lv.chromatic, piano: lv.piano, seed: 4242 + k });
+      const theme = k % 2 ? 'dark' : 'light';
+      const L = render(box, ex, aids, theme);
+      const id = `L${lvN} ${texture} ${keyName} seed ${4242 + k} ${theme}`;
+      L.notes.forEach((n) => {
+        // the colour each notehead is actually painted with
+        const fills = [...(n.el ? n.el.querySelectorAll('.vf-notehead path') : [])].map((e) => getComputedStyle(e).fill);
+        const rgb = (hex) => `rgb(${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)})`;
+        check('render: every note has a painted notehead', fills.length > 0, `${id} at ${n.start}`);
+        if (aids.grey) {
+          if (n.nct) check('render: harmless notes grey', fills.every((f) => f === rgb(PALETTE[theme].grey[aids.grey])), `${id} at ${n.start}: ${fills}`);
+          else check('render: chord tones never grey', fills.every((f) => f !== rgb(PALETTE[theme].grey[aids.grey])), `${id} at ${n.start}: ${fills}`);
+        }
+        if (aids.tint) n.landmine.forEach((lm, j) => { if (lm) check('render: landmines tinted', fills.includes(rgb(PALETTE[theme].tint)), `${id} at ${n.start}: ${fills}`); });
+        if (!n.nct && !n.landmine.some(Boolean)) check(`render: chord tones in the ${theme} theme's ink`, fills.every((f) => f === rgb(PALETTE[theme].ink)), `${id} at ${n.start}: ${fills}`);
+        if (aids.tint && !n.landmine.some(Boolean) && !n.nct) check('render: only landmines tinted', !fills.includes(rgb(PALETTE[theme].tint)), `${id} at ${n.start}: ${fills}`);
+      });
+      if (aids.outline) check('render: every right-hand triad has a shape name', L.notes.filter((n) => n.staff === 0).every((n) => ['lines', 'spaces', 'gap on top', 'gap below'].includes(n.shape)), id);
+      check('render: room for the marks under every bar, last system included', L.bars.every((b) => b.yBottom + MARK_ROOM <= L.height), `${id}: height ${L.height}`);
+      if (texture === 'L4' || texture === 'V') check(`render: two ${texture === 'V' ? 'voices-over-piano' : 'SATB'} systems fit 1024×700 under the conductor`, L.systems[1].bottom - L.systems[0].top <= 700 - 140 - 8, `${id}: ${Math.round(L.systems[1].bottom - L.systems[0].top)} px`);
+    }
+  }
+  box.innerHTML = '';
+}
+
+const ms = Math.round(performance.now() - t0);
+const names = Object.keys(rows);
+document.getElementById('out').innerHTML = `${n} exercises in ${ms} ms<br>` + names.map((k) => fails[k]
+  ? `<div class="fail">FAIL ${k}: ${fails[k].length} of ${rows[k]}<br>&nbsp;&nbsp;${fails[k].slice(0, 5).join('<br>&nbsp;&nbsp;')}</div>`
+  : `<div class="pass">pass ${k} (${rows[k]})</div>`).join('');
+window.TEST_DONE = { n, fails };
+</script></body></html>

@@ -1,0 +1,102 @@
+<meta charset="utf-8"><title>Pitch detector test</title>
+<style>body{font:13px/1.4 ui-monospace,Menlo,monospace;padding:16px;background:#fff;color:#111}td,th{padding:2px 8px;text-align:left}.bad{color:#b00;font-weight:bold}</style>
+<h3>Pitch detector test</h3>
+<div id="out">running…</div>
+<script src="pitch.js"></script>
+<script>
+const FRAME = 4096, HOP = 512;
+const out = [];
+function row(name, target, frames, note) {
+  const v = frames.filter(f => f.voiced);
+  const errs = v.map(f => (f.midi - target) * 100);
+  const med = errs.length ? errs.slice().sort((a, b) => a - b)[errs.length >> 1] : NaN;
+  const ok = errs.filter(e => Math.abs(e) < 50).length;
+  const octLo = errs.filter(e => Math.abs(e + 1200) < 100).length, octHi = errs.filter(e => Math.abs(e - 1200) < 100).length;
+  const other = errs.length - ok - octLo - octHi;
+  // a pass: the note's median within 30 cents, no octave errors, most frames voiced (scoops and drift are the singer's)
+  const pass = note === 'unvoiced' ? v.length / frames.length < 0.1 : (Math.abs(med) < 30 && octLo + octHi === 0 && v.length / frames.length > 0.6);
+  out.push({ name, target, n: frames.length, voiced: v.length, med: med.toFixed(0), ok, octLo, octHi, other, pass });
+}
+let OPTS = {};
+function run(x, sr, target, name, note, opts) {
+  opts = opts || OPTS;
+  const frames = [];
+  for (let i = 0; i + FRAME <= x.length; i += HOP) frames.push(Pitch.detect(x.subarray(i, i + FRAME), sr, opts));
+  row(name, target, frames, note);
+  return frames;
+}
+function highpass(x, sr, fc, poles) {
+  let y = Float32Array.from(x);
+  const a = 1 / (1 + 2 * Math.PI * fc / sr);
+  for (let p = 0; p < poles; p++) {
+    const z = new Float32Array(y.length); let px = 0, py = 0;
+    for (let i = 0; i < y.length; i++) { py = a * (py + y[i] - px); px = y[i]; z[i] = py; }
+    y = z;
+  }
+  return y;
+}
+function lowNoise(n, sr, fc, amp) { // brown-ish rumble: white noise through a one-pole low-pass, twice
+  const y = new Float32Array(n); let a = 0, b = 0; const k = 2 * Math.PI * fc / sr;
+  for (let i = 0; i < n; i++) { a += k * ((Math.random() * 2 - 1) - a); b += k * (a - b); y[i] = b; }
+  let pk = 0; for (const v of y) pk = Math.max(pk, Math.abs(v)); for (let i = 0; i < n; i++) y[i] *= amp / pk; return y;
+}
+function white(n, amp) { const y = new Float32Array(n); for (let i = 0; i < n; i++) y[i] = (Math.random() * 2 - 1) * amp; return y; }
+function mix(...xs) { const n = Math.min(...xs.map(x => x.length)); const y = new Float32Array(n); for (const x of xs) for (let i = 0; i < n; i++) y[i] += x[i]; return y; }
+
+(async () => {
+  OPTS = { highpass: +(new URLSearchParams(location.search).get('hp') || 100) };
+  const sr = 48000, S = Pitch.synthVoice, M = Pitch.midiToHz;
+  // synthetic singers
+  const cases = [
+    ['Ab3 ah, plain', 56, S(sr, 1, M(56))],
+    ['Ab2 ah (octave low), plain', 44, S(sr, 1, M(44))],
+    ['E2 ah, plain', 40, S(sr, 1, M(40))],
+    ['E3 oo (strong fundamental)', 52, S(sr, 1, M(52), { vowel: 'oo' })],
+    ['Ab2, no fundamental', 44, S(sr, 1, M(44), { fundamental: false })],
+    ['E2, no fundamental, phone high-pass 150 Hz', 40, highpass(S(sr, 1, M(40), { fundamental: false }), sr, 150, 2)],
+    ['Bb3, phone high-pass 200 Hz', 58, highpass(S(sr, 1, M(58)), sr, 200, 2)],
+    ['Ab3, weak odd harmonics (octave-up trap)', 56, S(sr, 1, M(56), { evenGain: 4 })],
+    ['E3 ee, vibrato ±40c, jitter', 52, S(sr, 1, M(52), { vowel: 'ee', vibrato: 40, jitter: 1 })],
+    ['Ab2 wobbly: drifts ±60c, 1 Hz', 44, S(sr, 1, t => M(44 + 0.6 * Math.sin(2 * Math.PI * t)))],
+    ['Bb3 + white noise (SNR ~10 dB)', 58, mix(S(sr, 1, M(58)), white(sr, 0.06))],
+    ['E2 + car rumble (loud, <120 Hz)', 40, mix(S(sr, 1, M(40), { amp: 0.2 }), lowNoise(sr, sr, 60, 0.2))],
+    ['Ab2 hum-like (oo, quiet) + rumble', 44, mix(S(sr, 1, M(44), { vowel: 'oo', amp: 0.1 }), lowNoise(sr, sr, 50, 0.1))],
+  ];
+  for (const [name, m, x] of cases) run(x, sr, m, name);
+  run(white(sr, 0.05), sr, 0, 'white noise only', 'unvoiced');
+  run(lowNoise(sr, sr, 60, 0.2), sr, 0, 'car rumble only', 'unvoiced');
+
+  // the recorded bass: each note's window in the stem
+  const ex = await (await fetch('exercise.json')).json();
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  const buf = await ac.decodeAudioData(await (await fetch('voice-100.mp3')).arrayBuffer());
+  const x = buf.getChannelData(0), r = buf.sampleRate;
+  for (const n of ex.notes) {
+    const a = Math.round((n.t0 + 0.04) * r), b = Math.round((n.t1 - 0.02) * r);
+    const frames = [];
+    for (let i = a; i + FRAME <= b + FRAME / 2 && i + FRAME <= x.length; i += 256) frames.push(Pitch.detect(x.subarray(i, i + FRAME), r, OPTS));
+    row(`stem m${n.bar} q${n.q} "${n.word}"`, n.midi, frames);
+  }
+  // the same notes, phone-mic high-pass
+  const hp = highpass(x, r, 150, 2);
+  for (const n of ex.notes) {
+    const a = Math.round((n.t0 + 0.04) * r), b = Math.round((n.t1 - 0.02) * r);
+    const frames = [];
+    for (let i = a; i + FRAME <= b + FRAME / 2 && i + FRAME <= hp.length; i += 256) frames.push(Pitch.detect(hp.subarray(i, i + FRAME), r, OPTS));
+    row(`stem high-passed m${n.bar} q${n.q}`, n.midi, frames);
+  }
+  // the stem pitched an octave down (resampled at half speed: what an octave-low singer of this vowel sounds like)
+  const down = new Float32Array(x.length * 2);
+  for (let i = 0; i < down.length; i++) { const j = i / 2, k = Math.floor(j); down[i] = (x[k] || 0) * (1 - (j - k)) + (x[k + 1] || 0) * (j - k); }
+  for (const n of ex.notes) {
+    const a = Math.round((n.t0 + 0.04) * r * 2), b = Math.round((n.t1 - 0.02) * r * 2);
+    const frames = [];
+    for (let i = a; i + FRAME <= b + FRAME / 2 && i + FRAME <= down.length; i += 256) frames.push(Pitch.detect(down.subarray(i, i + FRAME), r, OPTS));
+    row(`stem octave down m${n.bar} q${n.q}`, n.midi - 12, frames);
+  }
+
+  window.RESULTS = out;
+  document.getElementById('out').innerHTML = '<table><tr><th>case</th><th>target</th><th>frames</th><th>voiced</th><th>median ¢</th><th>within 50¢</th><th>oct low</th><th>oct high</th><th>other</th><th></th></tr>' +
+    out.map(o => `<tr><td>${o.name}</td><td>${o.target}</td><td>${o.n}</td><td>${o.voiced}</td><td>${o.med}</td><td>${o.ok}</td><td>${o.octLo}</td><td>${o.octHi}</td><td>${o.other}</td><td class="${o.pass ? '' : 'bad'}">${o.pass ? 'pass' : 'FAIL'}</td></tr>`).join('') + '</table>';
+})().catch(e => { document.getElementById('out').textContent = 'error: ' + e.stack; });
+</script>

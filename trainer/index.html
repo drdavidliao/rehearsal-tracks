@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#fbf6f8">
+<title>Pitch Trainer</title>
+<style>
+/* One column, phone in the hand: the score, the live staff, one big word. */
+:root {
+  --bg: #fbf6f8; --ink: #23181d; --muted: #75636b; --line: #b9a9b0; --card: #fff;
+  --pink: #c2185b; --go: #1f7a5a; --near: #b7791f; --far: #c0392b; --oct: #2b6cb0; --stop: #4a3d43;
+  --f: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #17121a; --ink: #f2e9ee; --muted: #a8949e; --line: #6e5f68; --card: #221b25;
+    --pink: #f06292; --go: #4cc49a; --near: #e0a43c; --far: #ef6b5b; --oct: #6aa8f0; --stop: #d9ccd3;
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.4 var(--f);
+  padding: env(safe-area-inset-top, 0px) max(16px, env(safe-area-inset-right, 0px)) env(safe-area-inset-bottom, 0px) max(16px, env(safe-area-inset-left, 0px));
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+main { max-width: 560px; margin: 0 auto; padding-block: 12px 24px; display: flex; flex-direction: column; gap: 12px; min-height: 100%; }
+[hidden] { display: none !important; }
+header { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+h1 { font-size: 15px; font-weight: 600; margin: 0; color: var(--muted); }
+#pass { font-size: 13px; color: var(--pink); font-weight: 600; letter-spacing: .02em; }
+.score { background: #fff; border-radius: 8px; padding: 6px; }
+.score img { display: block; width: 100%; height: auto; }
+@media (prefers-color-scheme: dark) { .score img { filter: invert(.92) hue-rotate(180deg); } .score { background: #141014; } }
+#text { font-size: 13px; color: var(--muted); font-style: italic; margin: -6px 0 0; text-align: right; }
+#staff { width: 100%; height: 190px; display: block; background: var(--card); border-radius: 8px; }
+#staff .ln { stroke: var(--line); stroke-width: 1; }
+#staff .tgt { fill: var(--pink); }
+#staff .nxt { fill: none; stroke: var(--pink); stroke-width: 1.5; stroke-dasharray: 3 2; }
+#staff text.acc { font-size: 20px; stroke: none; }
+#staff text.acc.tgt { fill: var(--pink); }
+#staff text.acc.nxt { fill: var(--pink); }
+#staff .lab { font-size: 12px; fill: var(--muted); }
+#staff .tr { fill: none; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+#staff .tr.good, #staff .you.good { stroke: var(--go); fill: var(--go); }
+#staff .tr.near, #staff .you.near { stroke: var(--near); fill: var(--near); }
+#staff .tr.far, #staff .you.far { stroke: var(--far); fill: var(--far); }
+#staff .tr.oct, #staff .you.oct { stroke: var(--oct); fill: var(--oct); }
+#staff .tr { fill: none !important; }
+#staff .gd { fill: none; stroke: var(--ink); stroke-width: 2; }
+#staff .up { stroke: var(--oct); stroke-width: 2; stroke-dasharray: 4 3; }
+#staff .beat { fill: var(--pink); }
+#read { text-align: center; font-size: 18px; font-weight: 600; min-height: 1.4em; margin: -4px 0 0; }
+#read[data-kind=good] { color: var(--go); } #read[data-kind=near] { color: var(--near); }
+#read[data-kind=far] { color: var(--far); } #read[data-kind=oct] { color: var(--oct); }
+.cuebox { text-align: center; min-height: 112px; display: flex; flex-direction: column; justify-content: center; }
+#cue { font-size: clamp(34px, 11vw, 56px); font-weight: 800; letter-spacing: -.01em; line-height: 1.05; transition: color .15s; }
+#cue[data-kind=go] { color: var(--go); } #cue[data-kind=stop] { color: var(--stop); } #cue[data-kind=listen] { color: var(--pink); }
+#cue[data-kind=beat] { color: var(--pink); font-variant-numeric: tabular-nums; }
+#hint { font-size: 17px; color: var(--muted); min-height: 1.4em; }
+body[data-flash=good] #staff { box-shadow: 0 0 0 3px var(--go); }
+body[data-flash=miss] #staff { box-shadow: 0 0 0 3px var(--near); }
+#bar { height: 8px; background: var(--card); border-radius: 4px; overflow: hidden; }
+#bar > div { height: 100%; width: 100%; background: var(--stop); }
+#dots { list-style: none; display: flex; justify-content: space-between; gap: 4px; padding: 0; margin: 0; }
+#dots li { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; color: var(--muted); }
+#dots .dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--line); }
+#dots li.solid .dot { background: var(--line); }
+#dots li.cur .dot { border-color: var(--pink); background: var(--pink); }
+#dots li.next .dot { border-color: var(--pink); border-style: dashed; }
+#dots li.cur { color: var(--ink); font-weight: 600; }
+#dots li[data-res=ok] .dot { background: var(--go); border-color: var(--go); }
+#dots li[data-res=miss] .dot { background: var(--near); border-color: var(--near); }
+#dots li[data-res=unheard] .dot { border-style: dotted; }
+button { font: inherit; border: 0; border-radius: 14px; cursor: pointer; }
+.big { display: flex; gap: 12px; }
+.big button { flex: 1; padding: 22px 8px; font-size: 22px; font-weight: 700; background: var(--pink); color: #fff; }
+.big button.alt { background: var(--card); color: var(--ink); border: 2px solid var(--pink); }
+button:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.small { background: none; color: var(--muted); font-size: 14px; padding: 8px; text-decoration: underline; }
+.lead { font-size: 17px; margin: 0; }
+.muted { color: var(--muted); font-size: 14px; margin: 0; }
+.foot { margin-top: auto; display: flex; justify-content: center; }
+#ask { position: fixed; inset: 0; background: color-mix(in srgb, var(--bg) 85%, transparent); display: flex; align-items: center; justify-content: center; padding: 16px; }
+#ask > div { background: var(--card); border-radius: 16px; padding: 20px; max-width: 420px; width: 100%; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 8px 30px rgb(0 0 0 / .2); }
+#ask h2 { margin: 0; font-size: 22px; }
+@media (prefers-reduced-motion: reduce) { #bar > div { transition: none !important; } }
+</style>
+</head>
+<body>
+<main>
+  <header><h1 id="title"></h1><span id="pass"></span></header>
+  <div class="score"><img id="score" alt="The bars in the score"></div>
+  <p id="text"></p>
+
+  <section data-screen="start" hidden>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <p class="lead">Hold the phone near your mouth. No earbuds needed: the phone plays, then listens.</p>
+      <p class="muted">In a car or a crowd, hum. It works just as well.</p>
+      <div class="big"><button id="go-sing">Sing</button><button id="go-hum" class="alt">Hum</button></div>
+      <p class="muted" id="resume"></p>
+    </div>
+  </section>
+
+  <section data-screen="run" hidden style="display:flex;flex-direction:column;gap:12px">
+    <svg id="staff" role="img" aria-label="Your pitch against the note"></svg>
+    <p id="read"></p>
+    <div class="cuebox"><div id="cue"></div><div id="hint"></div></div>
+    <div id="bar" hidden><div></div></div>
+    <ul id="dots"></ul>
+    <div class="foot"><button id="stop" class="small">Stop for now</button></div>
+  </section>
+
+  <section data-screen="done" hidden>
+    <div style="display:flex;flex-direction:column;gap:14px">
+      <h2 id="doneT" style="margin:0;font-size:26px"></h2>
+      <p class="lead" id="doneP"></p>
+      <div class="big"><button id="again">Keep going</button></div>
+      <div class="foot"><button id="reset" class="small">Start over from the beginning</button></div>
+    </div>
+  </section>
+</main>
+
+<div id="ask" hidden><div>
+  <h2 id="askT"></h2><p id="askP" class="lead"></p>
+  <div class="big"><button id="askY"></button><button id="askN" class="alt"></button></div>
+</div></div>
+
+<script src="pitch.js"></script>
+<script src="trainer.js"></script>
+</body>
+</html>

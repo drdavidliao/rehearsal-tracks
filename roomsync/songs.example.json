@@ -1,0 +1,18 @@
+{
+ "_note": "Copy to songs.json (ignored by git) and fill in per song. Keys are short song ids used on the command line.",
+ "song1": {
+  "song_dir": "/path/to/song folder",
+  "mov": "phone recording of the rehearsal.MOV",
+  "musicxml": "the song.musicxml",
+  "balanced": "human-sung set/the song - Balanced Voices.mp3",
+  "stems_dir": "song1/demucs",
+  "stem_prefix": "room_declicked",
+  "truth": "_build/tap map knots.npy",
+  "user_answers": {},
+  "truth_bars": [
+   3,
+   144
+  ],
+  "truth_note": "which bars were tapped"
+ }
+}

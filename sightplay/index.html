@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chord Reduction Trainer</title>
+<style>
+  :root { color-scheme: light; --ink: #1d1d1f; --muted: #6b6b70; --faint: #9a9aa0; --line: #e2e2e6; --bg: #fafaf7; --paper: #fff;
+    --hit: #1e8a4c; --late: #b7791f; --miss: #c0392b; --accent: #2557c7; --btn-border: #cfcfd6; --outline: #7d9be0; --outline-text: #5b78c4;
+    --band: rgba(255, 196, 0, 0.30); --pending: #c8c8cc; }
+  :root[data-theme="dark"] { color-scheme: dark; --ink: #e4e4e7; --muted: #a2a2aa; --faint: #74747c; --line: #2f2f34; --bg: #111113; --paper: #1a1a1d;
+    --hit: #53c98a; --late: #e7a948; --miss: #f06b5c; --accent: #5b8cff; --btn-border: #45454c; --outline: #6f8fe0; --outline-text: #8fa9ee;
+    --band: rgba(255, 196, 0, 0.22); --pending: #4a4a50; }
+  * { box-sizing: border-box; }
+  html { overflow-y: scroll; }
+  body { margin: 0; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: var(--ink); background: var(--bg); }
+  .page { max-width: 1280px; margin: 0 auto; padding: 0 16px 48px; }
+  #top { padding: 22px 0 4px; transition: opacity .3s; }
+  h1 { font-size: 30px; line-height: 1.15; margin: 0 0 6px; letter-spacing: -0.01em; }
+  #rule { font-size: 19px; margin: 0; }
+  #card { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; padding: 12px 0 14px; transition: opacity .3s; }
+  #levelline { font-size: 17px; font-weight: 600; }
+  #levelsub { color: var(--muted); font-size: 14px; flex-basis: 100%; margin-top: -8px; }
+  .actions { display: flex; gap: 10px; align-items: center; }
+  button { font: inherit; padding: 7px 16px; border-radius: 7px; border: 1px solid var(--btn-border); background: var(--paper); color: var(--ink); cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  #count { font-size: 34px; font-weight: 700; color: var(--accent); min-width: 1em; }
+  #midi { font-size: 13px; } #midi.ok { color: var(--faint); } #midi.bad { color: var(--miss); font-weight: 600; }
+  body.running #top, body.running #card > :not(.actions), body.running #modes, body.running footer { opacity: .35; }
+  body.running #demo, body.running #offer { display: none; }
+  #stage { position: sticky; top: 0; z-index: 6; height: 140px; background: #0b0b0d; border-radius: 8px 8px 0 0; overflow: hidden; }
+  #wrap { position: relative; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  #score { min-height: 200px; }
+  #overlay { position: absolute; left: 0; top: 0; pointer-events: none; }
+  #overlay > div { position: absolute; }
+  .outline { z-index: 1; border: 1.5px solid var(--outline); border-radius: 9px; }
+  .outline span { position: absolute; top: -17px; left: -6px; font-size: 11px; color: var(--outline-text); white-space: nowrap; }
+  .mask { z-index: 3; background: var(--paper); border-radius: 4px; }
+  .mark { z-index: 4; font-size: 13px; font-weight: 600; white-space: nowrap; pointer-events: auto; cursor: default; }
+  .mark.pending { color: var(--pending); }
+  .mark.hit { color: var(--hit); } .mark.late, .mark.partial { color: var(--late); } .mark.miss { color: var(--miss); }
+  #kbd { position: relative; height: 70px; margin-top: 8px; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: #fff; }
+  .wk { position: absolute; top: 0; height: 100%; border-right: 1px solid #ddd; background: #fff; }
+  .bk { position: absolute; top: 0; height: 60%; background: #333; z-index: 1; border-radius: 0 0 3px 3px; }
+  .wk.lit, .bk.lit { background: #f0b400; }
+  #results { margin: 14px 0; padding: 12px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; }
+  #results .big { font-size: 34px; font-weight: 700; }
+  .msg { font-size: 17px; font-weight: 600; margin: 2px 0 6px; }
+  .hint { color: var(--muted); font-size: 13px; margin-top: 4px; }
+  #flash { background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 16px; }
+  #flashchord { height: 150px; visibility: hidden; }
+  .dot { display: inline-block; width: 26px; text-align: center; font-weight: 700; }
+  .dot.hit { color: var(--hit); } .dot.partial { color: var(--late); } .dot.miss { color: var(--miss); }
+  .rubric { margin: 16px 0 0; padding: 12px 16px; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; font-size: 14px; transition: opacity .3s; }
+  .rubric h2 { font-size: 16px; margin: 0 0 6px; }
+  .rubric p { margin: 4px 0; }
+  .rub { width: 100%; margin-top: 8px; }
+  .rub th { width: 150px; vertical-align: top; text-align: left; padding: 6px 12px 6px 0; border-top: 1px solid var(--line); font-weight: 600; }
+  .rub td { vertical-align: top; padding: 6px 0; border-top: 1px solid var(--line); }
+  .rub ul { margin: 0; padding-left: 18px; }
+  body.running .rubric { opacity: .35; }
+  footer { margin-top: 26px; color: var(--muted); font-size: 14px; transition: opacity .3s; }
+  #modes { display: flex; gap: 6px; margin: 20px 0 8px; }
+  #modes button { font-size: 13px; padding: 4px 12px; color: var(--muted); }
+  #modes button.on { border-color: var(--ink); color: var(--ink); }
+  details { margin: 8px 0; } summary { cursor: pointer; }
+  .form { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px 24px; padding: 10px 0; }
+  fieldset { border: 1px solid var(--line); border-radius: 6px; padding: 6px 10px; margin: 0; }
+  legend { font-size: 13px; }
+  fieldset label { display: inline-block; margin: 2px 12px 2px 0; white-space: nowrap; color: var(--ink); }
+  .row { display: flex; gap: 8px; align-items: center; margin: 4px 0; color: var(--ink); }
+  .row > span { min-width: 110px; color: var(--muted); }
+  table { border-collapse: collapse; font-size: 13px; margin-top: 8px; }
+  th { text-align: left; font-weight: 500; padding: 2px 12px 2px 0; } td { padding: 2px 12px 2px 0; }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/vexflow@4.2.2/build/cjs/vexflow.js"></script>
+</head>
+<body>
+<div class="page">
+  <header id="top">
+    <h1>Chord Reduction Trainer</h1>
+    <p id="rule"></p>
+  </header>
+
+  <section id="card">
+    <div id="levelline"></div>
+    <div class="actions">
+      <button id="demo">▶ Watch the demo (20 s)</button>
+      <button id="start">Start (space)</button>
+      <span id="count"></span>
+    </div>
+    <span id="midi">Connecting to the piano…</span>
+    <div id="offer" hidden></div>
+    <div id="levelsub"></div>
+  </section>
+
+  <main>
+    <div id="ladder">
+      <div id="stage" title="The conductor, 20 feet away, as you see them while your eyes are on the page"></div>
+      <div id="wrap"><div id="score"></div><div id="overlay"></div></div>
+      <div id="kbd" hidden></div>
+      <section id="results" hidden>
+        <div id="summary"></div>
+        <div id="resultbtns" class="actions" style="margin-top:10px"><button id="next" class="primary">Next run (space)</button><button id="again">Same music again</button></div>
+      </section>
+      <section id="rubric" class="rubric"></section>
+    </div>
+    <section id="flash" hidden>
+      <div id="flashchord"></div>
+      <div id="flashdots"></div>
+      <div id="flashmsg" class="msg"></div>
+      <div id="flashrubric" class="rubric"></div>
+    </section>
+  </main>
+
+  <footer>
+    <nav id="modes"><button data-mode="ladder">Levels</button><button data-mode="free">Free play</button><button data-mode="flash">Flash drill</button></nav>
+    <div id="freeset" hidden>
+      <div class="form">
+        <fieldset><legend>Keys (one is picked at random)</legend><div id="keys"></div></fieldset>
+        <fieldset><legend>Texture (one is picked at random)</legend><div id="textures"></div></fieldset>
+        <fieldset><legend>Run</legend>
+          <div class="row"><span>Tempo ♩ =</span><input id="bpm" type="number" min="30" max="200" step="2" style="width:5em"></div>
+          <div class="row"><span>Meter</span><select id="meter"><option value="4">4/4</option><option value="3">3/4</option><option value="mix">either</option></select></div>
+          <div class="row"><span>Chord changes</span><select id="density"><option value="one">one a bar</option><option value="slow">mostly one a bar</option><option value="medium">medium</option><option value="fast">fast (up to every beat)</option></select></div>
+          <div class="row"><span>Length</span><select id="bars"><option value="8">8 bars</option><option value="16">16 bars</option></select></div>
+          <div class="row"><span>Judge</span><select id="hand"><option value="both">both hands</option><option value="left">left hand only</option><option value="right">right hand only</option></select></div>
+        </fieldset>
+        <fieldset><legend>Reading ahead</legend>
+          <div class="row"><span>Hide</span><select id="hide"><option value="off">nothing</option><option value="half">the current half-bar</option><option value="bar">the current bar</option></select></div>
+          <div class="row"><label><input id="hl" type="checkbox"> Conductor</label></div>
+          <div class="row"><label><input id="names" type="checkbox"> Name each chord in the results</label></div>
+        </fieldset>
+      </div>
+    </div>
+    <details>
+      <summary>Choir, timing, click, piano and page colour</summary>
+      <div class="row"><span>Choir (from level 6, where its parts are printed)</span><select id="choir"><option value="normal">sings</option><option value="soft">sings softly</option><option value="off">silent</option></select></div>
+      <div class="row"><label><input id="drag" type="checkbox"> Half the choir follows reactively and drags with inconsistent rhythm</label></div>
+      <div class="row"><label><input id="rush" type="checkbox"> A couple of sections rush, worse as they panic, and vamp to get back on track</label></div>
+      <div class="row"><span>Click (only on runs without the conductor)</span><select id="click"><option value="all">all the way</option><option value="countin">count-in only</option><option value="off">off</option></select></div>
+      <div class="row">Last note: <b id="lastnote">–</b></div>
+      <div id="timing" class="hint"></div>
+      <div class="row"><button id="calibrate">Calibrate timing</button><span id="calmsg" class="hint"></span></div>
+      <div class="row"><button id="theme">Light page</button></div>
+    </details>
+    <details>
+      <summary>History</summary>
+      <table id="history"></table>
+    </details>
+  </footer>
+</div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rehearsal pace</title>
+<style>
+/* the suggested pace: a row of section letters per song, each as wide as its share of the time, and a cursor moving
+   across them by the clock. It doesn't follow the player; it shows where the schedule is. */
+:root{--bg:#050505;--panel:#0d0d0c;--amber:#ffb020;--dim:#7a5a1c;--faint:#2a2214;--line:#1c1a16}
+html,body{margin:0;background:var(--bg)}
+body{color:var(--amber);font:600 16px/1.3 "SF Mono",Menlo,Consolas,monospace;text-transform:uppercase;letter-spacing:.05em;padding:12px}
+#board{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px 12px}
+header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:2px solid var(--faint);padding-bottom:6px;margin-bottom:6px}
+#clock{font-size:26px;font-variant-numeric:tabular-nums}#sub{color:var(--dim);font-size:11px}
+.song{margin-top:12px}.song.past{opacity:.35}
+.name{display:flex;justify-content:space-between;font-size:12px;color:var(--dim);margin-bottom:3px;gap:8px}
+.name b{font-weight:600;color:var(--amber);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.name span{white-space:nowrap;font-variant-numeric:tabular-nums}
+.row{position:relative;display:flex;height:34px}
+.cell{border:1px solid var(--faint);border-left:none;display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:15px;min-width:0}
+.cell:first-child{border-left:1px solid var(--faint)}
+.cell.on{background:var(--amber);color:var(--bg)}
+.times{position:relative;height:16px;margin-top:3px;font-size:11px;color:var(--dim);font-variant-numeric:tabular-nums}
+.times i{position:absolute;font-style:normal;white-space:nowrap;padding-left:2px;border-left:1px solid var(--faint)}
+.times i.end{padding:0 2px 0 0;border:none;border-right:1px solid var(--faint)}
+.cursor{position:absolute;top:-4px;bottom:-4px;width:3px;margin-left:-1px;background:#fff;box-shadow:0 0 6px #fff;border-radius:2px}
+#msg{color:var(--dim);font-size:13px;padding:16px 0}
+</style></head><body>
+<div id="board">
+  <header><span id="sub">loading…</span><span id="clock">--:--</span></header>
+  <div id="songs"></div>
+</div>
+<script>
+// The schedule runs from a minute after the rehearsal starts to a minute before it ends (announcements), split over
+// today's checked sections by playing time. ?from=19:00&until=21:00 (or the status's pacing.from/until). The sections
+// come from rehearsal_status.py's status, read once a minute in case they change; see README.md.
+const q = new URLSearchParams(location.search);
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+const two = n => String(n).padStart(2, '0');
+const hm = t => { const d = new Date(t * 1000); return two(d.getHours()) + ':' + two(d.getMinutes()) };
+let status = null;
+
+function at(s, ref) { const [h, m] = s.split(':').map(Number); const d = new Date(ref * 1000); d.setHours(h, m, 0, 0); return d.getTime() / 1000 }
+
+function draw() {
+  const now = Date.now() / 1000, d = new Date();
+  $('clock').textContent = hm(now) + ':' + two(d.getSeconds());
+  if (!status) return;
+  const p = status.pacing || {sections: []}, secs = p.sections;
+  const from = q.get('from') || p.from, until = q.get('until') || p.until;
+  if (!from || !until) { $('sub').textContent = 'add ?from=19:00&until=21:00'; return }
+  let a = at(from, now), b = at(until, now);
+  if (b <= a) b += 86400;
+  if (now > b + 6 * 3600) { a += 86400; b += 86400 }          // tomorrow's rehearsal, after midnight
+  if (a > now + 18 * 3600) { a -= 86400; b -= 86400 }        // tonight's, seen after midnight
+  const t0 = a + 60, t1 = b - 60, total = secs.reduce((x, s) => x + s.play, 0);
+  $('sub').textContent = `pace ${hm(t0)}–${hm(t1)}`;
+  if (!secs.length || !total) { $('songs').innerHTML = '<div id="msg">no song is tagged Today</div>'; return }
+  let cum = 0;
+  for (const s of secs) { s.start = t0 + (t1 - t0) * cum / total; cum += s.play; s.by = t0 + (t1 - t0) * cum / total }
+  const songs = [];
+  for (const s of secs) { let g = songs.find(g => g.name === s.song); if (!g) songs.push(g = {name: s.song, secs: []}); g.secs.push(s) }
+  const clamp = Math.min(Math.max(now, t0), t1);
+  $('songs').innerHTML = songs.map(g => {
+    const g0 = g.secs[0].start, g1 = g.secs[g.secs.length - 1].by, span = g1 - g0;
+    const here = clamp >= g0 && (clamp < g1 || (clamp === t1 && g1 === t1));
+    const cells = g.secs.map(s => `<div class="cell${here && clamp >= s.start && clamp < s.by ? ' on' : ''}" style="flex:${s.by - s.start} 1 0">${esc(s.section)}</div>`).join('');
+    const cursor = here ? `<div class="cursor" style="left:${(clamp - g0) / span * 100}%"></div>` : '';
+    // the time each section is due to start, and the song's end; labels that would overlap are hidden after drawing
+    const times = g.secs.map(s => `<i style="left:${(s.start - g0) / span * 100}%">${hm(s.start)}</i>`).join('') +
+      `<i class="end" style="right:0">${hm(g1)}</i>`;
+    return `<div class="song${clamp >= g1 && !here ? ' past' : ''}"><div class="name"><b>${esc(g.name)}</b></div>` +
+      `<div class="row">${cells}${cursor}</div><div class="times">${times}</div></div>`;
+  }).join('');
+  for (const row of document.querySelectorAll('.times')) {
+    const labels = [...row.children], end = labels.pop().getBoundingClientRect();
+    let right = -Infinity;
+    for (const l of labels) {
+      const r = l.getBoundingClientRect();
+      if (r.left < right + 6 || r.right > end.left - 6) l.style.visibility = 'hidden'; else right = r.right;
+    }
+  }
+}
+
+async function load() {
+  try { status = await (await fetch('/status', {cache: 'no-store'})).json(); draw() }
+  catch (e) { $('sub').textContent = 'server not answering' }
+}
+load(); setInterval(load, 60000); setInterval(draw, 1000);
+</script></body></html>

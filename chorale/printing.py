@@ -1,0 +1,624 @@
+"""Page layout and PDF rendering, via Verovio.
+
+Two things here are not obvious and cost real time to find.
+
+`unit` is the staff-size knob, not `scale`.  Verovio's `unit` is half a staff
+space in 1/10 mm, so a staff height of `mm` millimetres is `mm / 4 * 10 / 2`.
+`scale` only zooms the finished SVG, so turning it up makes a big picture of a
+small score.
+
+cairosvg does not honour `@font-face`, so every SMuFL glyph Verovio draws as text
+— chord-symbol accidentals above all — comes out as a tofu rectangle in the PDF
+no matter what `smuflTextFont` is set to.  `install_smufl_font()` unpacks
+Verovio's own Leipzig out of its stylesheet and installs it for fontconfig,
+which is what cairosvg actually consults on Linux.  Homebrew's cairo on a Mac
+finds fonts through CoreText instead, so there `render()` also registers the
+file with CoreText for its own process; nothing is installed system-wide.
+
+Two more things cairo cannot draw are fixed on the rendered page:
+
+* An emoji (a 🤔 left in a direction for the director) prints as a box: Times
+  has none, and cairo cannot put a colour emoji font into a PDF.  It is drawn
+  as a picture instead (`draw_emoji`).
+* Verovio ignores a credit's `font-size`, so the title comes out the size of
+  the credit lines beside it.  `render()` enlarges it to the `title_size` given
+  to `credit_xml`, moves the credit lines under it and the music down to match.
+"""
+import base64
+import io
+import os
+import re
+import subprocess
+import sys
+
+SVG = '{http://www.w3.org/2000/svg}'
+SVG_NS = {'s': SVG[1:-1]}
+
+PAGE_LETTER = (215.9, 279.4)
+PAGE_A4 = (210.0, 297.0)
+PAGE_OCTAVO = (171.45, 260.35)
+
+
+class Print:
+    """A page plan: staff size, paper, margins, and where the systems begin.
+
+    `systems` is the list of bar numbers that start a system.  Taking every
+    `per_page`th of them gives the page breaks, so the two settings cannot
+    disagree with each other.
+    """
+
+    def __init__(self, systems, staff_mm=7.0, page=PAGE_LETTER, per_page=2,
+                 margins=None, system_distance=150, top_system_distance=90,
+                 staff_distance=85, lyric_size=4.0, spacing_staff=4, spacing_system=20,
+                 justify_vertically=False):
+        self.systems = list(systems)
+        self.staff_mm = staff_mm
+        self.page_w, self.page_h = page
+        self.per_page = per_page
+        self.margins = margins or dict(left=14.0, right=11.0, top=13.0, bottom=12.0)
+        self.system_distance = system_distance
+        self.top_system_distance = top_system_distance
+        self.staff_distance = staff_distance
+        self.lyric_size = lyric_size
+        self.spacing_staff = spacing_staff
+        self.spacing_system = spacing_system
+        self.justify_vertically = justify_vertically
+        self.title = None                   # set by credit_xml; render() enlarges it
+        self.title_scale = 1.0
+
+    def tenths(self, mm):
+        return round(mm / self.staff_mm * 40)
+
+    def defaults_xml(self):
+        mg = self.margins
+        return ('<defaults>'
+                f'<scaling><millimeters>{self.staff_mm}</millimeters><tenths>40</tenths></scaling>'
+                f'<page-layout><page-height>{self.tenths(self.page_h)}</page-height>'
+                f'<page-width>{self.tenths(self.page_w)}</page-width>'
+                f'<page-margins type="both"><left-margin>{self.tenths(mg["left"])}</left-margin>'
+                f'<right-margin>{self.tenths(mg["right"])}</right-margin>'
+                f'<top-margin>{self.tenths(mg["top"])}</top-margin>'
+                f'<bottom-margin>{self.tenths(mg["bottom"])}</bottom-margin></page-margins></page-layout>'
+                '<system-layout><system-margins><left-margin>0</left-margin>'
+                '<right-margin>0</right-margin></system-margins>'
+                f'<system-distance>{self.system_distance}</system-distance>'
+                f'<top-system-distance>{self.top_system_distance}</top-system-distance></system-layout>'
+                f'<staff-layout><staff-distance>{self.staff_distance}</staff-distance></staff-layout>'
+                '</defaults>')
+
+    def lay_out(self, src):
+        """Insert <defaults> and the encoded breaks. `src` is a path or XML text."""
+        xml = src if src.lstrip().startswith('<') else open(src, encoding='utf-8').read()
+        # <defaults> goes before <credit>, which goes before <part-list>; inserting
+        # it straight before <part-list> puts it after any credits and fails the XSD.
+        anchor = '<credit ' if '<credit ' in xml else '<part-list>'
+        xml = xml.replace(anchor, self.defaults_xml() + anchor, 1)
+        page_starts = {self.systems[i] for i in range(0, len(self.systems), self.per_page)}
+
+        def ap(mo):
+            m = int(mo.group(1))
+            if m in page_starts and m != 1:
+                return mo.group(0) + '<print new-page="yes"/>'
+            if m in self.systems and m != 1:
+                return mo.group(0) + '<print new-system="yes"/>'
+            return mo.group(0)
+
+        # MuseScore writes <measure number="1" width="253.75">; a pattern that
+        # demands '>' right after the number silently inserts no breaks at all.
+        return re.sub(r'<measure number="(\d+)"[^>]*>', ap, xml)
+
+    def options(self):
+        mg = self.margins
+        return {"pageWidth": int(self.page_w * 10), "pageHeight": int(self.page_h * 10),
+                "pageMarginLeft": int(mg['left'] * 10), "pageMarginRight": int(mg['right'] * 10),
+                "pageMarginTop": int(mg['top'] * 10), "pageMarginBottom": int(mg['bottom'] * 10),
+                "unit": self.staff_mm / 4 * 10 / 2, "scale": 100, "adjustPageHeight": False,
+                "breaks": "encoded", "justifyVertically": self.justify_vertically,
+                "spacingStaff": self.spacing_staff, "spacingSystem": self.spacing_system,
+                "lyricSize": self.lyric_size, "svgViewBox": True,
+                "header": "auto", "footer": "none"}
+
+    def expand_credit_blocks(self, xml, leading=30):
+        """Split a multi-line credit into one credit per line, for Verovio only.
+
+        The two readers want opposite encodings, and a probe settles which:
+
+        * Sibelius keeps ONE credit per zone of the page — given six separate
+          credits aimed at the same corner it drew the last and silently
+          dropped five — but renders every `<credit-words>` of a single credit
+          as its own line.
+        * Verovio is the mirror image: it draws every separate credit and only
+          the first `<credit-words>` of a block.
+
+        So the file keeps the block, which is what the notation program reads,
+        and the renderer is handed the expansion. Nothing else sees this.
+        """
+        if xml.count('<credit-words') < 2:
+            return xml
+        from lxml import etree
+        head, _, rest = xml.partition('<score-partwise')
+        root = etree.fromstring(('<score-partwise' + rest).encode())
+        for cr in root.findall('credit'):
+            words = cr.findall('credit-words')
+            if len(words) < 2:
+                continue
+            first = words[0]
+            try:
+                y0 = float(first.get('default-y'))
+            except (TypeError, ValueError):
+                continue
+            idx = list(root).index(cr)
+            for i, w in enumerate(words):
+                one = etree.Element('credit')
+                one.set('page', cr.get('page', '1'))
+                cw = etree.SubElement(one, 'credit-words')
+                for k, v in first.items():
+                    cw.set(k, v)
+                cw.set('default-y', f'{y0 - leading * i:g}')
+                cw.text = (w.text or '').rstrip('\n')
+                root.insert(idx + i, one)
+            root.remove(cr)
+        return head + etree.tostring(root, encoding='unicode')
+
+    @staticmethod
+    def close_extenders(xml):
+        """End every lyric extender explicitly, for Verovio only.
+
+        A plain `<extend/>` leaves the reader to infer where the line stops, and
+        Verovio infers badly: it runs the line THROUGH rests to the next
+        lyric-less note in the same voice, however far away.  On a shared staff
+        voice 2 can vanish for bars at a time, so a melisma in one phrase grew a
+        line that crossed three systems to reach an unrelated note seven bars
+        later.  The fix is the spec's own: `<lyric><extend type="stop"/></lyric>`
+        on the last note of each melisma — the last note before a rest, a new
+        syllable on that line, or the end of the part.
+
+        Do NOT write these stops into a file for Sibelius.  Sibelius infers the
+        same bad way, but it reads a text-less `<lyric><extend type="stop"/>`
+        as a new, empty syllable: the melisma then ends on its own note and the
+        line disappears altogether.  Safe to run twice.
+        """
+        if '<extend' not in xml:
+            return xml
+        from lxml import etree
+        head, _, rest = xml.partition('<score-partwise')
+        root = etree.fromstring(('<score-partwise' + rest).encode())
+
+        def stop(note, num):
+            ly = etree.SubElement(note, 'lyric')
+            ly.set('number', num)
+            etree.SubElement(ly, 'extend').set('type', 'stop')
+
+        for part in root.findall('part'):
+            voices = {}
+            for note in part.iter('note'):
+                if note.find('chord') is not None:
+                    continue
+                voices.setdefault(note.findtext('voice') or '1', []).append(note)
+            for notes in voices.values():
+                open_ = {}                    # lyric number -> [start note, last note]
+                for note in notes:
+                    if note.find('rest') is not None:
+                        for num, (a, b) in open_.items():
+                            if b is not a:
+                                stop(b, num)
+                        open_.clear()
+                        continue
+                    sung = {ly.get('number', '1'): ly for ly in note.findall('lyric')
+                            if ly.findtext('text')}
+                    stopped = {ly.get('number', '1') for ly in note.findall('lyric')
+                               if not ly.findtext('text') and ly.find('extend') is not None
+                               and ly.find('extend').get('type') == 'stop'}
+                    for num in list(open_):
+                        if num in stopped:
+                            del open_[num]    # already closed here (second pass)
+                        elif num in sung:
+                            del open_[num]    # a new syllable ends the line by itself
+                        else:
+                            open_[num][1] = note
+                    for num, ly in sung.items():
+                        ext = ly.find('extend')
+                        if ext is not None and ext.get('type') in (None, 'start'):
+                            open_[num] = [note, note]
+                for num, (a, b) in open_.items():
+                    if b is not a:
+                        stop(b, num)
+        return head + etree.tostring(root, encoding='unicode')
+
+    def toolkit(self, xml):
+        import verovio
+        tk = verovio.toolkit()
+        tk.setOptions(self.options())
+        xml, above = lyric_ids_above(self.close_extenders(self.expand_credit_blocks(xml)))
+        tk.loadData(xml)
+        if above:
+            tk.loadData(verses_above(tk.getMEI(), above))
+        return tk
+
+    def credit_xml(self, title, lines, title_size=22, size=10,
+                   leading=30, gap=62, footer=None, footer_size=9,
+                   footer_mm=6.5):
+        """The <credit> elements, positioned in page coordinates.
+
+        MusicXML page positions are in tenths, and the reference documentation
+        is explicit that "the origin is changed relative to the bottom
+        left-hand corner of the specified page", positive x right and positive
+        y up. A credit with no default-x/default-y therefore defaults to (0, 0)
+        — the bottom-left corner of the paper, flush to the edge — and several
+        unpositioned credits land on top of one another there, so all but one
+        look like they were dropped. Always give coordinates.
+
+        Leave `kind` None unless you want the line swallowed. Sibelius takes a
+        credit carrying a <credit-type> into its Score Info fields instead of
+        drawing it on the page, so a typed composer line and a typed arranger
+        line both vanish while an untyped one beside them prints. The names
+        belong in <identification><creator> anyway; these are the copies meant
+        to be seen. Verovio draws all of them, typed or not.
+        """
+        from .musicxml import credit
+        page_w, page_h = self.tenths(self.page_w), self.tenths(self.page_h)
+        right = page_w - self.tenths(self.margins['right'])
+        top = page_h - self.tenths(self.margins['top'])
+        out = []
+        self.title = title
+        self.title_scale = title_size / size
+        if title:
+            out.append(credit(title, kind='title', justify='center',
+                              valign='top', x=page_w // 2, y=top,
+                              size=title_size))
+        if lines:
+            out.append(credit([t for _, t in lines], justify='right',
+                              valign='top', x=right, y=top - gap, size=size))
+        if footer:
+            # Inside the bottom margin, not above it. Sibelius anchors the
+            # copyright it generates from <rights> to the bottom margin and
+            # then justifies the staves down onto that same line, so the two
+            # collide and widening the margin moves both together — it cannot
+            # separate them. A credit placed in the margin band clears the
+            # music whatever the justification does. Drop <rights> from
+            # <identification> when you use this, or you get both.
+            out.append(credit(footer, justify='center', valign='bottom',
+                              x=page_w // 2, y=self.tenths(footer_mm),
+                              size=footer_size))
+        return out
+
+    def header_tenths(self, nlines, title_size=22, leading=30, gap=62):
+        """How far the first system must sit below the top margin to clear the
+        header block, so `system_distance` can be set from the credits rather
+        than guessed at."""
+        return int(gap + leading * nlines + title_size)
+
+    def draw_footer(self, svg, text, mm=6.5, size=28):
+        """Paint a footer line onto a rendered page.
+
+        Verovio converts credits into its page *head* only: a credit
+        positioned down in the bottom margin is dropped, and `footer` set to
+        none, auto or encoded makes no difference — all three were tried. The
+        notation program reads the credit from the file; the PDF needs the
+        line drawn.
+        """
+        if not text:
+            return svg
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
+        g.set('class', 'footer')
+        el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
+        el.set('x', f'{self.page_w * 10 / 2:.1f}')
+        el.set('y', f'{self.page_h * 10 - mm * 10:.1f}')
+        el.set('text-anchor', 'middle')
+        el.set('font-family', 'Times,serif')
+        el.set('font-size', f'{size}px')
+        el.text = text
+        return etree.tostring(root, encoding='unicode')
+
+    def draw_page_number(self, svg, n, mm=7.5, size=36):
+        """Paint page number `n` in the top outside corner, as octavos print them:
+        odd pages at the right margin, even pages at the left. Verovio has no page
+        numbers of its own in this setup (`header` auto puts the credits on page 1
+        only), so the number is drawn into the page SVG like the footer. The
+        baseline sits `mm` below the paper's top edge, inside the top margin; check
+        that the first system's ink clears it (on the TTBB octavo layouts the ink
+        starts 10-11 mm down)."""
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        g = etree.SubElement(root, '{http://www.w3.org/2000/svg}g')
+        g.set('class', 'pageNumber')
+        el = etree.SubElement(g, '{http://www.w3.org/2000/svg}text')
+        if n % 2:
+            el.set('x', f'{(self.page_w - self.margins["right"]) * 10:.1f}')
+            el.set('text-anchor', 'end')
+        else:
+            el.set('x', f'{self.margins["left"] * 10:.1f}')
+            el.set('text-anchor', 'start')
+        el.set('y', f'{mm * 10:.1f}')
+        el.set('font-family', 'Times,serif')
+        el.set('font-size', f'{size}px')
+        el.text = str(n)
+        return etree.tostring(root, encoding='unicode')
+
+    def enlarge_title(self, svg, leading=1.2):
+        """Set the title at `title_scale` times the credit size, bold.
+
+        Verovio draws every credit at one size, whatever `font-size` says, and
+        sets the credit lines on the title's own baseline at the right margin, so
+        a bigger title would run into them.  They move down by the title's new
+        height, and the systems on the page move down by the same amount.
+        Positions in the page SVG are in 1/100 mm.
+        """
+        if not self.title or self.title_scale <= 1:
+            return svg
+        from lxml import etree
+        root = etree.fromstring(svg.encode())
+        head = root.xpath('//s:g[@class="pgHead"]', namespaces=SVG_NS)
+        if not head:
+            return svg
+        shift = None
+        for t in head[0].iter(SVG + 'text'):
+            leaves = [el for el in t.iter(SVG + 'tspan') if el.text and el.text.strip()]
+            if any(el.text.strip() == self.title for el in leaves):
+                for el in leaves:
+                    fs = float(el.get('font-size', '0px').rstrip('px') or 0)
+                    if fs:
+                        el.set('font-size', f'{fs * self.title_scale:.0f}px')
+                        el.set('font-weight', 'bold')
+                        shift = fs * self.title_scale * leading
+        if shift is None:
+            return svg
+        for t in head[0].iter(SVG + 'text'):
+            if any(el.text and el.text.strip() == self.title for el in t.iter(SVG + 'tspan')):
+                continue
+            for el in t.iter(SVG + 'tspan'):
+                if el.get('y') is not None:
+                    el.set('y', f'{float(el.get("y")) + shift:.1f}')
+        for g in root.xpath('//s:g[@class="system"]', namespaces=SVG_NS):
+            g.set('transform', f'translate(0, {shift:.0f})')
+        return etree.tostring(root, encoding='unicode')
+
+    def render(self, xml, pdf_out, png_pages=(), quiet=False, footer=None, page_numbers=True):
+        """Write a print-ready PDF, and optionally PNGs of named pages. Every page but the
+        first (the title page) is numbered in the top outside corner: page numbers are
+        indispensable on anything a chorus rehearses from, so they are on
+        unless a caller turns them off for something that is not a score to sing from."""
+        import cairosvg
+        install_smufl_font()
+        register_with_coretext(SMUFL_TTF)
+        tk = self.toolkit(xml)
+        n = tk.getPageCount()
+        svgs = [tk.renderToSVG(i) for i in range(1, n + 1)]
+        if footer:
+            svgs[0] = self.draw_footer(svgs[0], footer)
+        svgs[0] = self.enlarge_title(svgs[0])
+        if page_numbers:
+            svgs = [s if i == 0 else self.draw_page_number(s, i + 1) for i, s in enumerate(svgs)]
+        svgs = [draw_emoji(s) for s in svgs]
+        per = [len(re.findall(r'class="system"', s)) for s in svgs]
+        if not quiet:
+            print(f'{n} pages, systems/page {per}')
+        pdfs = [cairosvg.svg2pdf(bytestring=s.encode(), dpi=254) for s in svgs]
+        try:
+            from pypdf import PdfReader, PdfWriter
+        except ImportError:
+            from PyPDF2 import PdfReader, PdfWriter
+        w = PdfWriter()
+        for b in pdfs:
+            w.append(PdfReader(io.BytesIO(b)))
+        with open(pdf_out, 'wb') as f:
+            w.write(f)
+        for p in png_pages:
+            png_page(svgs[p - 1], f'{pdf_out[:-4]}_p{p}.png')
+        return n, per
+
+
+def png_page(svg, out, width=1500):
+    """PNG of one rendered page, composited onto white.
+
+    cairosvg writes a transparent background; measuring ink on the raw output
+    counts the transparency as black and every page looks equally full.
+    """
+    import cairosvg
+    from PIL import Image
+    im = Image.open(io.BytesIO(cairosvg.svg2png(bytestring=svg.encode(),
+                                                output_width=width))).convert('RGBA')
+    bg = Image.new('RGBA', im.size, (255, 255, 255, 255))
+    bg.alpha_composite(im)
+    bg.convert('RGB').save(out)
+    return out
+
+
+def lyric_ids_above(xml):
+    """Give every note an id, and list the (note id, lyric number) set `placement="above"`.
+
+    Verovio reads no placement from a MusicXML lyric and prints every word below
+    the staff.  It does honour `@place` on an MEI verse, and a note's MusicXML id
+    survives the trip into MEI as its xml:id, so the words can be put back where
+    the file says (`verses_above`).  On a shared staff the rule followed here puts
+    the higher part's words above the staff wherever the two parts sing different
+    words; without this the PDF shows them all below.
+    """
+    if 'placement="above"' not in xml or '<lyric' not in xml:
+        return xml, set()
+    from lxml import etree
+    head = xml[:xml.index('<score-partwise')]
+    root = etree.fromstring(xml[len(head):].encode())
+    above, k = set(), 0
+    for n in root.iter('note'):
+        if not n.get('id'):
+            k += 1
+            n.set('id', f'n{k:05d}')
+        for ly in n.findall('lyric'):
+            if ly.get('placement') == 'above':
+                above.add((n.get('id'), ly.get('number') or '1'))
+    return head + etree.tostring(root, encoding='unicode'), above
+
+
+def verses_above(mei, above):
+    """Set @place="above" on the MEI verses `lyric_ids_above` listed.  A chord's
+    verses hang from the <chord>, not its notes: any member's placement counts."""
+    from lxml import etree
+    M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+    root = etree.fromstring(mei.encode())
+    for el in root.iter(M + 'note', M + 'chord'):
+        ids = [el.get(X)] + ([n.get(X) for n in el.iter(M + 'note')] if el.tag == M + 'chord' else [])
+        for v in el.findall(M + 'verse'):
+            if any((i, v.get('n') or '1') in above for i in ids):
+                v.set('place', 'above')
+    # Verovio stacks a dynamic nearer the staff than words on the same side, so a
+    # dynamic above a staff with words above it there would sit between the notes
+    # and the words.  The words belong next to the notes: lift the dynamic over
+    # them, where words above the staff start within two beat units of it.  13 vu
+    # clears one row at lyricSize 4.2.
+    unit = int(next((e.get('meter.unit') or e.get('unit') for e in root.iter(M + 'scoreDef', M + 'meterSig')
+                     if e.get('meter.unit') or e.get('unit')), 4))
+    DUR = {'1': 4, '2': 2, '4': 1, '8': 0.5, '16': 0.25, '32': 0.125}
+    for meas in root.iter(M + 'measure'):
+        starts = {}                                 # staff n -> tstamps of words above it
+        for st in meas.iter(M + 'staff'):
+            for layer in st.iter(M + 'layer'):
+                q = 0.0
+                for el in layer.iter(M + 'note', M + 'chord', M + 'rest', M + 'space', M + 'mRest'):
+                    if el.tag == M + 'note' and el.getparent().tag == M + 'chord':
+                        continue
+                    if el.get('grace'):
+                        continue
+                    if el.find(M + "verse[@place='above']") is not None:
+                        starts.setdefault(st.get('n'), []).append(1 + q * unit / 4)
+                    d = DUR.get(el.get('dur', ''), 0)
+                    dots = int(el.get('dots', 0))
+                    q += d * (2 - 0.5 ** dots)
+        for d in meas.iter(M + 'dynam'):
+            ts = float(d.get('tstamp', 1))
+            if d.get('place') == 'above' and any(abs(t - ts) <= 2 for t in starts.get(d.get('staff'), [])):
+                d.set('vo', '13')
+    return etree.tostring(root, encoding='unicode')
+
+
+SMUFL_TTF = os.path.expanduser('~/.fonts/Leipzig.ttf')
+_registered = set()
+
+
+def register_with_coretext(path):
+    """Make a font file visible to cairo on a Mac, for this process only.
+
+    Homebrew's cairo looks fonts up through CoreText, not fontconfig, so the
+    Leipzig `install_smufl_font()` puts in ~/.fonts never reaches it and the
+    note in a metronome mark prints as a box.  Registering the file with
+    CoreText at process scope fixes that without installing anything.  A no-op
+    off macOS, or if the file is missing.
+    """
+    if sys.platform != 'darwin' or path in _registered or not os.path.exists(path):
+        return
+    import ctypes
+    import ctypes.util
+    cf = ctypes.CDLL(ctypes.util.find_library('CoreFoundation'))
+    ct = ctypes.CDLL(ctypes.util.find_library('CoreText'))
+    cf.CFURLCreateFromFileSystemRepresentation.restype = ctypes.c_void_p
+    cf.CFURLCreateFromFileSystemRepresentation.argtypes = [
+        ctypes.c_void_p, ctypes.c_char_p, ctypes.c_long, ctypes.c_bool]
+    ct.CTFontManagerRegisterFontsForURL.restype = ctypes.c_bool
+    ct.CTFontManagerRegisterFontsForURL.argtypes = [ctypes.c_void_p, ctypes.c_uint32, ctypes.c_void_p]
+    b = path.encode()
+    url = cf.CFURLCreateFromFileSystemRepresentation(None, b, len(b), False)
+    if not ct.CTFontManagerRegisterFontsForURL(url, 1, None):        # 1: process scope
+        raise RuntimeError(f'CoreText would not register {path}')
+    _registered.add(path)
+
+
+EMOJI = re.compile('[\U0001F000-\U0001FAFF]')     # not U+2600 up: that holds ♩ ♪ ♭ ♯
+EMOJI_FONTS = ('/System/Library/Fonts/Apple Color Emoji.ttc',
+               '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf',
+               '/usr/share/fonts/noto/NotoColorEmoji.ttf')
+_emoji_uri = {}
+
+
+def emoji_png(ch):
+    """A data: URI of `ch` drawn by the system's colour emoji font, or None."""
+    if ch in _emoji_uri:
+        return _emoji_uri[ch]
+    from PIL import Image, ImageDraw, ImageFont
+    uri = None
+    for path in EMOJI_FONTS:
+        if not os.path.exists(path):
+            continue
+        for px in (160, 109):                  # sbix takes any size; Noto's bitmaps only 109
+            try:
+                f = ImageFont.truetype(path, px)
+            except OSError:
+                continue
+            im = Image.new('RGBA', (px + 40, px + 40), (0, 0, 0, 0))
+            ImageDraw.Draw(im).text((0, 0), ch, font=f, embedded_color=True)
+            if im.getbbox():
+                b = io.BytesIO()
+                im.crop(im.getbbox()).save(b, 'PNG')
+                uri = 'data:image/png;base64,' + base64.b64encode(b.getvalue()).decode()
+                break
+        if uri:
+            break
+    _emoji_uri[ch] = uri
+    return uri
+
+
+def draw_emoji(svg):
+    """Replace an emoji that opens a text with a picture of it.
+
+    Only a leading emoji is handled: it is drawn at the text's start and the
+    text moves right by one em.  One further along the line would need the
+    width of the words before it; it is left as text, and reported.
+    """
+    if not EMOJI.search(svg):
+        return svg
+    from lxml import etree
+    root = etree.fromstring(svg.encode())
+    for t in root.iter(SVG + 'text'):
+        pos = t if t.get('x') is not None else next(
+            (el for el in t.iter(SVG + 'tspan') if el.get('x') is not None), None)
+        leaves = [el for el in t.iter(SVG + 'tspan') if el.text and el.text.strip()]
+        if not leaves or pos is None:
+            continue
+        first = leaves[0]
+        m = EMOJI.match(first.text.lstrip())
+        uri = m and emoji_png(m.group(0))
+        if not uri:
+            for el in leaves:
+                if EMOJI.search(el.text):
+                    print(f'note: emoji left as text (prints as a box): {el.text.strip()[:40]!r}')
+            continue
+        fs = float((first.get('font-size') or '400px').rstrip('px'))
+        x, y = float(pos.get('x')), float(pos.get('y'))
+        img = etree.Element(SVG + 'image')
+        img.set('href', uri)
+        img.set('{http://www.w3.org/1999/xlink}href', uri)
+        for k, v in (('x', x), ('y', y - 0.82 * fs), ('width', fs), ('height', fs)):
+            img.set(k, f'{v:.1f}')
+        t.addprevious(img)
+        first.text = first.text.replace(m.group(0), '', 1)
+        pos.set('x', f'{x + 1.1 * fs:.1f}')
+    return etree.tostring(root, encoding='unicode')
+
+
+def install_smufl_font(force=False):
+    """Make Verovio's Leipzig visible to cairosvg, killing the tofu rectangles.
+
+    Verovio ships the font base64'd inside data/Leipzig.css as WOFF2; fontconfig
+    cannot read WOFF2, so it is converted on the way out.  Returns the installed
+    path, or None if the font was already there.
+    """
+    import verovio
+    dest_dir = os.path.expanduser('~/.fonts')
+    dest = os.path.join(dest_dir, 'Leipzig.ttf')
+    if os.path.exists(dest) and not force:
+        return None
+    css_path = os.path.join(os.path.dirname(verovio.__file__), 'data', 'Leipzig.css')
+    css = open(css_path, encoding='utf-8').read()
+    m = re.search(r'base64,([A-Za-z0-9+/=]+)', css)
+    if not m:
+        raise RuntimeError(f'no embedded font found in {css_path}')
+    raw = base64.b64decode(m.group(1))
+    from fontTools.ttLib import TTFont
+    f = TTFont(io.BytesIO(raw))
+    f.flavor = None
+    os.makedirs(dest_dir, exist_ok=True)
+    f.save(dest)
+    subprocess.run(['fc-cache', '-f'], check=False,
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    return dest

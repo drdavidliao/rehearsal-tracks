@@ -1,0 +1,387 @@
+# rehearsal-tracks
+
+Turning sheet music into files a community chorus can rehearse from — rehearsal
+tracks, revoicings, printable parts.
+
+**The work happens in a conversation with Claude**, following the method written
+down in `SKILL.md`. You attach a file and type a sentence. You do not have to run
+any of the scripts in this repository yourself — Claude does that. The nine
+sentences below are the ones worth knowing.
+
+Typing `README` to Claude prints this same list back to you.
+
+**Choose Opus in Claude's model menu before you start**, above all for a scan
+or a phone photo of a score. (This is from trying both Opus
+and Sonnet.)
+
+- [🎼 &nbsp;PDF → MusicXML](#pdf-to-musicxml)
+- [✍️ &nbsp;Plan an arrangement or revoicing](#plan-an-arrangement-or-revoicing)
+- [🔧 &nbsp;Add kludges for Cantai](#add-kludges-for-cantai)
+- [🎧 &nbsp;Make rehearsal tracks](#make-rehearsal-tracks)
+- [🎬 &nbsp;Make follow-along videos](#make-follow-along-videos)
+- [🔁 &nbsp;Revoice recorded tracks](#revoice-recorded-tracks)
+- [💃 &nbsp;Sync a dance video](#sync-a-dance-video)
+- [📋 &nbsp;Plan note-learning rehearsals](#plan-note-learning-rehearsals)
+- [🎹 &nbsp;Rehearse from the score with the player app](#rehearsal-player)
+
+---
+
+<a id="pdf-to-musicxml"></a>
+
+### 🎼 &nbsp;PDF → MusicXML
+
+To convert a PDF of sheet music, attach the PDF and write something like:
+
+```
+Convert the attached PDF into a MusicXML file.
+```
+
+A glyph-based PDF — one that a notation program exported — works far better than
+a scan or a photo.
+
+Or, if you already have a MusicXML file from an OMR like Newzik, attach that as
+well and write something like:
+
+```
+Convert the attached PDF into a MusicXML file. The attached MusicXML file is
+Newzik's attempt, in case that helps.
+```
+
+It is worth handing over even when the OMR made a mess of the vocal staves; the
+accompaniment is usually salvageable.
+
+<a id="plan-an-arrangement-or-revoicing"></a>
+
+### ✍️ &nbsp;Plan an arrangement or revoicing
+
+To prepare a list of edits by clicking to select measures and then typing
+instructions in plain English, attach the MusicXML and write something like:
+
+```
+Prepare a BENCH for the attached MusicXML so I can write arranging/voicing
+instructions.
+```
+
+A **bench** is a scrolling page of the score with clickable boxes under every beat.
+Shift-click a run of beats, type what should happen there, and the pairs come back
+as a list of edits. The measure and beat range comes from what you clicked, so you
+never have to type it. For example, after clicking to select measure 3 beat 2
+through measure 5 beat 4, someone might write something like:
+
+> reassign the soprano part to tenor 2, alto part to bass, tenor part to tenor 1,
+> and bass part to baritone
+
+<a id="add-kludges-for-cantai"></a>
+
+### 🔧 &nbsp;Add kludges for Cantai
+
+To deliberately damage the arrangement to work around Cantai bugs — for example
+removing some slurs and writing extra copies of a syllable, so that Cantai's
+melisma handling stops holding a note that should have moved on — attach the
+MusicXML and write something like:
+
+```
+Make the attached MusicXML compatible with Cantai.
+```
+
+**This file is for learning tracks only. Never print from it.** You always get the
+faithful file as well.
+
+Then send the MusicXML to [Sibelius](https://sibelius.com) to play with
+[Cantai](https://cantai.app).
+
+<a id="make-rehearsal-tracks"></a>
+
+### 🎧 &nbsp;Make rehearsal tracks
+
+To make rehearsal tracks for each part, first **wait for Cantai to finish
+rendering**, then export one audio file per staff.
+
+**Wait for Cantai first.** Cantai renders the singing in the background, from
+the start of the piece onward, after you open the file or clear its cache, and
+an export writes only what has been rendered so far. Everything else comes out
+as silence, with no warning. On one 3½-minute piece with six Cantai voices, rendering
+took about five minutes. An export a few seconds after clearing the cache sang
+only the first three bars; one five minutes later sang everything. Exporting
+the whole score first does not help: it is cut short the same way. To see
+whether Cantai is done:
+
+1. Open the Mixer (**Play > Mixer**, or press **M**) and click the small **gear** on a Cantai
+   voice's strip. That opens Cantai's panel for that voice.
+2. On the panel's first page, the singer's picture has a **spinning halo while
+   that voice is still rendering**, and near the top left corner a **pulsing dot
+   beside the word "Rendering..."**. Wait until the halo, the dot and the word
+   have all gone.
+3. Once it has stopped, open the gear of every other Cantai voice and check
+   that its halo has stopped too.
+4. If you want a second opinion, click the **three dots** at the top right of
+   the panel. The second page shows the cache size. It does not update while
+   you watch, so leave the page and come back; when the number stops growing,
+   rendering is done.
+
+Then export: solo each staff in turn and use **File > Export > Audio**, one staff
+at a time. Do not use a plug-in that exports every staff in one go: even with
+rendering finished, it gave each staff after the first the opening of the staff
+before it. Put
+the files in one folder **together with the MusicXML the audio was rendered
+from**, connect that folder to Claude (or attach the files), and write
+something like:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder. The MusicXML there is what they were rendered from.
+```
+
+**Include the MusicXML. It is optional, but strongly advised.** Cantai's worst
+failures are a voice that stops singing partway through and never comes back,
+and a voice that comes in late or never starts. From the audio alone those look
+exactly like a part that is resting, so Claude can only report them as
+questions ("Solo 1 is silent from 1:04 — is that right?"). With the MusicXML,
+every silence is checked against the score, bar by bar, and a voice that stops
+early is reported as an error, with the bars it misses. On one piece, Cantai
+stopped rendering Solo 1 at 1:04 while Solo 2 sang on to 1:13;
+the folder had no MusicXML, so the tracks went out with a phrase missing and
+were remade after the gap was noticed.
+
+Without the MusicXML, write:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder.
+```
+
+Claude then asks once whether you can add the MusicXML. If you can't, it goes
+ahead with the audio-only checks: a silent file, a file that copies another
+staff, a voice that comes in late against its section, and a voice that goes
+quiet and never comes back. Each is reported with its time, as a question for
+you rather than an error, so you can re-export that staff before any tracks are
+made.
+
+Claude then checks every stem against the score and reports, by bar number,
+any phrase the score has that the audio leaves silent, and any rest in the
+score that the audio fills (audio leaked in from another staff).
+
+Before mixing, Claude shows the **posting-site section** each part's files
+will be filed under, and you click to accept or type your chorus's own name.
+This matters: the chorus's posting site files a track under the section named in
+parentheses, and shows a track whose section it does not recognise to
+*everyone*. A part that divides a section keeps the section in the parentheses
+and puts the division after it: `Shenandoah - (Tenor 2) a predominant-left.mp3`,
+never `(Tenor 2a)`.
+
+Then Claude writes four kinds of mp3 beside the originals, named for the
+chorus's posting site:
+
+- one **predominant-left** track per part, with that part loud, the other voices
+  faint and the piano as loud against the choir as if every stem had been
+  normalized to the same loudness first, e.g. `Shenandoah - (Tenor 2)
+  predominant-left.mp3`. The part is only in the left channel; the other voices
+  and the piano are in the middle. A phone or a Bluetooth speaker plays the two
+  channels together and you hear the part loud over everyone else; with earbuds,
+  take one out, or turn the balance knob, to hear your part over the piano, or the
+  piano and everyone else without your part;
+- one `Shenandoah - Balanced.mp3`, with every part at the same level;
+- one `Shenandoah - Balanced panned.mp3`, the same with the voices spread
+  across the stereo field, lowest on the left;
+- one `Shenandoah - Balanced 3D, use headphones.mp3`, with the voices placed
+  around you (lowest behind-left, highest behind-right, the middle voices just
+  either side of straight ahead). Headphones only.
+
+<a id="make-follow-along-videos"></a>
+
+### 🎬 &nbsp;Make follow-along videos
+
+Once the rehearsal tracks are made, write something like:
+
+```
+Make follow-along videos for the Shenandoah folder.
+```
+
+If the MusicXML there is the Cantai learning version, put the print version in
+the folder too, ideally the closed score the singers hold, and say which is
+which, so the videos show the music as printed. You get one video per part and one for everyone, named like the mp3s
+(`Shenandoah - (Tenor 2) predominant-left.mp4`, `Shenandoah - Balanced.mp4`). The
+score is the closed score the singers hold, two parts to a staff. Each note and
+its word lights up in the part's colour while it sounds. Each rest lights up
+too, with a bar that fills beat by beat, so nobody has to count. In a part's
+own video, only that part lights up and everyone else is grey.
+
+The lyric sheet comes with the videos: every part's words on one page
+(`Shenandoah - lyric sheet.pdf`: the portrait page to print first, then a
+landscape copy of the video's page), and beside each video two more with each syllable
+lighting up as it's sung: `Shenandoah - Balanced, lyrics.mp4` for a screen, and
+`Shenandoah - Balanced, lyrics, iPad.mp4`, the printed page in portrait for an
+iPad in a music folder.
+Dots before each line show who sings it; one bold word per line, with an emoji,
+gives the eye somewhere to land. The first time round, Claude drafts the sheet's
+plan, names the sections from the music (not the words) and picks the bold words
+before rendering; the plan stays in the song's folder.
+
+<a id="revoice-recorded-tracks"></a>
+
+### 🔁 &nbsp;Revoice recorded tracks
+
+When the only good audio is a publisher's practice set for other voices (SSA tracks
+for a TTB chorus, say), separate the vocals from each part-predominant track
+(Ultimate Vocal Remover), put them in the song's folder with the accompaniment track
+and the revoiced MusicXML, and write something like:
+
+```
+Make TTB tracks from the SSA practice tracks in the Shenandoah folder: everything down an octave, formants down a minor third. Soprano 1 is Tenor 1, Soprano 2 is Tenor 2, Alto is Baritone and Bass.
+```
+
+The voices are shifted in pitch with the vocal "formants" placed separately, every
+part's move measured rather than assumed, the parts spliced by bars where a part
+borrows another's line, and the set mixed and balanced by what is heard (brightness,
+loudness as the ear weighs it, and how much the piano covers each part). The videos
+follow as usual.
+
+<a id="sync-a-dance-video"></a>
+
+### 💃 &nbsp;Sync a dance video
+
+With the follow-along videos made, put a choreography video in the folder and write
+something like:
+
+```
+Sync the dance video in the Shenandoah folder to the Balanced follow-along video.
+```
+
+The dance is retimed to the tracks (it is usually filmed to a different recording),
+and you get it stacked above the score, and the score laid over it with the white
+see-through.
+
+<a id="plan-note-learning-rehearsals"></a>
+
+### 📋 &nbsp;Plan note-learning rehearsals
+
+For teaching the notes from tracks, section by section, put the MusicXML and the
+score PDF in the song's folder, connect it (or attach them), and write something
+like:
+
+```
+Make a note-learning lesson plan for the Shenandoah folder.
+```
+
+If the choir already knows the song by ear, add:
+
+```
+They already know this one: take the tricky bits down tempo instead of drilling rhythms.
+```
+
+You get two PDFs:
+
+- `Shenandoah - lesson plan.pdf`, a checklist to print (landscape, two columns).
+  For every rehearsal letter: which part to play first, and how many times, in a
+  shorthand: `A1 Tenor P+SS` means play the tenor part once for them to listen,
+  then twice for them to sing. It says which letters are repeats ("= F", sing it
+  once all together), which are nearly repeats (learn only the bars that differ,
+  and why), where to slow down, and a short line to say out loud where one helps.
+  Each start has the bar to type into Logic after `/`; if a 2/4 bar or a change of
+  meter makes Logic's bar numbers differ from the printed ones, it gives both.
+- `Shenandoah - Full score (lesson marks).pdf`, the score with the same steps
+  stamped on it for forScore: a circled `A1` on the tenor staff where A starts, and
+  so on, in each part's colour, and the passages where parts sing in unison shaded
+  (dashed where a part doubles them an octave away).
+
+It is a draft for your pen: it measures difficulty rather than hearing it.
+
+---
+
+<a id="rehearsal-player"></a>
+
+### 🎹 &nbsp;Rehearse from the score with the player app
+
+For running a rehearsal from a Mac with no DAW or tablet, there is a player app: the lesson-marked score on half the screen,
+clickable by the beat, in time with the song's stems. Put the stems, the score PDFs and the MusicXML in the song's folder and
+write something like:
+
+```
+Set up the rehearsal player for the Shenandoah folder.
+```
+
+Click a beat to start there, or type a bar or a rehearsal letter. You get:
+
+- Balanced, one part alone, or any mix of parts, with the instruments always on.
+- Any tempo, without changing the pitch, starting in a moment instead of waiting for a render.
+- A loop between two bars, and your choice of audio output.
+- Single wrong notes in a stem muted or moved by semitones, with a right-click on the note.
+
+It needs an Apple Silicon Mac. [`player/README.md`](player/README.md) has the details.
+
+**On Windows or anything else**, your own version can be written from a guide to the app:
+
+```
+Read player/PORTING.md and build me a version of the rehearsal player for Windows.
+```
+
+[`player/PORTING.md`](player/PORTING.md) has what the app does, the numbers it uses and what went wrong the first time. Nobody has
+tried it on Windows yet.
+
+---
+
+## What is here
+
+| File | What it does | Needs |
+|---|---|---|
+| `SKILL.md` | The whole method, start to finish. The ten scripts below are printed inside it in full, so it is self-contained. | — |
+| `chorale/` | The piece-independent half, as an importable package: event model, score-text parser, voice collapsing, MusicXML emission, print layout, the bench builder. See `chorale/README.md`. | see below |
+| `scanproof/` | Proofreads a hand transcription (score text or MusicXML) against the scan it was typed from, every staff of every bar from the pixels: pitches, notehead kind, note values from beams and flags, accidentals, dots. Writes review sheets, labelled zooms, and question images that put the scan above the transcription's rendering. See `scanproof/README.md`. | `numpy`, `scipy`, `pillow`; `verovio`, `cairosvg` for questions |
+| `check_pdf_type.py` | Is this PDF vector (read it directly) or a scan (needs OMR)? | `pdfplumber` |
+| `find_performer_instructions.py` | Lists the "Solo", "Basses only", "unis." text that says *who sings*. These never survive OMR and are invisible to every other check. | `pdfplumber` |
+| `musicxml_qc.py` | Pre-synthesis QC: bar lengths, lyrics, octave jumps, clef flips. | stdlib |
+| `cantai_mode.py` | Post-processes a finished file so Cantai sings every note. Not for printing. | stdlib |
+| `lyric_collisions.py` | Renders a laid-out score and reports syllables that would overlap, so bars-per-system is chosen by measurement rather than by squinting. | `verovio`, `lxml` |
+| `verify.py` | Runs every Step 5 check on a finished MusicXML (against the PDF when given one) and prints a PASS / FAIL / MANUAL / N/A / NOT RUN table for the handback. A check that could not run says so rather than disappearing. | `lxml`; `pdfplumber` with `--pdf` |
+| `rehearsal_mix.py` | Mixes the whole rehearsal-track set from the stems: predominant-left per part, plus plain, panned and 3D Balanced. | `numpy`, `ffmpeg`; `slab` for 3D |
+| `score_video.py` | Follow-along videos: the closed score with each note, word and rest lighting up in its part's colour over a rehearsal mp3, timed like `stem_vs_score.py` and with the drift measured. | `verovio`, `cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli`, `ffmpeg`; `stem_vs_score.py` beside it |
+| `lyric_sheet.py` | The lyric sheet made with the follow-along videos: every part's words on one printable page, and a video of that page per mp3 with each syllable lit in the colours of the parts singing it. Drafts the plan (sections, rows, bold words) and prints the melody bar by bar for naming sections. | `pycairo`, `pillow`, `numpy`, `lxml`, Noto Color Emoji; `score_video.py` beside it |
+| `stem_vs_score.py` | Checks exported audio stems against the MusicXML they came from and reports, by bar, phrases the audio leaves silent and rests it fills. | `numpy`, `ffmpeg` |
+| `dorico_reader.py` | Reads a Dorico vector PDF (open SATB score, piano on two staves) straight into MusicXML: notes, ties, slurs, lyrics and their extender lines, dynamics, hairpins, chord symbols. | `pdfplumber`; `chorale/` to finish |
+| `mixset/` | A human singer's finished practice set (Balanced, accompaniment, Predominant and Muted mixes, no stems): lines the files up, shows which voice each mix features where, splices a part's track from the set's other mixes, and retimes existing follow-along videos onto the new audio through a measured time map. See `mixset/README.md`. | `librosa`, `soundfile`, `scipy`, `ffmpeg`; `matplotlib` for plots |
+| `lesson/` | Note-learning lesson plans: the checklist PDF and the marked score (`python3 -m lesson`). | `reportlab`, `pypdf`, `pdfplumber`, DejaVu fonts |
+| `stem_audit.py` | Audits a whole set of stems against the MusicXML they came from: silent stretches of written notes (Cantai's unfinished rendering), a stem singing another part's line (the export plug-in's leak), stems holding the same audio, and the basic file checks. | `numpy`, `ffmpeg` |
+
+## Setup
+
+```
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy scipy fonttools brotli slab reportlab pypdf pycairo
+```
+
+Plus `poppler-utils` for `pdftoppm` / `pdftotext`, and the Noto Color Emoji font
+(`fonts-noto-color-emoji`) for the lyric sheet. The only thing fetched from the
+network is the MusicXML schema, at verification time.
+
+## Running the scripts directly
+
+```
+python3 check_pdf_type.py score.pdf
+python3 find_performer_instructions.py score.pdf --all-text
+python3 musicxml_qc.py score.musicxml
+python3 verify.py score.musicxml --pdf score.pdf --lanes "0a=Tenor,0b=Lead,1a=Baritone,1b=Bass"
+python3 cantai_mode.py score.musicxml score-cantai.musicxml --untie-all
+python3 lyric_collisions.py score-laid-out.musicxml 7.0
+python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav"
+python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Bass=Bass.wav" "Piano=Piano.wav"
+python3 rehearsal_mix.py "Shenandoah" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav"
+python3 score_video.py "Shenandoah (Cantai).musicxml" "Shenandoah - Balanced.mp3" "Shenandoah - (Tenor 2) predominant-left.mp3" --display Shenandoah.musicxml
+python3 lyric_sheet.py structure Shenandoah.musicxml
+python3 lyric_sheet.py pdf "Shenandoah - lyric sheet plan.json"
+python3 -m chorale.bench score.musicxml -o bench/ --beats 8 --bars-per-system 4
+python3 -m lesson Shenandoah.musicxml --pdf "Shenandoah - Full score.pdf" --pages 1-13 --rhythm slow
+python3 -m chorale.instructions revoicing.json score.txt T1,T2,B1,B2
+python3 -m scanproof check proof.json
+```
+
+## Song titles stay out
+
+Nothing committed here names a commercial song: not its title, its composer or
+arranger, its catalogue number or its lyrics. Pieces are described by what they
+are ("the unaccompanied TTBB"), and examples use *Shenandoah*. Scores, stems,
+bench pages and mp3s belong in each song's own folder, outside this repo;
+`.gitignore` refuses them here as a backstop.
+
+## Licence
+
+`LICENSE.txt` — the Unlicense, a public-domain dedication. It covers the tooling
+in this repository: the skill, the scripts and the `chorale` and `lesson` packages. It has no
+bearing on any published arrangement; no score content is included here. The Signalsmith libraries in
+`player/Sources/CEngine/third_party` keep their own MIT licences, and the built player links Rubber Band, which is GPL or commercial.

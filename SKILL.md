@@ -1,0 +1,10736 @@
+---
+name: "choral-pdf-to-singable-musicxml"
+description: "Turn a choral PDF into MusicXML correct enough to sing or drive singing synthesis; covers revoicing, closed-score collapsing and print layout, plus an opt-in Cantai mode. Use for rehearsal tracks (part-predominant-left and balanced mp3s from Sibelius audio stems), follow-along or memorization videos and sheets (any score animated over audio, including a commercial recording), or MusicXML/MIDI from sheet music."
+---
+
+# Choral PDF → singable MusicXML
+
+## README
+
+When the user types `README` — on its own, in any case — print the block below
+back to them and stop. Do not start work, do not ask a clarifying question.
+It is a reminder card for someone who does not handle these files every day,
+and the whole value of it is that it comes back the same every time.
+
+These are sentences to type to Claude, with the file attached; nobody runs
+the scripts by hand. Print the commands as code blocks, so they read as
+something to copy rather than as quotations.
+
+**PDF → MusicXML.** Attach the PDF and write something like:
+
+```
+Convert the attached PDF into a MusicXML file.
+```
+
+If there is an OMR attempt (Newzik or similar), attach it too:
+
+```
+Convert the attached PDF into a MusicXML file. The attached MusicXML file is Newzik's attempt, in case that helps.
+```
+
+**Plan arranging / revoicing.** Attach the MusicXML and write something like:
+
+```
+Prepare a BENCH for the attached MusicXML so I can write arranging/voicing instructions.
+```
+
+Then click to select a run of beats and type what should happen there.
+
+**Add kludges for Cantai.** Attach the MusicXML and write something like:
+
+```
+Make the attached MusicXML compatible with Cantai.
+```
+
+This deliberately damages the notation to work around Cantai's melisma
+handling. Never print from it.
+
+Then open the MusicXML in Sibelius (sibelius.com) to play it with Cantai
+(cantai.app).
+
+**Make rehearsal tracks.** First wait for Cantai to finish rendering: an
+export writes only what Cantai has rendered so far, and silence for the rest.
+In the Mixer (Play > Mixer, or M), click the gear on each Cantai voice's
+strip; the singer's picture on that panel has a spinning halo, and a pulsing
+dot beside "Rendering..." sits at its top left, until that voice is rendered.
+When every halo has stopped, export one audio file per staff
+(solo each staff, File > Export > Audio), put them in one folder with the
+MusicXML they were rendered from, connect or attach it, and write something
+like:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder. The MusicXML there is what they were rendered from.
+```
+
+Include the MusicXML: optional, but strongly advised. Without it, a voice
+Cantai stopped rendering looks exactly like a voice that is resting, and can
+only be asked about; with it, every silence is checked against the score, bar
+by bar. Without it, write:
+
+```
+Make rehearsal tracks from the audio files in the Shenandoah folder.
+```
+
+That is Step 9: check every stem, then per part one predominant-left mp3, plus Balanced, Balanced panned and Balanced 3D tracks, named for
+the chorus's posting site. Claude first shows the section each part's files will be
+filed under, for you to click and change: the posting site shows a file whose
+section it does not recognise to everyone.
+
+**Make follow-along videos.** Once the rehearsal tracks exist, write something
+like:
+
+```
+Make follow-along videos for the Shenandoah folder.
+```
+
+If the MusicXML there is a Cantai learning file, include the print-faithful one
+too (the closed score the singers hold is best) and say which is which; the
+videos show the print file.
+That is Step 10: one mp4 per mp3 used, the score lighting up note by note, rests
+included, in each part's colour. The lyric sheet comes with them (10.1): a
+PDF of everyone's words (the portrait page to print, then a landscape page), and
+beside each video two more of that page, 16:9 and iPad portrait, with each
+syllable lighting up as it is sung. The first time, Claude drafts how the
+words fall into sections and rows, names the sections from the music, and picks
+a bold key word and an emoji for each row, before rendering.
+
+**Revoice recorded tracks.** With a publisher's practice set for other voices
+separated into vocal stems (Ultimate Vocal Remover) in the song's folder, beside the
+accompaniment track and the revoiced MusicXML, write something like:
+
+```
+Make TTB tracks from the SSA practice tracks in the Shenandoah folder: everything down an octave, formants down a minor third. Soprano 1 is Tenor 1, Soprano 2 is Tenor 2, Alto is Baritone and Bass.
+```
+
+That is Step 9.5: shifted, measured, spliced by bars, mixed and balanced by ear-weighted
+measures; then the videos as usual.
+
+**Use a human singer's practice set.** When a singer sends finished tracks (Balanced, an
+accompaniment track, and a Predominant and Muted mix per part) for a song that already has
+follow-along videos, write something like:
+
+```
+I got human-sung tracks for Shenandoah; they're in its folder. Make Tenor 1, Tenor 2, Baritone and Bass tracks from them, and the usual videos from the existing ones.
+```
+
+That is Steps 9.6 and 10.4: what each mix holds is checked against the score, parts are spliced
+from the set's other mixes where needed, and the old videos are retimed onto the new audio
+without redrawing a frame.
+
+**Sync a dance video.** With the follow-along videos made and a choreography video in the
+folder, write something like:
+
+```
+Sync the dance video in the Shenandoah folder to the Balanced follow-along video.
+```
+
+That is Step 10.3: the dance retimed to the tracks, stacked above the score, and the
+score laid over it with its white see-through.
+
+**Plan note-learning rehearsals.** Put the MusicXML and the score PDF in the
+song's folder, connect or attach it, and write something like:
+
+```
+Make a note-learning lesson plan for the Shenandoah folder.
+```
+
+If the choir already knows the tune (a pop song they have in their ears), add:
+
+```
+They already know this one: take the tricky bits down tempo instead of drilling rhythms.
+```
+
+That is Step 11: a printable checklist (landscape, two columns) of every
+lettered section, in the order to teach it: which part is played first, how
+many times (P = play, S = sing), what is a repeat, what is almost a repeat and
+why, and the bar to type into Logic for each start. And a copy of the score
+PDF with the same steps stamped on it (circled A1, A2 … on the part's staff)
+and the unison passages shaded, for forScore.
+
+**Rehearse from the score with the player app.** With the stems, the score PDFs and the MusicXML in
+the song's folder, write something like:
+
+```
+Set up the rehearsal player for the Shenandoah folder.
+```
+
+That is `player/README.md`: build the Mac app and write the folder's `player map.json`. The score
+is clickable by the beat, with a choice of parts, tempo, a loop and single-note fixes. Where the folder
+has a human-sung set sung natively in the correct octave, the map uses those tracks in preference to Cantai output. The track maker's name may not be in the filenames: look for `(Part) Predominant`, `Accompaniment Track` and `Balanced Voices`. A set may be renamed between copies (one set's "Bass 1 Predominant" is byte for byte its "(Baritone) Predominant"), so compare checksums before calling a part missing. Run `player/pitch_guide.py FOLDER XML check` on every map made from human-sung stems: they're sung freely, and an attack fit can be bars out on slow legato singing while every attack-based check looks fine; the README says how to time such a song by its pitches. Run `player/center_stems.py FOLDER --write` and then `player/balance_check.py` on every such map: separated stems keep their mix's stereo, and in some of the track maker's sets that is the part on the left with all the other voices on the right (a stem then plays the whole choir), in others the part at its seat, which the player's pan doubles. On Windows
+or anything else:
+
+```
+Read player/PORTING.md and build me a version of the rehearsal player for Windows.
+```
+
+`BENCH` in the second command means the clickable beat-grid page: build it
+with `python3 -m chorale.bench`, publish it, and read the spans back with
+`python3 -m chorale.instructions`.
+
+Written up after repairing one badly-converted TTBB octavo end to end, then
+extended by a second job that took a scanned SATB octavo through OMR repair,
+a TTBB revoicing, and print layout. The numbers below are measured,
+not guessed. Everything here assumes the goal is a file good enough to *sing
+from or synthesise*, which is a much higher bar than a file that opens.
+
+**Decide the deliverables up front.** Steps 0–5 produce a *print-faithful*
+file: what the engraver wrote, nothing more, suitable for Sibelius/Dorico/MuseScore
+engraving and for most synths. Step 6 is a separate, opt-in post-process that
+rewrites lyrics so Sibelius's Cantai singer sounds every note; its output is *not*
+for printing. Steps 7–8 are for the other common ask: re-voicing the piece for a
+different ensemble and laying it out to be printed and sung from. Step 9 turns
+the finished score into rehearsal tracks, and Step 10 turns those into follow-along
+score videos and a lyric sheet, printed and on video (10.1). Step 11 plans the rehearsals where a section leader teaches the notes
+from tracks. Never mix the
+Cantai file with the rest — deliver the faithful file always, and the Cantai file
+in addition when asked for learning tracks.
+
+**This file is self-contained.** The thirteen scripts it refers to are printed in
+full under *Scripts* near the end. Write them out to disk verbatim before you
+start — `check_pdf_type.py`, `find_performer_instructions.py`, `musicxml_qc.py`,
+`cantai_mode.py`, `lyric_collisions.py`, `stem_vs_score.py`, `stem_audit.py`,
+`verify.py`, `rehearsal_mix.py`, `score_video.py`, `lyric_sheet.py`, `dance_sync.py`, `mp4out.py`. Six larger pieces live in the
+repository beside this file instead of being printed here: the `chorale` package
+(Steps 7–8), `dorico_reader.py` (a Dorico PDF read into MusicXML, 2.7), the
+`scanproof` package (proofreading a transcription against its scan, 1.2), the
+`voiceshift` package (recorded tracks revoiced in audio, and the bar grid of a recording, 9.5), the `mixset` package (a human singer's finished practice set, and old videos retimed onto new audio, 9.6 and 10.4) and the `lesson` package (Step 11).
+
+**Nothing is delivered until `verify.py` has run on it** (Step 5), and its table
+goes into the handback as printed. The rules in this file are prose, and prose
+gets skipped: on the unaccompanied TTBB the extension lines were derived from the notes instead
+of read from the PDF (2.5), check 10 was never run, and a
+missing hyphen in a lyric was found only by eye. A check that exists as a script that fails
+out loud does not get skipped.
+
+**Nothing is copied to the user's computer until its checksum there matches.** Every
+file, every time: scores, PDFs, mp3s, mp4s, plans, and this repository's own files.
+The desktop bridge's copy reports success for a file it has written, not for what it
+wrote: sending a newer version from a workspace path already sent from earlier put
+the earlier copy on the user's computer, twice in one afternoon (a one-page lyric
+sheet where the two-page one was reported delivered, and four repository files left
+at their previous versions), and the first was found only by opening the folder.
+Send each version from a path never used before (a fresh folder per round), then
+compare `md5sum` on both sides, and for an mp4, whose copy can arrive a few KB larger
+with the same content, the streams instead:
+`ffmpeg -i x.mp4 -map 0:v -c copy -f md5 -` (and `0:a`). Staging a file from the
+user's computer into the workspace gets the same check before it is edited: a stale
+copy edited and sent back overwrites the user's newer work. Say a file is delivered
+only after the checksums agree.
+
+**Every claim about pitch, interval, rhythm or harmony is computed, never
+eyeballed or recalled.** This covers what you tell the user, what goes in a
+handback, a commit message or a "why" note, and what you predict a change will
+or won't do. Work it out in code, in a form where the answer is arithmetic:
+- pitches as step/alter/octave and MIDI numbers
+- intervals as a count of diatonic steps plus a count of semitones, both
+  from those
+- rhythms as onsets and durations in exact fractions of the beat
+- harmony as pitch-class sets
+
+Only then put it into words. A notehead's position in a PDF goes from geometry
+to staff position to step/octave in code (2.2), not by eye and not by mental
+staff-space arithmetic.
+
+On an SATB with piano, a corrected engraving moved two soprano noteheads up
+6.8 pt, two staff spaces. That was reported as "up a third". One staff space
+is already a third, so it was E4 to B4: four steps and seven semitones, a
+fifth. The next claim was just as fluent and just as unchecked: the fix
+"wouldn't change any unison shading". But B4 put the soprano exactly an octave
+above the bass for the whole bar, and the lesson marks changed. Both were
+caught afterwards by eye, not by the work. If a musical fact can't be computed from
+what's at hand, say that instead of naming one.
+
+```
+pip install pdfplumber lxml music21 verovio cairosvg pillow numpy fonttools brotli slab reportlab pypdf pycairo
+# and poppler-utils for pdftoppm / pdftotext
+```
+
+**No song titles in this repository.** The pieces this method is used on are
+commercial, and their names stay out of the repo: out of SKILL.md, README.md,
+the scripts and their comments, commit messages, and any file committed here.
+That covers the title, the composer, lyricist and arranger names that identify
+the piece, publisher catalogue numbers, and quoted lyric fragments longer than
+a generic word or two. When a lesson goes into this file, describe the piece by
+what it is — "the unaccompanied TTBB", "the scanned SATB octavo", "a TTBB
+with two soloists and piano" — and write examples with a public-domain title
+(*Shenandoah*) or none. The piece's own folder is a different matter: PDFs,
+MusicXML, stems, bench pages and mp3s are named after the song as usual, and
+never live in or get committed to this repo (`.gitignore` refuses score, audio
+and bench files as a backstop). Before committing a change to this repo, search
+the diff for the titles of the pieces worked on in the session.
+
+The only thing fetched from the network is the MusicXML schema, at verification
+time (Step 5).
+
+## This repository is public
+
+Write every lesson in general terms. Nothing that identifies the user goes into a file or a commit message here: no
+names of people (track makers, arrangers, directors, singers) or choruses, no site the chorus posts on, no song
+titles, file stems or lyrics beyond a single word needed for a technical point, no home or Dropbox paths, no quotes,
+rulings or stories of the user's rehearsals and concerts, no date that dates a rehearsal. Keep the rule and its
+technical evidence (bars, tempos, measurements, what went wrong) under a neutral label ("a TTBB ballad", "a
+human-sung set"); the specifics belong in the song's own `_build/` notes. Dates of work and measurement are fine.
+
+## Design before you build
+
+Before writing a script or running a process that produces something (a transcription, a stem, a player map), write
+down what the output is, piece by piece, and for each piece what evidence fixes it. Wherever no evidence fixes a piece,
+say what will check it instead. List every way a piece can come out wrong, derived from that account rather than
+remembered from past faults. Each failure gets a check that runs on every build and covers everything the user sees,
+not only what is easy to score. Name the assumptions that only data can settle, with the test for each. Agree the design
+with the user before running anything.
+
+When a fault turns up anyway, find which step of the design missed it. Fix that step, turn the lesson into a check, and
+run it over every output already made before calling the fix done. A fault the user finds is a gap in the design, not
+just a bad item; a fix that names one bar or one song has fixed the item and left the design as it was. A sentence of
+advice in a README fails the same way when it could have been a check. So every correction from the user becomes three
+things: a rule here, an automatic check wherever one is possible, and a sweep of every existing output.
+
+Write down every property of the input the design relies on, and check each one against every input, not the first:
+nothing about a file is constant until it has been measured to be. A scan's pages need not share a size (in one TTB
+octavo pages 2 and 4 are 1224 pt tall and the other five 1008 pt), a page's crop box need not
+be its media box, and a score's systems, clefs, keys, meters and first bar (a pickup) change within it. The player took
+one page height for the whole PDF and drew every cursor on the taller pages 216 pt below the music.
+
+**Anything that follows or reads music starts from how a musician who knows the piece does it.** Before choosing a
+signal method for an alignment, a score follower or a reader, write down how a singer or pianist who has rehearsed the
+piece would do the job. They count beat by beat in order, expect the next pitches and attacks from the voices and the
+piano separately, and recognise landmarks. They know where the holds and tempo marks are, and shrug off a wrong note
+or a pianist's fill. Make each habit a part of the design, and ask the user which bars might confuse it. The phone-footage
+maps were generic audio fits (an offset and a tempo ratio per 6 s window) with no bars or counting in them.
+They slipped whole beats after holds, in grooves and through a stringendo, which no musician would do, and every downbeat had to be
+tapped by hand (`roomsync/DESIGN.md`).
+
+Bound the scope by what the inputs plausibly are, say so, and check the boundary with the user while designing: the
+user's boundary for score PDFs is anything that reads in forScore on an iPad without nasty surprises, which rules out sideways
+pages and rules in mixed page sizes and crop boxes.
+
+The score is the copy the singers hold. Find out where that is recorded (the site or shared folder the chorus gets
+its music from, a file the user names, a folder kept for exactly that copy) and take it from there. If nothing records
+it, ask the user. Never infer it from file names or from which file looks published. Match it to the local file by MD5
+(or by name, size and page images, and say which), and record that per song in the design. It can be our own
+engraving: an adaptation made for the chorus is the score, and a publisher's octavo the singers no longer use is not.
+Choosing "the original" from file names once took the publisher's PDF for a song whose singers hold an edited
+adaptation, and put the adaptation among "our engravings, not originals"; two finished transcriptions had been
+checked against an unposted copy of their scan.
+
+Say what a claim was read from. "The MusicXML has no piano part" is what a part list shows; "the song has no piano" needs
+the score read.
+
+**Anything a person operates (a tap page, a trainer, a prompt to answer): write the walkthrough before any code.**
+Go moment by moment from the page opening to the user closing it. At each moment, say what they see and hear, what they
+must do, and what they know right then. That includes how they know where they are and what comes next. Write the
+exact on-screen wording in the walkthrough, since the user only sees that wording and never the design behind it.
+- **A lead-in before every timed action.** Any action that must land at a moment in the music needs enough of the
+  music heard before it that the user can feel the pulse and count in. Two bars is a floor, and a count-in works too.
+- **Know which moment it is without watching the screen.** People time an action by expecting it from the music. They
+  can't react to something that moves on screen in time.
+- **Every slip.** Say what happens when a key comes too early, too late, twice or not at all. Say the same for getting
+  lost, for wanting to stop, and for going back. Say how the user notices each one and how they recover.
+
+Then give the walkthrough, and nothing else (no code, no design notes, no conversation), to a fresh subagent told to
+play the user. Have it report every moment where the user can't know what to do. Have it also report every wording
+that could be read two ways. Revise and repeat until nothing it reports would stop the user. Then show the user the
+walkthrough and the critique, and get their approval before building. Both tap pages built for one job
+failed in ways a walkthrough would have shown:
+- **Four-bar prompts asked for the downbeats with no lead-in.** Bar 1's prompt started where the audio did, with
+  nothing heard before beat 1 to count in from.
+- **A highlight moved one beat per tap, worded "tap as the highlighted beat sounds".** Nobody can react to a cursor in
+  time, and the wording reads as one prompt per beat.
+
+Example: the player maps were checked by `pitch_guide.py check`, which scores sung notes only. The beats that fit is
+least sure of are the ones no voice sings, so the check couldn't see them. Fixing one song's intro, then its middle
+section, one at a time, left the same fault in 26 of 30 maps until `player/unvoiced_check.py` looked at all of them.
+
+## A transcription is the whole page
+
+Transcribe every staff of every system, piano included, and everything printed on them: notes, rests, ties, slurs,
+dynamics, hairpins, articulations, fermatas, tempo and expression words, staff text, boxed rehearsal marks, repeat and
+ending marks, chord symbols, and lyrics. Never transcribe only the voices, or only the staves the job at hand seems to
+need. The only exception is one the user writes explicitly for that piece. A voice-only transcription left the player
+maps' voiceless bars with no written accompaniment to time them against: the piano that fixes those bars was printed
+in the scan and missing from the file.
+
+Where the print itself leaves a syllable out (a hyphen under a note with no syllable, while every other part sings the
+word whole), keep the sung syllable and list the place in the handback.
+
+**How a whole-page transcription is built and checked** (seven scanned octavos, 2026-11-14):
+
+1. Type the whole score in one `chorale.fullscore` file (its docstring is the format: notes as score text, then
+   `@part`, `@dir`, credits, `@credit-page`). Build it with `python3 -m chorale.fullscore` and nothing else. When the
+   page prints something the builder cannot write, extend the builder in the repo and rebuild; never patch the
+   MusicXML afterwards in a song's folder, and never stand in invented text for a mark ("three tremolo strokes" written
+   as words is wrong twice: the words are not printed and the strokes are missing).
+2. Proofread every staff with scanproof (1.2), the piano included, reading pitches from `scanproof zoom` against the
+   named guides: the automatic head reader is a donor at most (it read A5 for E6 in one bar of sixteenths).
+3. Write `completeness.json` (every printed staff, every system's staves and bars) and run `completeness_check.py`.
+   For a scan, the marks check needs `marks.tsv`, typed by a second reader who never sees the transcription. Its
+   disagreements are settled on the page, one crop each: on the first seven songs it found missed tenutos, accents on
+   the wrong staff, an extra dynamic, lost chord suffixes and marks a bar early, and was itself wrong as often.
+   A finding goes into `reviewed.tsv` only with what the page shows; a checker or builder limit is fixed in the
+   repo, not noted away.
+4. Anything printed that the file still lacks goes into `completeness.json`'s `known_missing`, which fails the check
+   until it is empty. A stamp means complete, not "complete except".
+
+A check picks what it reads by what that thing is, never by how often or where it happens to stand. The lyric font
+was once "the most common font": in one score two sizes printed exactly as many letters, the parts after the score set
+lyrics bigger, and a scaled page used a third size; it is now the font whose words are the file's sung syllables, per
+page, on the score's pages. A mark between two systems once went to the nearer one; it goes to the one that has a mark
+of that kind unmatched. A hairpin was counted where its lines meet, which for a diminuendo is its end: the file's side
+counts it there too. Each such fault was swept over every checked song when it was fixed.
+
+`completeness_check.py` compares a MusicXML with its score (Step 5) and runs on every transcription; nothing built from a
+transcription (a player map, parts, a lyric sheet, a video) is made from one that has not passed it. A map with no
+rehearsal marks while its score prints them is a transcription error, fixed in the transcription.
+
+## Step 0 — Triage. This decides everything.
+
+Do not start converting until you know which kind of PDF you have.
+
+```
+python3 check_pdf_type.py score.pdf
+```
+
+**VECTOR** (exported from Sibelius/Finale/Dorico/MuseScore): every notehead is a
+font glyph at an exact coordinate, every slur is a bezier, lyrics are a text
+layer. Do not run OMR. Read the file. Go to Step 2.
+
+**SCAN** (photo/photocopy): pixels only. OMR is the only route. Go to Step 1.
+
+A PDF can look identical on screen in both cases. Check, don't assume. In the
+case this was written from, the PDF was a 2008 Sibelius 4 export — 1,568 music
+glyphs, 1,940 vector paths, zero images — and the OMR being used
+was solving a problem that did not exist.
+
+`check_pdf_type.py` only knows the font names listed in it. A Sibelius export in
+**Helsinki** (Sibelius's other house font) reports "unrecognised music font" —
+it is still fully extractable, with the same code points as Opus once you undo
+the Mac Roman mapping (see the appendix). Add the font name to the script when
+you meet a new one.
+
+## Step 1 — If it's a scan
+
+OMR is genuinely required. Expect to repair it. The failure modes seen in real
+commercial OMR output, all from one 64-bar piece:
+
+- **A hidden time signature carried forward for 39 bars.** The engraving had a
+  2/4 bar and then returned to 4/4 *without printing the 4/4*. The OMR read every
+  symbol correctly and never noticed that 39 consecutive bars contained twice
+  their declared meter. About half those bars were then truncated to 2/4 —
+  music silently discarded — and half were left overfull, where the editor
+  displays the first half and hides the rest. This is what "measures are missing
+  their second halves" looks like.
+- **Clef-octave flip-flop.** A treble-8vb tenor staff exported as treble and
+  treble-8vb alternately, eleven times, with pitches rewritten to match each
+  flip. Notation looks fine; playback jumps octaves.
+- **Dropped chord tones** — a four-note chord read as three. Invisible to any
+  duration check.
+- **Garbled lyrics** — a two-word phrase broken into stray letters and quote marks, `1S` for `is`,
+  `taıns` for `tains`. For synthesis the lyrics *are* the deliverable, so this
+  alone can make OMR output worthless.
+- **Lyric fragments filed as tempo directions**, floating above staves.
+
+Run the QC script (Step 5) on anything OMR hands you, before you build on it.
+
+### 1.1 Treat OMR output as a donor, not a draft
+
+On a 67-bar SATB-with-piano octavo the commercial OMR (Newzik/Maestria) was
+worth keeping only for the **piano**, and even that needed twenty hand repairs.
+The vocal staves were faster to transcribe from scratch against image crops than
+to audit: the OMR had dropped a chord tone here, read G3 for B3 there, A4 for
+G4, C♮ for C♯ — and nothing in the file tells you which readings it got right.
+Budget the job as *transcribe the voices, repair the piano*; the piano is never left out (see "A transcription is the whole page").
+
+Hand-transcription wants a compact text source you can read and diff, not XML.
+A one-token-per-note line format (`B3q=hap- B3s=-py F#3e. E3q=day`, `R`
+for rests, `~` for ties, `(` `)` for slurs, one block per voice, one line per
+bar, bar number as the line label) is fast to type, trivially checkable against
+the meter, and makes a revoicing (Step 7) a text edit rather than an XML edit.
+
+**Check the OMR's bar numbering before you trust any bar reference.** That file
+had 69 measures for a 67-bar piece, and real bars 19–20 were filed as measures
+21–22 *in two parts only*, the rest unshifted. Write an explicit `real bar → OMR
+measure` map per part and route every repair through it. A repair applied to the
+wrong measure looks exactly like a repair that didn't work.
+
+**Work from crops, not pages.** `pdftoppm -r 300` the scan, then cut each system
+and each questioned bar to its own PNG and look at it. A crop of one bar answers
+"C♯ or D?" in seconds; a full page does not. Keep the crops — you will come back
+to the same bars when the user reports a problem three rounds later, and a
+named crop library (`pf_b47rh.png`, `z05_b25.png`) is the difference between
+re-answering a question and re-deriving it.
+
+**Hand transcription from a scan: the text format has what a scan needs.** On a
+scanned unison TTBB with piano (a film song, 65 bars), a 16th-triplet ornament and
+a spoken passage in x-noteheads forced a separate builder for that piece, because
+`chorale.scoretext` had no way to write them. On a scanned SSA with piano, the
+next piece's builder had its own parser. The parser now takes everything those
+two pieces needed, and `musicxml.note_xml` writes it out:
+
+- `x` before the pitches: an x-notehead (`xE4e=hey`).
+- `3` after the duration: a triplet member (`C5q3`).
+  `scoretext.mark_tuplets` places the brackets. `ScoreSpec.divisions` must then
+  be a multiple of 3, and `ticks()` raises if it is not.
+- `~` on one pitch of a chord: a tie on that pitch only (`Ab4~,C5q`).
+  `scoretext.link_ties` sets `tie_stop` per pitch.
+- `H`: a hidden rest. `M`: a whole-bar rest, written with no duration.
+- `{flags}`: words for the piece script to draw (`G4q{marc}`).
+- ` | `: two voices in one bar. Parse with `parse_score(path, voices=True)`.
+- `@NAME = tokens`: a macro. `&T` or `&24`: this bar is the same as that
+  block's bar, or as bar 24 of this block.
+
+Write the piece in this format rather than writing another builder. Section 1.2
+proofreads a transcription in this format against the scan.
+
+### 1.2 Proofread a hand transcription against the scan
+
+A hand transcription from a scan is not done until it has been compared with the
+scan by `scanproof/`. The comparison covers every staff of every bar, from the
+pixels. Reading it over by eye does not replace this. On an SSA-and-piano octavo
+from a phone scan, the transcription had been checked by hand bar by bar, and
+errors still reached the user: a phantom head inside two tied chords, and wrong
+spoken notes. `scanproof` then found four more errors that the hand check had
+passed:
+
+- a piano chord with E♭4 F4 for F4 G4, in two bars;
+- a B♭3 added under two beamed eighth chords, in two bars;
+- a voice note a step low.
+
+Three things about where the errors were are worth knowing before you start:
+
+- **They were systematic.** One kind was touching chord heads, two notes a third
+  or a second apart, read as an extra head between them. The eye makes the same
+  mistake that a naive detector makes. The other kind was a bar typed by analogy
+  with a parallel bar that the engraver had changed. A `&` reference then copied
+  the error into every bar that pointed at it. When one of these turns up, check
+  every other chord and every other parallel bar of the same kind.
+- **The transcriber's sense of which notes were doubtful did not predict where
+  the errors were.** Check everything, not just the bars you are unsure of.
+- **Ask the user with pictures, not note names.** Show the scan crop above and
+  the transcription's rendering of the same bars below
+  (`python3 -m scanproof question`). "B♭4 or C5 in bar 51?" makes the user
+  find the bar. The pair of images shows the error at a glance.
+
+**A score whose systems change their number of staves, or a page with two kinds:** cut each system to its own image and give
+scanproof one project per run of the same staff count. On a TTBB phone scan with solo staves coming and going (98 bars, 5 to 7
+staves), six projects worked; the detector supplied four system-end barlines it could not see, all right on the overlays' numbers. Dump what `heads.read_staff` reads per bar before typing: it is
+most of an OMR for filled heads (it misses whole notes and reads ledger notes poorly), and typing against it is quicker.
+
+**A singer's stems are a second proof.** With a practice set in hand, pYIN each part's stem at each note. On that scan it found
+what scanproof cannot: an accidental carried through the bar typed as natural on a later beat (the print shows no sign there, and
+a head-position check is happy), in four bars, on every staff that had it. Low bass eighths read a semitone sharp from the scoop; look for
+patterns, not single notes. Where stem and print disagree in one part only, the print wins and the user hears about it.
+
+**Look at notehead sizes, not only positions.** Small (cue-size) heads mean something: on that TTBB scan,
+every bass "split" into octaves printed the lower octave small, an "if you prefer" note, with the upper note the
+one sung (and in places the one the baritones sing too). The transcription had typed them as full-size chord
+notes, so the open file, the videos and the player's map all treated the optional low note as the part. scanproof's
+pitch check passes them, since the pitches are right. Measure them: threshold the crop, open with a 5×5 square to
+drop staff lines, stems and ledger lines, and compare each blob's area with the full-size heads beside it (full
+heads about 20 px wide at 300 dpi; cue heads 11–15). Look at a zoom of every split, because a ledger line through a
+head or a curled page makes one size misread. Hollow heads need a look by eye. Mark them `<type size="cue">`.
+
+**Run it.** It works from the piece's folder, outside this repo:
+
+1. Write `proof.json`; its format is in `scanproof/project.py`. It gives:
+   - the page images (`pdftoppm -r 300 -png`),
+   - the transcription (`score`, the score text, or `musicxml`),
+   - every system's staves from top to bottom, with each staff's clef, whether
+     it has x-noteheads, and the blocks it is transcribed in,
+   - the key,
+   - `grand_staff` for a piano's two staves.
+2. `python3 -m scanproof bars proof.json` drafts the bar table from the
+   detected barlines. It also draws every page in `out/overlay/`, with staff
+   lines in red, barlines in blue, system ends it had to guess in orange, and
+   bar numbers.
+   - Check every page.
+   - Correct the draft and save it as `bars.json`.
+   - Copy the printed bar number at each system start into `first_bar`, so a
+     missed or invented barline raises at once instead of shifting every later
+     bar.
+
+   On the SSA, detection missed five barlines (pale ones, and system ends at a
+   curled edge) and invented one (a column of stems). This table is the one
+   step a person checks, because every finding after it depends on it.
+3. `python3 -m scanproof check proof.json` reads and compares everything:
+   pitch set, notehead kind, note value from beams and flags, accidentals
+   against the key and the bar so far, and dots. It prints the counts and how
+   often the note values read agreed with the transcription. Expect a few
+   hundred findings on a 77-bar piece, nearly all of them the detector's.
+4. `python3 -m scanproof review proof.json` writes review sheets. Each one
+   shows the scan with every head the reader found circled and named, the
+   beams it counted, the transcription, and the findings. **Look at every
+   finding.** Do not sample them or skip a type. Each of the four errors above
+   showed up as a "pitch set differs" finding, among about 200 findings that
+   were all the detector's.
+5. Where a sheet leaves any doubt, run
+   `python3 -m scanproof zoom proof.json BAR STAFF [X0 X1]`. It enlarges the
+   spot with every line and space named in the margin and a guide across the
+   page. Decide a step from the zoom, not from the sheet: on a curved phone
+   scan the eye misplaces a head by a step as easily as the detector does.
+6. Fix the real errors, rebuild, and run `check` again. Their findings should
+   be gone, and nothing new should appear.
+
+**In the handback, list two groups separately:**
+
+- **Real errors.** For each, give the bar, the staff, what it was and what it is
+  now.
+- **Detector errors.** Group them by cause and say that, for each one, the scan
+  agrees with the transcription. On the SSA the causes were:
+  - misses: heads in tight clusters, faint stems, pale heads on ledger lines;
+  - false hits: beams, flags, tuplet numbers, stains, an accidental assigned
+    to the wrong head of a chord;
+  - wrong note values: a stem traced the wrong way through stacked ledger
+    lines, a beam that leaves a stem on one side only, a missed chord head
+    letting the stem window reach a beam.
+
+Also name three more things:
+
+- anything printed that the transcription cannot express (the SSA had a
+  tremolo on a piano chord, which the value reader saw as three extra beams);
+- print anomalies kept as they are (a dotted half that would overfill its bar);
+- what was not checked: rests, ties, slurs, dynamics, articulations, and the
+  words, which are compared separately against a lyric sheet.
+
+## Step 2 — If it's vector: read the glyph stream
+
+Use `pdfplumber`. The whole score is sitting there as typed objects.
+
+### 2.1 Geometry first
+
+**Staff lines** are horizontal vector `lines` in groups of five, evenly spaced.
+Find them by scanning sorted line tops for runs of 5 with equal gaps:
+
+```python
+tops = sorted(l['top'] for l in page.lines
+              if abs(l['y0']-l['y1']) < 0.6 and (l['x1']-l['x0']) > 150)
+# then find runs of 5 whose consecutive gaps are equal within ~0.15pt
+```
+
+The length filter is not optional. Ledger lines are short (about 10 pt), but where
+chords climb or drop far off the staff they stack at exactly the staff-line spacing, so a
+run of five of them looks like a staff to a finder that doesn't check length. On a Finale
+TTBB with piano, a finder written fresh for the piece, which counted any horizontal
+segment, locked onto a stack of ledger lines instead of a real line in two piano
+systems. Every note in them came out one staff line off. Check 12 still passed, because
+the shifted positions were still whole half-spaces. Use `staves_of()` from `verify.py`
+instead of writing a new one; check 17 (Step 5) is what caught this.
+
+The gap is your **staff space, SP**. Measure it; do not hardcode. Everything
+below is expressed as a multiple of SP so it transfers between page scales.
+(In the reference file SP = 4.2525 pt.)
+
+**Barlines** are vertical lines spanning a staff top to bottom. Take only those
+present on ≥3 staves of the system — stems and slur edges produce false hits
+otherwise. If the count doesn't match the printed bar count for that system,
+tighten to "present on all 4 staves".
+
+**Systems** are groups of staves (4 per system for SATB-with-piano, etc.). Build
+a page→system→measure map once and reuse it.
+
+### 2.2 Pitch: exact, from glyph position
+
+Assign every glyph to the **nearest staff on the whole page** (not the nearest
+of the current system — otherwise the top staff swallows glyphs from the system
+above).
+
+That rule is for glyphs drawn **on or beside their own staff**: noteheads,
+rests, accidentals, clefs, dots, flags. **It is wrong for stems and beams**,
+which are drawn away from the staff by design and routinely end up geometrically
+nearer a neighbouring staff than their own. Do not assign those to a staff at
+all — see 2.3.
+
+Then:
+
+```python
+centre = (char['top'] + char['bottom']) / 2
+d = round((staff_top_line - centre) / (SP/2)) * -1 - 2   # staff positions below the top line
+```
+
+That `- 2` is a font-baseline offset. **Calibrate it** rather than trusting it:
+find the key-signature accidentals, which must land on known positions
+(treble E♭ major = B♭ on the middle line, E♭ top space, A♭ second space), and
+solve for the constant. Then verify against a bar you can read by eye.
+
+Top line is F5 in treble, A3 in bass. Map `d` down the diatonic ladder.
+
+**Note: `<pitch>` in MusicXML is SOUNDING pitch.** Under
+`<clef><sign>G</sign><line>2</line><clef-octave-change>-1</clef-octave-change></clef>`
+the note *displays* an octave above what you encode. Transcribe what you see on
+the page, subtract one octave at build time for 8vb parts. Getting this backwards
+puts the tenors an octave high in both notation and synthesis.
+
+### 2.3 Rhythm: from noteheads, beams, flags and dots
+
+- **Notehead type** from the glyph code (filled / half / whole).
+- **Beams**: slanted beams are filled `curves` with exactly 2 distinct x values,
+  each with 2 y values ~0.5·SP apart. Flat beams are `rects` of the same
+  thickness. *You must handle both* — a beam that happens to be horizontal is a
+  different object type in the PDF.
+- Count beams crossing a stem's x within its y-range → 1 beam = eighth,
+  2 = sixteenth, 3 = thirty-second.
+- **Flags** are glyphs (unbeamed notes only).
+- **Dots** are in a *different font* (OpusSpecial) with a different baseline —
+  roughly 0.85·SP lower than an Opus glyph at the same staff position.
+  Calibrate separately. Dot x-offset ≈ 1.6–2·SP right of the notehead.
+- **A chord prints one dot per notehead.** Count distinct dot *columns*, not
+  dots, or you will read a dotted eighth as double-dotted (0.5 → 0.875).
+- **Triplets** are marked by a "3" in the OpusText font. Find the group of 3
+  consecutive equal-duration notes bracketing it and scale by 2/3.
+- **Chord grouping keys on a shared stem, not a shared x.** Group the noteheads
+  one stem claims. A chord's noteheads do spread over ~1.3·SP of x, because a
+  second is drawn offset by one notehead width (≈1.28·SP) — but that spread is a
+  *consequence* of the grouping, not the test for it. Two notes in different
+  voices can print at the same x, and a stemless whole note sitting under a
+  stemmed note there is not a chord member; grouping by x merges them. (One
+  piano left-hand bar summed to 288 in a 144 bar before this was fixed.)
+  Deduplicate identical (x, staff-position, glyph) triples — Sibelius
+  double-strikes some glyphs for faux-bold, which otherwise produces phantom
+  chord members like `C4+C4`.
+
+**Stems and beams are page-global. Never assign them to a staff.**
+
+Nearest-staff assignment (2.2) tips from one staff to the next at the midpoint
+of the gap between their centres, and on a grand staff that midpoint is only
+about 3 SP below the upper staff's bottom line. Measured on one reference page
+at SP = 4.375: the piano right-hand staff ran 614.7–632.2 and the left hand
+659.3–676.8, so the boundary fell at y = 645.75 — **3.10 SP below the RH bottom
+line**. A down-stemmed lower voice clears that routinely. The beam under the RH
+lower voice spanned 645.2–651.8, straddling the boundary, and the three stems
+feeding it had centres 5.1, 2.9 and 0.7 pt from flipping. This is not a quirk of
+one engraving: any grand staff, and any vocal staff carrying a stem-down lower
+divisi voice, has the same geometry. A stem only has to reach ~3 SP below its
+own staff.
+
+So keep them in two page-global lists and let each staff query those:
+
+```python
+# per page, not per staff
+V = [...]   # every vertical line of stem linewidth
+B = [...]   # every beam rect and 5-point filled curve
+```
+
+- A **stem** is claimed by a notehead when its x matches the notehead's left or
+  right edge and its y-range reaches the notehead's baseline.
+- A **beam** counts for a stem when it crosses the stem's x **and** its
+  interpolated y falls inside the stem's y-span.
+
+Both tests are already in the pipeline; they just have to run against the
+page-global list instead of a pre-filtered per-staff one. This is strictly safer
+than proximity, because y-containment is what discriminates: staves sit ~45 pt
+apart here and a stem is 11–15 pt long, so a beam belonging to the neighbouring
+staff at the same x is 30+ pt outside this stem's span and cannot match.
+Proximity throws away the one measurement that resolves the ambiguity.
+
+*The symptom, if you get this wrong.* The beam vanishes from its own staff's
+beam list, so every note in that group loses its beam count, reads as a quarter
+instead of an eighth, and the bar over-runs. It is easy to misdiagnose: the
+*other* voice on that staff is fine, and the bar-length check fires on the staff
+rather than the voice, so "this staff is 36 over" reads like a missed dot or a
+tuplet and sends you looking in the wrong place. The tell is that the over-run is
+always one beam group's worth of notes and always on a staff carrying two voices.
+On the reference file it cost nine bars — a 12/8 bar of 144 summing to 180, three
+eighths read as quarters.
+
+**Validate every bar against its time signature.** This is the single most
+valuable check in the whole pipeline; it catches beam misreads, missed dots and
+the hidden-meter trap in one line. When a bar over-runs by exactly the amount
+that one note being longer than it should be would explain, the constraint tells
+you which reading is right.
+
+**Accidentals: attach by column, not by distance, and check every one.** Bar lengths,
+the notehead grid and check 17 all pass on a wrong accidental, since the head is where
+it should be. Engravers pack a chord's accidentals in columns right up against it, the
+outermost furthest away: with a second in the chord (one head displaced right) and
+three columns, the outermost sat 4–5 staff spaces from its head, past the 3.2–3.4 SP
+cut-off the Finale TTBB with piano's extractor used. Eleven piano accidentals were
+lost that way (E♭ read as E, G♯ as G), and the stems, mp3s and videos were all made
+from the file before a proof of the video screens against the print found them.
+Attach an accidental to the chord at the end of an unbroken run of accidentals (each
+within about 1 SP of the next) directly left of it; a key signature is set off from
+the first note by a clear gap and stays out of the run. Then scan: for every
+accidental glyph on the page, the file's alter for the head it stands in front of must
+be that accidental. Nothing else catches it.
+
+**A key change can be printed only at the end of the system before.** Six courtesy
+naturals after the last barline of a system, and no key signature at the start of the
+next, is a change to C there. The same TTBB's extractor read the key from glyphs
+before a system's first note and so missed it at bar 107 (as it had at 136, which was
+patched by hand), and every note in the two bars before the next key signature came out
+flat that the print has natural, in all six voices. Look past the last barline of every
+system for accidentals.
+
+**Where a mark sits decides whose it is, and nearest-staff can be wrong for marks.** An
+articulation or dynamic hangs off its note, and on a crowded page it can be nearer the
+next staff, even the next system's (the Finale TTBB: an accent under bar 1's low piano
+octave went to bar 4's tenors; a basses' accent-staccato between the staves went to the
+tenor staff, which had no note there, and was lost). Give a mark to the nearer of the
+two nearest staves that has a notehead under or over it, within a few staff spaces. And
+a glyph within half a point of a barline is collected into both bars: a dynamic printed
+once came out twice.
+
+### 2.4 Lyrics: from the text layer
+
+Filter `page.chars` by font (the text font, not the music font) and by a y-band
+just below the staff. Rebuild words by x-gap. Two thresholds matter:
+
+- Gaps **within** a word are 0.00 pt.
+- Gaps at syllable/word boundaries are ≥0.25 pt.
+
+So split on gaps ≥0.25 pt and at hyphens; do not use a larger threshold or you
+merge `hope`+`is` into `hopeis` and `we`+`know` into `weknow`.
+
+Sibelius fakes bold by drawing text twice — `TThhoouugghh`. Detect
+even-length strings where every character is doubled and halve them.
+
+Sibelius attaches a hyphen to whichever syllable it was typed after, so the
+text layer has `a-` `bout,` in one place and `be` `-long,` in another. Treat a
+hyphen as shared by both neighbours; marking only one side leaves a syllabic
+chain with a `begin` and no `end` (or the reverse), which a synth that rebuilds
+words from syllabics then pronounces as two non-words. After building the file,
+reassemble every hyphenated word from its syllabics and read the list — that
+check also catches engraver typos (`smil-ling`, `wa-ater`, a missing hyphen in
+`beau-ti ful`) that are invisible on the page but wreck pronunciation.
+
+Performer instructions are not always italic. In the reference Sibelius file
+`Solo 2 (tenor):`, `Bari/Bass`, `T1/T2` and `Everyone clap!` were upright
+Palatino at 8.4 pt, separated from the 8.8 pt lyrics only by size. Filter the
+text layer by font *and size*, not by style.
+
+Assign syllables to notes **across a whole system, not per bar**. Per-bar
+assignment loses any word that straddles a barline.
+
+**Do not match syllable centre to notehead centre.** This is the single most
+productive source of wrong-but-plausible output, and it is silent — the words
+read correctly, they are just on the wrong notes, and you only find out when
+someone sings it.
+
+Engravers *centre* a syllable on its notehead **but left-align it when the
+syllable is held over following notes**, so the extender line has room. A wide
+left-aligned syllable's centre then sits over the *next* note. Centre-matching
+slides it one note right. In the reference file this corrupted 17 of 64 bars,
+always in the same direction.
+
+The rule that handles both alignments:
+
+> the syllable belongs to the **first note whose centre falls inside the
+> syllable's horizontal span**, among notes that can legally begin a syllable.
+
+"Can legally begin a syllable" matters. A wide word often spans a tied note:
+
+**A tie continuation never begins a syllable.** It sustains the previous one.
+So tie-stop notes are excluded from candidacy *during* matching — not patched
+afterwards. (Extract ties first, then lyrics. Order your pipeline accordingly.)
+
+Verify with slurs as an independent signal: a syllable must begin at the start
+of the slur it is sung over. If span-matching and slur-snapping disagree, one of
+them has a bug. When both are right they agree on every syllable, which is a
+much stronger result than either alone.
+
+### 2.5 Slurs, ties and melisma lines
+
+A slur or tie is a **single cubic bezier**: a path of exactly two operators,
+`('m', p0)` then `('c', c1, c2, p1)`. This is unambiguous and complete.
+
+- Control points above/below the endpoints tell you which side the arc sits on,
+  which is how you assign it to the right voice of a divisi.
+- Match endpoints to noteheads: try a tight x-window first (±1.4·SP), then widen
+  *asymmetrically* — a tie leaves the right side of its note and arrives at the
+  left side of the next, so long notes need ~5·SP of slack on the appropriate side.
+- **Dashed slurs** arrive as ~0.6·SP fragments tiling end-to-end with small gaps.
+  Merge contiguous fragments at the same height and direction before matching.
+- **A slur crossing a system or page break is two arcs** — one ending at the
+  right margin, one starting at the left. Stitch by staff and system index.
+- **Tie vs slur**: same pitch *and* adjacent notes → tie; anything else → slur.
+- A **divisi dyad** draws one arc above and one below. If both match the same
+  chord member, give the upper arc the top note and the lower arc the bottom.
+
+**Lyric extension lines** (the `____` after a held syllable) are thin horizontal
+lines in the lyric band. Ledger lines live in the same band — distinguish by
+line weight (ledger lines are drawn heavier) where the engraver varies it. Finale
+(Maestro) draws both at 0.48 pt; there, a ledger line is a short line on a
+staff's ledger grid (a whole number of staff spaces above or below it) with a
+notehead over it. They are an excellent independent
+cross-check: every extension line that runs past a following notehead should
+correspond to a slur or tie in your extracted set. In the reference file that
+check came out 32/32.
+
+They are also the **source** of `<extend>`, not merely a check. Deriving extends
+from your note model ("a lyric-less, non-tied note follows") misses every
+syllable that is held only by a tie — `seen` tied over the barline gets no line
+at all, and Sibelius then draws none. Instead: for each syllable, find the line
+that starts within ~2.5 SP of its right edge (or, when the syllable runs to the
+margin, the leading segment on the next system), put `<extend/>` on the
+syllable, and walk the following lyric-less notes under the line, across system
+and page breaks. Then check both directions: every printed segment consumed by
+exactly one syllable, and every extend you emit backed by a printed line (a
+slurred melisma with no printed line is the one case to keep anyway). Do not put
+a text-less `<lyric><extend type="stop"/></lyric>` on the held notes — no
+engraver writes that, and Sibelius/Cantai treat it as an empty syllable.
+
+Two consequences of taking the lines from the page rather than the notes, both
+learned on the unaccompanied TTBB (TTBB closed score, Finale/Maestro):
+
+- **A syllable held only by a tie often has no line.** `hands,` tied over the
+  barline into an eighth, `man` likewise, a third word tied from an eighth into a half:
+  the engraving prints none, so the file carries none.
+- **Unless the same word on the same figure prints one nearly everywhere else.**
+  A word-end syllable on an eighth tied into a quarter, printed with a line 28
+  times and without one 4 times in the same arrangement: the 4 are the engraver
+  dropping it, and a singer reading them sees a clipped word where every other
+  statement is held. Give those the line and list them in the handback.
+  "Same figure" is the word, its note value and the length it is tied through;
+  "nearly everywhere" is more than half of those statements.
+  `dorico_reader.matching_lines` does it; check 10 accepts the line on the
+  same count, so an `<extend/>` that nothing else on the page backs still fails.
+- **A syllable in the middle of a word held only by a tie gets no extender.**
+  `long-` held over a tie into `-in'` prints a hyphen, and an `<extend/>` on
+  `long` makes Sibelius draw a line where the hyphen should be. The note model
+  says "held, so extend"; the page says "hyphen". The page wins.
+- **Held over a melisma of moving notes, it does get one, even where the page
+  prints only a hyphen.** `be-` sung on a slurred pair of eighths before
+  `-gins`, with a hyphen and no line under the second eighth: the hyphen there
+  is standing in for an extender, and a singer needs the line to see that the
+  syllable is held. This is a deliberate disagreement with the engraving, so
+  say in the handback where you made it. `chorale.events.finalize` does both;
+  checks 10 and 14 accept the line.
+- **Sibelius draws a hyphen after a first or middle syllable even when it
+  carries `<extend/>`**; it draws the line only after a syllable that ends a
+  word. So in the print and display files, end the word at the held syllable
+  and start the rest afresh (`begin` becomes `single`, the next `end` becomes
+  `single`): `mu ______ sic`, confirmed in Sibelius on a TTBB with piano.
+  `chorale.musicxml.break_words_at_melismas` does it on the finished file. Make
+  the Cantai copy from the file before that step: Cantai reads the hyphens to
+  pronounce the word.
+
+Where a line runs off the right margin, the leading segment on the next system
+is not always drawn at the height of its own lyric line: Finale puts it just
+above the staff whichever lyric line it continues. Pair leading segments with
+the lines that ran off the previous system by system and count, not by
+height.
+
+A syllable printed under a tied continuation ("you – – oo" across a tie) is usually not an engraving slip to correct to a
+slur. Pop and gospel arrangers write out what classical engraving leaves to interpretation, as it leaves the timing of a
+final consonant: there it would be "you" with an extender, and the printed "oo" says it is sung with a near-aspirated
+restrike on the held note. Keep the tie and put the syllable on the tied note as printed; the reader starts no syllable on
+a tie continuation, so a build script places it.
+
+### 2.6 Tempo: the arranger's words, and measuring a recording
+
+A score with no metronome marks still has tempo in it. Words like "Bright Broadway 2",
+"Tempo de <another song's title>", "MAESTOSO", "BROADLY", "STRINGENDO" and "SUDDENLY SLOW DOWN!" are
+the arranger's tempo marks. List every one with its bar and propose a number for each,
+or measure them from a recording, and put the result in as hidden tempi
+(`<metronome print-object="no">` plus `<sound tempo>`, in the first part only). Words
+that are not tempo: "ACAPELLA" is scoring, and a title engraved close to the first
+staff is not a mark.
+
+To measure a recording (chroma of the score laid out on the tempo map, dynamic time
+warping against the audio's chroma, then onsets to fix bar starts):
+
+- **Trim the audio to the music before aligning.** Plain DTW pins the last score frame
+  to the last audio frame. A concert recording goes on past the final chord (a piano
+  fill, applause, room tone): about 20 s on one YouTube rip. The alignment has to put
+  that time somewhere, and it puts it wherever stretching the score costs least. Find the
+  end of the final chord from the loudness and spectral flatness curves (applause is
+  flat and noisy), cut there, and check the cut by listening to or looking at the last
+  few seconds.
+- **Repetitive stretches are where it goes wrong.** In a vamp (the same two chords bar
+  after bar, sustained "Ah!"s, a repeat), every bar has nearly the same chroma, so DTW
+  can slide or stretch it at almost no cost. On the TTBB above, bars 161–173 came out as
+  20 s against the real 12 s. Before aligning, ask the user for the start and end times
+  of any vamp or repeated section, align each piece between those anchors separately,
+  and place bars inside the vamp from onsets.
+- **Align against a score you have checked.** A misread staff (2.1) gives wrong pitch
+  classes, which pull the alignment off in exactly those bars. Run check 17 first.
+- **Report the measurements as a table** of bar ranges, marking, and tempo with the note
+  value spelled out ("half = 138"): Unicode note glyphs may not be readable. Say
+  where the measurement differs from what the user hears (MAESTOSO measured 88 on one
+  recording that sounds nearer 100) and which value went into the file.
+
+### 2.7 A Dorico export: `dorico_reader.py`
+
+Dorico writes its noteheads in Bravura at the font's *optional* code points —
+black `U+F4BE`, half `U+F4BD`, whole `U+F4BC` — not at the SMuFL ones
+(`U+E0A2`–`E0A4`); rests, accidentals, dots, flags and clefs are standard SMuFL
+(`E4E3`–`E4E7`, `E260`–`E262`, `E1E7`, `E240`–`E243`, `E050`/`E052`/`E062`).
+Chord-symbol accidentals are BravuraText `ED60`–`ED62`, the slash in `B/E`
+is `E87B`, the metronome note `ECA5`. Beams are filled rects (flat) and filled
+4-point polygons (slanted); ties and slurs are filled crescents (`m c l c l h`);
+hairpins are open 7-point polylines. With those, `dorico_reader.py` reads an open
+score (one voice per vocal staff, piano on two) straight into MusicXML: glyph
+baselines sit exactly on their staff positions, so no offset needs calibrating.
+Its `Reader` runs `read().voices().pitches().ties_slurs().lyrics(...).marks(...)`,
+with `.tempo_marks()` and `.fermatas()` after `marks()` where the score has more than one tempo mark, tempo words, a
+swing mark or fermatas (they are opt-in because older builds add those themselves), then `melisma_lines(...)` and `matching_lines(...)` (2.5), then `emit()`; a per-piece build script holds only the page range, the lyric
+font and size, the parts, and any word fixes (`lyric_fix`), and calls `finish()`,
+which writes the print file and the copy before `break_words_at_melismas` that a
+Cantai file is made from. Keep that script and its log in the song's `_build/`
+folder, never here.
+
+What the first two Dorico SATB + piano arrangements taught:
+
+- **One PDF can hold the full score and the parts.** A 29-page file was 13 pages
+  of score then each singer's part and the piano part, at other staff sizes. Read
+  the score pages only (`range(13)`), and give `verify.py` a PDF of just those
+  pages. The parts are then a free independent check: read each with
+  `Reader(..., nstaves=1)` (the piano with `nstaves=2`) and compare the note and
+  syllable sequences with the score's. On one piece every voice agreed note for
+  note and syllable for syllable.
+- **The piano can be set smaller than the voices.** Staff space is per staff, not
+  per page (`verify.py` checks 12 and 17 measure each staff's own).
+- **Dorico's lyric extenders are short.** A two-note melisma prints a line of 6 pt,
+  under two staff spaces; take lines of more than one staff space. Lines stop a
+  few points short of the right margin: a line ending within two staff spaces of
+  it runs on to the next system.
+- **A hyphen typed after a word's last syllable prints as a hyphen, or several.**
+  `rol- -  a-way` (the `ling` never typed), `see-` before a rest, `long-`
+  before a new word. The chain then joins two words (`rolaway`);
+  read the word list (check 9) and fix each by hand with `lyric_fix`, saying so in
+  the handback. Where a syllable is missing (a repeated note with only hyphens under
+  it while every other part sings the syllable there), add it and say so.
+- **A syllable set wide can cover a slurred note.** Choose the note that starts a
+  syllable from the notes *not* inside a slur (`ri-` over a slurred pair, then
+  `ver`): the slur is the melisma.
+- **Academico's `fi` ligature has no Unicode.** pdfplumber reports `(cid:57)`, so
+  "find" reads `(cid:57)nd`; map it.
+- **A tie runs from the last note of a system.** An arc leaving the right margin is
+  a tie only when it leaves the last note of its voice on that staff and the arc on
+  the next system arrives at the same pitch on the first note of its voice; otherwise
+  it is a slur continuing.
+- **Two same-pitch notes with a note between are not tied.** Check that nothing
+  in the voice sits between them before calling the arc a tie.
+
+What the next two (a 4/4 piece with 2/4 bars, and a 6/8 one) added:
+
+- **Read the time signature; never assume 4/4.** Its digits are Bravura
+  `E080`–`E089` on the top staff, numerator row above denominator; each bar gets
+  its own `meter` and length, and `<time>` is written wherever it changes. A part
+  page's multi-bar rest prints its count in the same digits, as a lone row: the
+  reader skips a lone row rather than read it as a meter.
+- **Low notes of a piano RH chord can sit nearer the LH staff.** On ledger lines in
+  the grand-staff gap, the nearest staff is the wrong one. A head outside its
+  staff belongs to the adjacent staff when its stem's far end is inside that staff
+  (`restaff_gap_heads`); its staccato, accent and accidental go with it. `verify.py` checks 12 and 17
+  use the same rule (`head_staff`). Ties under such notes likewise go to the
+  neighbouring staff when the nearest has no head at either end.
+- **Words under ledger notes fall past the midpoint between staves.** Below a sung
+  staff whose next staff is also sung, take words down to a staff space above the
+  next staff; never into the chord symbols over the piano. A soprano line that
+  dips low had lost seven bars of words to the midpoint rule.
+- **Chord symbols come in two sizes.** Dorico sets `(add9)`, `(add11)`, `(omit3)`
+  smaller after the kind (5.5 pt after 8.5): pass `marks()` a tuple of sizes. The
+  kind keeps its printed text, and hidden `<degree>`s carry the additions. A lone
+  `/B` means the chord stays and only the bass moves: write `G/B`. A slash that
+  rises above the search band, or a 5-pt suffix at another size, is dropped: read
+  the last bar's symbols against the page.
+- **A slur can leave the margin clear of every stem**, beyond tie distance of any
+  head; catch it as outgoing from the nearest chord. Slurs nested or ending on one
+  note need their own `number`s (check 8 fails otherwise).
+- **The fi ligature's cid changes with the export** (it follows the font subset), and Dorico 4.2 has an fl one
+  too. The one table is `verify.LIGATURES`, which the reader uses; read the word list for a `(cid:` left over and
+  add it there, never in a build.
+- **Arcs across a page break can match no note** (build-log problems). Read each against the page: a tie there changes
+  what is sung (a held note read as a new attack), so put ties and slurs on in the build before `lyrics()`, which uses them.
+- **Fermatas** (Bravura `E4C0` above, `E4C1` below): `r.fermatas()` puts each on the nearest note or rest of its
+  staff, and on the other voices' items at that onset.
+- **Single-note extenders.** The score can print a line under a word sung on one
+  note, with nothing after it. Where the singers' parts print none, drop it and
+  say so (check 10 then reports it); where nothing else decides, keep what the
+  score prints (check 14 then reports it). Either way it is a handback item.
+
+What an unaccompanied five-part score (S, A1, A2, T, B, 154 bars) added, all now in the reader:
+
+- **Pass `nstaves` and `staff_names`.** `Reader(..., nstaves=5, staff_names=['S', 'A1', 'A2', 'T', 'B'])`;
+  the build log labelled staves S A T B and crashed on a fifth.
+- **A tie keeps its note's alteration across the barline.** An F♮ tied into the next bar is
+  printed there with no accidental and is still F♮; the key signature made it F♯. Check 17
+  compares staff positions only, so it passed; list every chromatic note per part and read
+  it against the page.
+- **An arc between two heads on the same line is a slur when the second carries an
+  accidental that changes the pitch** (E to E♭, G to G♯). Read as ties, check 8 fails them.
+- **A hairpin across a system break** is drawn on the next system without its tip, as two
+  thin (0.6 pt) slanted strokes that the beam reader took for beams. The reader now pairs
+  them into one wedge and ends the hairpin there; before, it stopped where it started
+  (Verovio: "hairpin is ignored").
+- **A rehearsal letter on a double barline mid-system sits wholly left of it**, over the
+  previous bar's end; five of eighteen letters came out a bar early. A letter now goes
+  to the bar whose start is nearest the box's centre.
+- **Close-set staves push each part's words nearer the staff below**, so check 10 needs
+  `--lanes` with both lanes per part (`0b=Soprano,1a=Soprano,1b=Alto 1,2a=Alto 1,...`);
+  the default lanes reported 61 disagreements, all of them lanes.
+
+What a swung SATB + piano in G (108 bars, Dorico 6.2) added, all in the reader except the swing mark:
+
+- **Triplets.** The digit is Bravura `E883`. `Reader.triplets` times at 2/3 the run of notes the digit is centred over,
+  three of some value (a quarter and an eighth count), and the emit writes `<time-modification>` and `<tuplet>`.
+- **A key signature is counted on the top staff only.** A wide piano chord's accidentals can stand more than a staff
+  space left of the chord, and they were read as a key change (18 false ones) and lost from the notes. On other
+  staves only that many leftmost accidentals are the signature.
+- **A clef just before a barline takes effect in the next bar**, in Bravura `E052` at size 9 or `F472`, the small G
+  clef (a staff that swaps treble for octave-treble). Pitches were right without this, but the file showed the wrong clef.
+- **A trill's auxiliary note** is a small head between `E0F5` and `E0F6`: not a note of the bar. Check 17 reports that
+  bar, which is expected. `E566` writes a trill mark. `E5D4` is a doit, written as `<doit/>`.
+- **Chord symbols can sit nearer the staff above than the piano**, so the midpoint band loses them. Where the words
+  are another size than the symbols, the band starts at the staff above. The kinds now include `m6`, `m11`, `dim7`,
+  `9`, `9sus4`, and a small `(#11)` (`F4DE`), whose hidden degree is altered.
+- **A swing mark is in Metrico** (`E230 E232 = E2A0`; straight is `E230 E232 = E230 E232`), which `marks()` skips:
+  `r.tempo_marks()` reads it, or tracks come out straight.
+
+What five more (Dorico 4.2 to 6.1, November 2026) added, all now in the reader; their builds keep only word fixes and
+one three-voice bar. Rebuilding the seven earlier songs gave byte-identical files.
+
+- **A flag goes with its stem's heads**, not the nearest staff: a down-stem RH lower-voice eighth hangs its flag nearer
+  the LH and read as a quarter (`restaff_flags`).
+- **Rests go to the voice they complete.** A two-voice staff's rest on or near the middle line went to the wrong voice;
+  rests are moved between the voices where that makes both fill the bar, one way only (`rests_between`). A rest in the
+  grand-staff gap more than 1.5 SP outside its staff goes to the other piano staff when it is just what a voice there
+  lacks (`rests_across`). A whole rest above a stemless note is voice 1.
+- **Ties go by voice.** An arc over other notes of a one-voice staff is a slur, whichever way their stems point; a
+  stemless whole note can be tied over another voice's notes; across a break a tie leaves the last note of its voice
+  and arrives on the first of its voice. These caught ties the hand fixes had missed (Bb2 wholes, RH across a page).
+- **Two whole notes a second apart** sit side by side 1.7 SP apart: one chord, not two voices. A stem touching a head
+  from the wrong side (a crotchet's down stem against the half beside it) gives the head up, and a down-stem chord's
+  onset column is at its stem.
+- **Faux bold**: bold lyrics and marks are each letter drawn twice in one place ("lloonnee", "rriitt.."); the reader and
+  verify read each once.
+- **Text in the chord symbols' font** ("pedal ad lib.", even interleaved with a "D") is a run with a word space in it:
+  written as words, not a chord. Kinds now include `maj9` and `aug`.
+- **An extension line belongs to the syllable just left of it**: in "And I___" it is in reach of "And" too (reader and
+  verify check 10). A word at a system's right edge keeps letters that run past the staff end.
+- **Tempo**: `marks()` reads only page 1's metronome mark. `tempo_marks()` reads every page's, a dotted unit
+  (`ECB7`; dotted quarter = 75 sounds as 112.5), the words beside it ("Lively, Irish jig"), and the swing marks.
+
+What an SATB with piano from Dorico 6.2.40 (nine tempo marks; 2026-11-16) added:
+
+- **A tempo mark can start mid-bar.** Dorico sets the metronome glyph at its position's note: at a bar's first note
+  usually, but over m69's last eighth and m93's beat 4 here. `tempo_marks()` keeps the onset and the file writes it
+  as the direction's `<offset>`; `player/make_map.py` now reads that offset (it took every tempo from beat 1, and the
+  map ran 0.4-0.6 s ahead of the stems from m69 on; the attack drift report did not show it, `pitch_guide.py check`
+  did: 0.61, then 0.93).
+- **A word printed under a chord symbol** ("Evenly" under E♭) interleaves with it left to right: chord symbols are read
+  one printed line at a time, and a lowercase token no chord kind reads is words. Kind `m9` added. The fi and fl
+  ligatures were `(cid:39)` and `(cid:61)`.
+- **A syllable can be drawn twice, a hair apart** (the tenor's "er" read "eerr"): read the word list; fix it with `lyric_fix`.
+
+## Step 3 — Exploding a condensed score into one part per voice
+
+For singing synthesis you need one monophonic part per voice, because a synth
+cannot sing a chord. Condensed choral scores put two voices on one staff.
+
+### 3.0 Read the score's words before its notes
+
+**Before deciding who sings what, find the instructions that say who sings.**
+`Basses only`, `Tenors only`, `unis.`, `div.`, `tutti`, `soli`, `tacet`,
+`Soprano solo`, `men`, `women`. They are ordinary italic text above a staff.
+
+They are invisible to every check in this document. Pitches are right, rhythms
+are right, lyrics are right, bar lengths are right — and half the choir is
+singing a passage marked for the other half. Nothing catches it but reading.
+They also never survive OMR: in the reference file the commercial OMR dropped
+`Basses only` entirely, and I then wrote a whole explosion pipeline that
+duplicated every unison passage to both daughter parts without ever looking.
+
+Extract every italic run, discard the ones that are only tempo or expression
+(`Ritard`, `a Tempo`, `Gently`, `Big Ritard!`, bar numbers), and treat whatever
+is left as a decision you must make. Attribute each one to the staff **below**
+it — an instruction sits above the staff it governs — and to the bar it sits in,
+or the next bar if its text runs up against the barline.
+
+**Scope cannot be inferred; state it by hand.** `Basses only` ended at the next
+bar because that bar is divisi — two voices on the staff means both sections are
+singing again — but nothing in the text says so. Encode the scope explicitly
+with the reasoning next to it.
+
+Make the build **fail** on an instruction that has no rule, rather than
+defaulting to "everybody sings". A script that stops is a script that cannot
+quietly hand you a wrong file.
+
+A staff's role can change over the piece, not only within a bar. In a TTBB
+piece with two tenor soloists (the two-soloist TTBB below) the treble staff
+was `Solo 1 (tenor)` for bars 1–38 and `T1/T2` from 39; the bass-clef staff was `Solo 2 (tenor)` then
+`Bari/Bass`; and bars 35–38 were `Everyone clap!` X-noteheads on both staves.
+Encode this as a bar-range → part map written by hand from the instruction
+list, give the solos their own parts, and give claps their own unpitched part:
+a 1-line percussion staff, ordinary noteheads on the line, a `<score-instrument>`
+plus `<midi-instrument>` with `<midi-channel>10</midi-channel>` and
+`<midi-unpitched>40</midi-unpitched>` (GM hand clap), and `<instrument id>` on
+every clap note. X-noteheads on B4 of a 5-line staff with no instrument mapping
+display fine in Sibelius and play nothing.
+
+```
+python3 find_performer_instructions.py score.pdf        # --start 0 for a pickup bar
+```
+
+The script (in *Scripts*) derives the system and bar layout from the PDF itself
+and prints every hit with its staff and bar number. Anything it reports needs a
+rule written by hand; make your build refuse to run until it has one.
+
+### 3.1 Splitting the staff
+
+Rules, in priority order:
+
+0. **When mapping an extracted event back to an XML note in a multi-voice bar,
+   disambiguate by duration.** Two notes of the same pitch in one bar — a held
+   pedal and a passing note — are otherwise indistinguishable, and a tie landing
+   on the wrong one puts a syllable in the wrong voice.
+1. **Chord on one stem** → upper notehead to part 1, lower to part 2. *One
+   stem* is literal: take the noteheads that stem claims (2.3), not the ones
+   sharing its x. A stemless whole note printed at the same x belongs to another
+   voice, not to this chord.
+2. **Two stems on one column** (one up, one down) → upper voice to part 1, lower
+   to part 2.
+3. **Unison (single note)** → duplicate identically to *both* daughter parts.
+   This is what makes the output singable; do not leave gaps.
+4. **Second voice starting mid-bar** — the print shares the opening notes and
+   splits later. The lower part gets voice 1's material up to the split, then
+   voice 2's. Encode the lead-in with `<forward>`, not a rest.
+
+   *Check for this explicitly.* A second voice that starts on beat 1 and ends
+   before the barline is a bug, and a bar-length check will not catch it, because
+   voice 1 still sums correctly. Audit every voice's span, not just the maximum.
+
+5. **Lyrics are on the chord's first-written note**, which is not necessarily the
+   note you picked. Read the syllable off the whole chord group.
+5b. **Never place a borrowed or duplicated lyric on a tie continuation.** In a
+   divisi melisma one voice holds the previous syllable while the other takes the
+   new text; the tie is what tells them apart. Enforce it at the point you emit
+   the note, not as a later sweep.
+6. **Engravers print words on only one staff of a homophonic pair.** Duplicate
+   them to the other staff, matching **by onset**, not by requiring identical
+   rhythms — the lower staff often has extra passing notes, which should become
+   melisma rather than blocking the copy.
+7. **Melismas**: `<extend/>` on the syllable; following notes carry no lyric.
+   Take the extends from the printed extension lines (2.5), walked over the
+   **whole part**, not per bar, or every melisma that crosses a barline is
+   missed and every tie-only hold gets no line.
+
+8. **A tacet instruction beats every other rule.** If a section is marked out,
+   that part gets a whole-measure rest no matter what the staff contains.
+
+Target invariants for each vocal part: no `<chord/>`, one voice per bar, every
+bar sums to its meter, and every sung note either carries a syllable or is
+covered by an `<extend/>` on an earlier one.
+
+### 3.2 Editorial cues belong to a voice, and the only clue is their height
+
+A condensed choral score is a grand staff: soprano and alto share the treble
+staff, tenor and bass the bass staff. `mel.`, dynamics and hairpins are attached
+to **one** of the two voices on a staff, and the only thing on the page that
+says which is whether the mark sits **above** the staff (the upper voice) or
+**below** it (the lower voice). Record the placement when you extract the mark
+and keep it attached; "it is near the treble clef, so it belongs to the treble
+part" sends every alto cue to the wrong singer, and nothing downstream notices.
+`mel.` means *this part has the melody* and must travel with the notes it labels
+through any explosion or revoicing.
+
+Small/cue-size noteheads are load-bearing too. Where a divisi prints its upper
+line cue-size, the arranger is marking it optional, which also tells you that an
+adjacent `mel.` belongs to the full-size lower line. Preserve it as
+`<type size="cue">`, or at minimum write it down.
+
+## Step 4 — MusicXML element order (Sibelius rejects what others accept)
+
+music21, Verovio and MuseScore silently accept out-of-order children. Sibelius
+refuses to import. Order inside `<note>`:
+
+```
+grace? cue? chord? (pitch|rest|unpitched) duration tie* instrument? footnote?
+level? voice? type? dot* accidental? time-modification? stem? notehead?
+notehead-text? staff? beam* notations* lyric* play? listen?
+```
+
+Inside `<direction>`: `direction-type+ offset? footnote? level? voice? staff?
+sound? listening?` — and only **one** `<staff>`.
+
+Two real errors from this exact pipeline: `<notations>` emitted after `<lyric>`
+(because slurs were appended to finished notes), and a duplicated `<staff>` in a
+direction (because a staff number was added to a direction that already had one).
+A third, from adding ties to an already-built note: `<tie>` goes immediately
+after `<duration>` and `<tied>` goes inside `<notations>`; appending `<tie>` at
+the end of the note validates nowhere. Write a normaliser that reorders children
+to the canonical sequence and run it as the last step of every build.
+
+## Step 5 — Verify. All of it, every build.
+
+One check comes before the list below. `completeness_check.py` compares the file with the page: every staff printed
+is a part, every word printed is in the file, every mark is where the page has it (SKILL.md, "A transcription is the
+whole page"). The player's map scripts refuse a file without its passing stamp.
+
+Run the script, on the **print-faithful** file (the Cantai file departs from
+the page by design, and fails check 10 because of it):
+
+```
+python3 verify.py score.musicxml --pdf score.pdf [--lanes "0a=Tenor,0b=Lead,1a=Baritone,1b=Bass"] [--render pages/] [--original before.musicxml]
+```
+
+It prints one line per check below: PASS, FAIL, WARN, MANUAL (needs a person;
+the line says what to look at), N/A (the line says why) or NOT RUN (the line
+says which input is missing). Put the table into the handback exactly as
+printed, with a sentence for every FAIL, WARN and MANUAL line saying what you
+did about it. Do not deliver on a FAIL. A NOT RUN is reported as NOT RUN,
+never dropped: an empty result and a check nobody ran look identical downstream.
+
+`--lanes` tells it which part each lyric line of the PDF belongs to — `0a` is
+the line above the first staff of a system, `0b` the line below it. With one
+staff per part it defaults to part *k* below staff *k*; a closed score needs it
+spelt out. Checks 10, 11, 12 and 17 read the PDF directly with the script's own
+staff and barline finders, so they test the file against the engraving rather than
+against your own extraction; they work on vector PDFs only.
+
+Four things the checks got wrong on a Finale vector TTBB with piano, fixed in the script:
+check 8 compared a tie on the upper note of a chord with the next chord's lowest note (a tie
+on a chord member now needs the same pitch in the voice's next event); check 10 took an
+extender between two staves for a ledger line because it sat on the upper staff's ledger
+grid over a note of the lower staff (the notehead must now be on the same staff), and read
+only the most common lyric size, missing two pages Finale had scaled a few percent; and
+check 11 counted the courtesy key and time at a system's end as bars. Give `--lanes` every
+lane the lyric lines land in: the tenor line between the staves came out as `0b` on one
+system and `1a` on the rest.
+
+On two Dorico SATB + piano exports the checks needed more, now in the script:
+Dorico's notehead and rest code points (checks 11, 12 and 17 otherwise did not run);
+each staff's own staff space (a piano set smaller than the voices put 1,516 heads
+"off the grid"); extension lines down to one staff space long, and lines ending up
+to two staff spaces short of the margin counted as running on; leading segments on
+the next system matched to their lyric lane; `--lanes` taking `4a=-` to ignore chord
+symbols set in the lyric font; the `fi` ligature; and a line where the page prints
+only a hyphen after the syllable (2.5). `musicxml_qc.py` also stopped calling curly
+quotes and an ellipsis garbled.
+
+Tested on the unaccompanied TTBB: the delivered file passes; a copy with the two mistakes that
+reached a delivered file put back (extenders on mid-word syllables, extenders on
+tie-only holds) fails check 10 with 9 disagreements and check 14 with 18.
+
+The checks:
+
+1. **XSD.** Fetch `musicxml.xsd`, `xml.xsd`, `xlink.xsd` from
+   `https://raw.githubusercontent.com/w3c/musicxml/v4.0/schema/` and rewrite the
+   two `xs:import schemaLocation` attributes to point at the local copies.
+   `lxml.etree.XMLSchema(...).validate(doc)` must be True.
+2. **Bar lengths** against the meter in force. Zero exceptions.
+3. **Ranges** per part via music21 — a tenor part reading B♭1 means you got the
+   8vb clef backwards.
+4. **QC script** below — lyrics, octave leaps in sung lines, clef-octave
+   consistency. It reads the two parts of a shared staff separately, and lets
+   a note with no syllable of its own sing the one the other part starts at
+   that moment (the single shared line of 7.4).
+5. **Render and compare to the PDF, page by page**, with Verovio + cairosvg.
+   A render that looks wrong in a way your data doesn't explain means you have a
+   pitch or octave bug, not a renderer bug.
+6. **Every performer instruction found, and the scope you gave it.** If the list
+   is empty, say you looked — an empty list and a list you never made look the
+   same in the output.
+7. **Hand back the judgment calls.** Every divisi bar, every place you duplicated
+   lyrics, every literal-rest reading, every typo you fixed. The singer needs to
+   know what you decided on their behalf.
+8. **Ties and slurs pair up.** In every monophonic part, each tie start is followed by a
+   same-pitch note carrying the stop; no tie runs into a rest. Sibelius plays an
+   unpaired tie as a note held through whatever comes next. Every slur start is
+   closed by the next stop of the same number in the same voice: on a shared staff
+   a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is
+   closed by nothing, and is drawn on across the page to the next stop it finds
+   (7.2).
+9. **Words reassemble.** Rebuild every hyphenated word from the syllabics and
+   read the list (see 2.4).
+10. **Every printed extension line is consumed** by exactly one syllable, and
+    every emitted `<extend>` has a printed line behind it (see 2.5).
+11. **Cross-staff onset alignment.** Notes at the same onset in different staves
+    share an x within ~1.5 SP. One line of code; it catches a mis-split voice or
+    a mis-read duration before you ever look at a render.
+12. **Every notehead lands on its own staff's grid.** Its computed staff
+    position must come out a whole number of half staff spaces. A notehead
+    assigned to the wrong staff lands at a non-integral position, because two
+    staves in a system sit at arbitrary vertical offsets from each other. One
+    line of code, and it is the only *positive* evidence that nearest-staff
+    assignment (2.2) worked everywhere rather than merely not having been caught
+    failing — including the ledger-line notes in a grand-staff gap, which is
+    exactly where proximity is least trustworthy. On the reference file all
+    1,949 noteheads came within 0.12 of an integer.
+13. **Every voice can read its own part off a shared staff.** On any staff
+    carrying two voices, reconstruct what each singer actually reads — the
+    line-2 syllable wherever that voice has its own notehead, the line-1
+    syllable wherever it is sharing one — and compare to that voice's own
+    syllable list. Equality, or you have a lyric-line bug (7.4).
+14. **No extender outruns its voice.** Every `<extend/>` must have a following
+    note *in the same voice* for the line to run under. Verovio says
+    "Syllable with underline extender under one single note" when it doesn't.
+    The fix is to keep the tied note in that voice (7.4), never to drop the line.
+    And the line must stop where its melisma does: the check walks each line to
+    the next syllable on it and fails a line that crosses a printed rest or, given
+    `--original`, runs under notes that sing words of their own (7.6). It also
+    fails a line on a mid-word syllable held only by a tie (2.5).
+15. **No lyric collisions in the layout you are going to print** —
+    `lyric_collisions.py`, Step 8.
+16. **A revoicing matches the original everywhere it was not asked to change.**
+    Sample both scores on a 16th-note grid, per voice, and diff pitch and
+    pitch-class; the only differences left should be the ones on the
+    instruction list (7.5).
+17. **The printed noteheads are the file's pitches.** For each bar and each staff, the
+    set of staff positions of the heads printed in the PDF must equal the set the file's
+    pitches would print at under the clef in force. When every head in a bar is off by the
+    same amount, the check reports that shift: that is a misread staff (2.1) or a wrong
+    clef octave. Tested on the Finale TTBB with piano: the delivered file differs only in
+    one bar where grace notes had been left out, and a copy with the piano RH moved up one
+    line in five bars fails in exactly those five bars. Check 12 passes on that copy. A
+    FAIL here is either fixed or listed in the handback as a known omission (grace notes
+    left out, an 8va the file writes at sounding pitch).
+
+## Step 6 — Cantai mode (optional; not for printing)
+
+Sibelius's Cantai singer reads lyrics from the score and, as of this writing,
+**does not start a new sound on a note that has no lyric of its own when that
+note follows a tie continuation**. It keeps holding the previous pitch. The
+notation is right, the ties are right, a sampled voice plays it right; only
+Cantai sustains. Diagnosed on the two-soloist TTBB: bar 57, a syllable on an E♭ eighth →
+E♭ half → E♭ eighth (tied), then D — Cantai held the E♭ through the D and the
+following eighths; switching the staff to a Sibelius Sounds voice fixed it.
+Pure slur melismas (no tie in the chain) sang fine. Adding text to the
+lyric-less note fixed it.
+
+So the workaround is lyric text on every note that must start a sound, and
+nothing else: keep the print-faithful file as the deliverable for engraving and
+produce a second file for learning tracks. Cantai's own guide documents only
+that it "reads Sibelius's lyric hyphens to map phonemes correctly"
+(https://cantai.app/sibelius); there is no published melisma rule, so expect
+this section to age.
+
+**Rule, as implemented in `cantai_mode.py`** (runs on the finished MusicXML):
+
+- A *melisma group* is a lyric-bearing note plus the lyric-less notes after it
+  up to the next syllable or rest.
+- If the group contains a tie continuation, every note in it that starts a
+  sound gets a piece of the syllable: onset+vowel on the syllable note, the bare
+  vowel on intermediate notes, vowel+final consonants (with punctuation) on the
+  last. `gleams` over E♭ ~E♭ ~E♭ D B♭ C ~C D → `glea / ea / ea / ea / eams`;
+  `now,` over C ~C D → `now / ow,`; `ful` over F ~G G → `fu / ul`; an in-word
+  syllable such as `smil-` keeps its hyphen semantics on the outer pieces.
+- A **dotted** tie-continuation in the middle of such a group is un-tied and
+  re-sung on the vowel (`G3 half ~ G3 dotted quarter` → `G3 half`, `G3 dotted
+  quarter: ea`). `--keep-dotted-ties` turns it off.
+- `--untie-all`: every tie continuation inside a real melisma (a tie chain
+  followed by at least one further sung note) is un-tied and re-sung on the
+  vowel, so no tie survives in a melisma. Plain tied holds that lead straight
+  into the next syllable (`seen ~`, `bright. ~`) are left alone; they never
+  misbehaved. **This is the setting that finally worked** on the reference
+  score; see the rounds below.
+- Groups with no tie are left exactly as printed. So is everything outside
+  melismas. Extension lines are re-derived so a piece gets `<extend/>` only if
+  lyric-less notes still follow it.
+
+**Respell vocables, in the Cantai file only.** Cantai pronounces each syllable
+as though it were an isolated English word, so the `Li, li, li` and `Ni, ni, ni`
+of a vocalise come out wrong — on the scanned SATB octavo Cantai
+mispronounced them badly. Respelling to `lai` / `nai` in the
+Cantai copy fixed it. Do it as a narrow regex over lyric text in the Cantai file
+only (`[LlNn]i[,.]?`, preserving case and trailing punctuation), print the count,
+and say in the handback which words were respelled. The print-faithful file
+keeps the engraver's spelling. Look for this whenever the text contains
+non-words: vocalise syllables, scat, and any invented syllable are the ones a
+grapheme-to-phoneme model has no dictionary entry for.
+
+**What to tell the user:** the pieces are pronounced by Cantai as isolated
+words, so vowels drift (`lo` from `love` comes out "low"); pitch and syllable
+timing are right, which is what a learning track needs. A bad piece is fixed
+by retyping that one lyric in Sibelius with a phonetic spelling. The Cantai
+file must not be used for printed parts.
+
+**Do it minimally and in rounds, and expect the renderer to be inconsistent.**
+The rounds on the reference score: (1) every melisma note gets a syllable —
+worked, but more than needed; (2) only after holds of 2½ beats or more —
+too narrow, sustains reappeared where a melisma ran into a second tie;
+(3) every sung note in a tie-containing melisma gets a piece, dotted
+continuations re-sung — fixed most spots, but T1 still held bar 101 while T2,
+whose XML was byte-for-byte identical, sang it correctly, with T1 soloed and the
+Sibelius level meter flat during the hold: Cantai's own pre-rendered audio,
+not a note event, and not something notation can address; (4) `--untie-all`,
+which takes ties out of melismas entirely so no singer in the ensemble has to
+stitch across one — that ended it. Keep the change log the script prints and
+hand it over, so the user knows every place the file departs from the print.
+
+## Step 7 — Revoicing, and collapsing voices onto shared staves
+
+A director hands you an instruction list ("SATB → TTBB: soprano down an octave
+to Tenor 2, alto to Bass, …, with these exceptions at bars 25–28, 43–44, 59–64").
+This is a *transcription of someone else's decisions*, and the failure mode is
+not wrong notes — it is quietly answering a question they already answered.
+
+### 7.1 Work from a text source, not from XML
+
+With the per-voice text format from 1.1, a revoicing is a new block of text per
+new voice, every bar written out explicitly, one pitch per token. It is
+readable, diffable, and you can hand the user the exact bars you produced for a
+rule you were unsure about. Editing XML directly makes every question
+"what did you do at bar 61?" expensive.
+
+Read the instruction list back to the user in your own words before building,
+and quote the bars. On the reference job an instruction that said "bars 61 beat 3
+to 64 repeat the bar 59 beat 4 – 61 beat 2 span" was first implemented as
+repeating a shorter span; only restating it caught that. When the user says a
+restatement is false, treat it as a hard stop and re-read the source — do not
+adjust the implementation around the misreading.
+
+### 7.2 Merging two parts onto one staff
+
+Two simultaneous events merge into one chord in voice 1 only when everything
+printable about them agrees: same duration, same dots, same note type, both
+notes or both rests, same tie start and stop, same slur start and stop, same
+lyric text and syllabic. Anything else → voice 1 carries the upper part, and a
+second voice follows after `<backup>`, with `<forward>` for its lead-in,
+explicit `<stem>up</stem>` / `<stem>down</stem>` on the split stretch, and
+`<voice>2</voice>`.
+
+**A slur never changes voice.** The chord's one slur mark belongs to voice 1, so
+a lower-part slur that starts in voice 2 (the parts split) and ends on a note
+that merges into a chord (they agree again) is left open, and Verovio drew it
+from bar 33 to bar 39 of a TTBB with piano; the reverse, a slur that starts on
+a merged chord and ends where voice 2 has split off, leaves a stop with no start.
+`collapse.merge_staff` keeps both ends of such a slur out of the chord, and
+check 8 fails any slur that does not close in its own voice.
+
+Parts diverge and reconverge **several times inside one bar**. A prefix merge
+— agree until the first difference, then two voices to the end of the bar —
+produces needless two-voice writing and duplicate lyrics. Sync on every position
+where both parts have an event and the two are mergeable; write two voices only
+in the stretches between syncs.
+
+### 7.3 Directions can land where voice 1 has no note
+
+On a merged staff, a dynamic, a rehearsal mark or a `mel.` belonging to the
+lower voice can fall on a beat where voice 1 is in the middle of a held note.
+If you only emit directions at voice-1 note starts, those vanish — silently, and
+only in the bars where the parts diverge, which is exactly where the marks
+matter. Attach them at the barline with an offset instead:
+
+```xml
+<direction placement="below">
+  <direction-type><words font-style="italic">mel.</words></direction-type>
+  <offset>8</offset>
+</direction>
+```
+
+`<offset>` is in divisions and comes *after* `direction-type` (Step 4).
+
+### 7.4 Lyrics on a shared staff — decide by words, not by beats
+
+This is the part that goes wrong. **Decide the number of lyric lines for a bar
+by comparing the two voices' syllable *sequences*, not their note positions.**
+
+- **Sequences equal, each syllable starting at the same moment → one lyric
+  line.** Drop the lower voice's copies entirely.
+  This is the common case: both parts sing the same words, one takes a two-note
+  melisma where the other has a plain quarter. The merge cannot chord them, so
+  the lower voice gets written out as voice 2 — and its duplicate syllable, the
+  same word on the same beat, plus an extender for the melisma, lands on a
+  second lyric line beneath an otherwise-empty one. That is the stray
+  `ing______` under a bar whose text is already complete. But keep the
+  extender: where only the lower voice holds the syllable over more notes, the
+  one line carries the lower voice's copy, extender and all, instead of the
+  upper's. For singers who do not read music, the slur alone did not
+  tell the basses to hold "no" over two notes while the baritones sang it on
+  one. A line-2 extender still open when the words move to line 1 must be
+  ended (7.6).
+- **Sequences differ → two lines,** line 1 the upper voice and line 2 the lower
+  voice, *for every bar of the divergent passage*, including bars where one of
+  them is silent. So do the same words entering at different moments
+  (staggered entrances on one word, a beat or two apart): a shared copy lines
+  up with one entrance and not the other, so each voice gets its own under its
+  own note.
+
+A per-bar collision test — "does a voice-2 syllable start on the same beat as a
+voice-1 syllable?" — gets both cases wrong. It prints the duplicate in the first
+case. In the second it flips between one and two lines from bar to bar, so a
+single continuous phrase in one voice is split across two lyric lines: every
+word is present, and the part cannot be read. On the reference score this hit
+bars 20–26, 38–42, 48–49 and 54–58 in the tenors and eleven more in the low
+voices, and it is what showed on the page as stray syllables.
+
+Two details that follow published practice, checked against the engraved
+original:
+
+- **Do not copy a shared syllable onto both lines** where the parts are chorded
+  together. The second line appears only over the bars where the parts diverge;
+  a singer follows line 2 while it exists and line 1 where the notes are shared.
+- **Put both lines below the staff** (`number="1"`, `number="2"`, no `placement`)
+  unless you are reproducing an original that sets words above the staff. When
+  there is an original PDF, follow it (7.7): the singers will hold it, and the
+  videos are there to get them used to reading it. Without one, mixed placement
+  only makes line 1 jump above and below the staff from bar to bar.
+
+**A tie never changes voice, and a held word keeps its line.** Merging is decided
+bar by bar, so a note held in voice 2 across a barline can land in a unison
+that merges into voice 1. The tie then jumps voices, and voice 2 has no note
+left for its syllable's extender to run under. Keep the tied note in voice 2 —
+a unison with one stem up and one down — and the line draws. Do not delete the
+`<extend/>` instead: an earlier version of this file said "the tie shows the
+sustain", and that was a workaround passed off as practice. The engraved
+original of the reference score prints both parts' lines into exactly such a
+unison, the upper tie curving in from above and the lower from below.
+
+**Verify by reconstructing the read** (check 13). Walk each voice and collect
+the syllable it would actually sing — line 2 where it has its own notehead,
+line 1 where it shares one — and compare to that voice's source syllable list.
+On the reference piece: 131 / 135 / 144 / 138 syllables, exact on all four.
+Nothing else catches a split phrase, because every syllable is present in the
+file and the XML validates.
+
+### 7.5 Cross-check the revoicing against the original
+
+Sample both scores on a 16th-note grid, per voice, and diff pitch and
+pitch-class; do the same for lyric position. Everything the director did not ask
+you to change must match, so the only differences left are the ones on the
+instruction list — which you then read back to them. On the reference job this
+caught an alto line extracted from the wrong half of a condensed staff, a bug
+no bar-length, XSD or range check would ever see, because the wrong notes were
+all perfectly plausible altos.
+
+**Checking someone else's revoicing: what goes back to them.** When the revoicing is the director's and the job is to
+check it, the notes and any shaded copy for the director carry only three kinds of item: what was changed (typos
+fixed), what they must answer, and what could surprise them in performance. Never mark "this is fine as you wrote it"
+(a note that is a chord tone rather than a literal source note, a walk that differs from the piano but sounds right):
+a mark pulls the eye and reads as something to fix. Those findings go in the user's own report. Letter each item
+(A, B, C ...) in score order so the director can answer by letter.
+Before calling something in their engraving a typo, read it by the conventions a choral arranger writes with. A note
+with no syllable where every part sings the same words is the "words written once" convention, not a missing word:
+leave it blank. Words under one voice of a shared staff (a "Bom" under the stems-down notes only) belong to that voice
+only. A single line on a shared staff that later splits into chords is everyone on that staff in unison, branching off.
+
+### 7.6 Crossed parts on a shared staff
+
+When the lower part goes above the upper, three things break on the page and
+nothing in the data catches any of them.
+
+- **Never chord crossed notes.** Two parts that agree in rhythm, ties, slurs
+  and syllable will merge into one chord, and a chord cannot say whose note is
+  whose: Baritone D3 under Bass E3 reads as the Baritone singing E3. Refuse the
+  merge whenever the lower part's note is above the upper's (a unison is not a
+  crossing) and write that stretch as two voices.
+- **Stems keep identifying the part.** Voice 1 stays up and voice 2 down even
+  while crossed. In a bar crossed throughout, voice 2's tie then defaults to
+  curving under, straight through voice 1's noteheads; write it
+  `<tied orientation="over">`. Sibelius honours the side. A probe showed it
+  ignores `bezier-x`/`bezier-y`/`bezier-x2`/`bezier-y2` and `default-y` on a
+  tie, so the height of the arc cannot be set from the file; any further lift
+  is a hand touch-up in Sibelius (Tie Middle Y). Verovio picks the tie side by
+  voice number rather than stem, so write the side explicitly on every tie of a
+  shared staff.
+- **A lyric line is not ended by a rest.** Both Sibelius and Verovio run an
+  extender on to the next syllable-less note in the same voice, however far
+  away. Splitting one crossed note off a chord gives voice 2 exactly such a
+  note, and a line from seven bars earlier ran across three systems to reach
+  it. So does 7.4 dropping the lower voice's copies where both sing the same
+  words: its notes there are syllable-less, and an open line-2 extender ran on
+  under them into the next divided bar, six bars away. Put a syllable-less
+  voice-2 note that follows an already-finished voice-2 line into voice 3; that was the only encoding that worked in a
+  Sibelius probe. Do not write `<lyric><extend type="stop"/></lyric>` for
+  Sibelius: it reads it as a new, empty syllable and every held word whose line
+  ended that way lost its line. A `print-object="no"` syllable was printed
+  anyway. The empty stop is fine for Verovio, and only for Verovio.
+
+### 7.7 Words where the original prints them, and fermatas once
+
+When the closed score is built from an original PDF, read from each system of
+the scan where each part's words sit, and keep to it. On the TTBB with piano the
+octavo prints the tenors' held vowel under the tenor staff, the baritone
+melody on a second line under that (above the bass staff), the basses' held
+vowel under the bass staff, Tenor 1's divisi words above the tenor staff, and in
+most bars one line between the staves that both staves' parts read. `collapsed_part(..., lyric_place=f)` takes `f(role, bar, offset)`
+returning `'above'`, `'below'`, or None for "printed on the other staff's line",
+and writes it two ways:
+
+- **The file for Sibelius keeps every part's words on its own staff**, with the
+  print's above or below as `placement`, and None falling back to below. A
+  syllable printed only on the other staff would leave these notes with none,
+  and Sibelius would run the line before it on under them (7.6). Lines stay
+  numbered by voice (1 upper, 2 lower), so check 14 holds. Whether Sibelius
+  honours `placement="above"` on import has not been checked yet.
+- **The display copy for the videos is laid out as printed**
+  (`hide_unprinted=True`): a syllable sung but printed on the other staff is kept
+  as `print-object="no"` (the video reads it from the printed copy with the same
+  text at that moment, on the line facing its staff), and `f` returns
+  `(side, number)` so that each printed row is one lyric number. Numbered by
+  voice, a row that takes one bar's words from the upper voice's chords and the
+  next bar's from the lower voice's notes was drawn as two rows. A chord both
+  parts sing, whose words the print gives on two rows (Tenor 1 above, Tenor 2
+  between the staves), carries the syllable twice; the video gives each row its
+  own light (the MEI verse's `@type` names its line in the SVG), so Tenor 2a's
+  video lights only the row between the staves, where a singer would read it. Then run
+  `end_lines_for_verovio` on it: renumbered lines would otherwise run on under
+  notes whose words have moved to another row, and Verovio (not Sibelius) stops
+  a line at an empty `<extend type="stop"/>`. A cue the print sets on the lyric
+  line after a syllable (an alternative vowel in brackets) goes into the
+  syllable's text, not a direction, which Verovio puts on a row of its own.
+
+Verovio ignores a MusicXML lyric's `placement`; `score_video.py` sets
+`@place="above"` on the MEI verses (a chord's verses sit under the `<chord>`,
+not its notes). Verovio also spaces a row's syllables apart only within one
+layer, so where a row takes words from two voices the next bar's first syllable
+printed over the last; the script moves such a syllable right until
+it clears its neighbour, and drops an extender squeezed to a stub, which read as
+a full stop after the word.
+
+**Once the parts split within a bar, they stay split for that bar, except at a
+unison.** Where both parts sing the same rhythm and word on two different pitches
+after they have split, the print gives each part its own stem, the upper part's up
+and the lower's down (the TTBB with piano at bars 13, 42 and 64). Merged into one
+chord on one stem, the note read as one part's whichever way the stem went: down,
+it looked like Tenor 2's alone, and a first fix that forced it up made it look like
+Tenor 1's alone. `merge_staff` keeps such moments out of the chord; a unison still
+merges into one note, stemmed by position, as the print's "unis." notes are.
+
+**A fermata once per staff and beat.** Collapsed onto one staff, both voices'
+fermatas stack one over the other, and a piano beat of two eighths got one over
+each. Voice 2 gets a fermata only where no voice-1 event is sounding; the piano
+gets one per beat. In a part's video a fermata is black where it sits on that
+part's note or rest, or where that part holds its own fermata on the same staff
+to the same moment (the basses' bar rest at bar 51, under the baritones' held
+note), and grey otherwise.
+
+## Step 8 — Laying out a part for print
+
+### 8.1 Verovio and cairosvg, the parts that surprise you
+
+- **`unit` is the staff-size knob**, not `scale`. With page dimensions given in
+  1/10 mm, `unit = staff_height_mm / 4 * 10 / 2`. `scale` only zooms the output
+  and changes nothing about how much music fits on a page.
+- **Verovio prints only the accidentals the file writes.** It takes the pitch
+  from `<alter>` and what to print from `<accidental>`, and works out nothing
+  itself. Sibelius does work them out, so a file that leaves them to the reader
+  imports right there and renders wrong in Verovio: a closed-score video showed
+  B-flat for every chromatic B-natural, the file having no `<accidental>` at
+  all. `score_video.py` writes the missing ones: per staff, both voices
+  together, against the key and the bar so far, none on a note tied over the
+  barline. A collapse can need one the open score did not, since two voices on
+  one staff share the bar's accidentals (one natural in the ballad TTBB).
+- Page size and margins are in 1/10 mm. **`cairosvg.svg2pdf(..., dpi=254)`** maps
+  those units to a real page; without it a US-Letter score comes out 22 × 29 in.
+- `breaks: "encoded"` honours `<print new-system="yes"/>` and
+  `<print new-page="yes"/>`. `breaks: "line"` honours system breaks and
+  paginates automatically — useful for a pilot, wrong for a final layout.
+- `justifyVertically` spreads systems from the top margin to the bottom margin.
+  With three or more systems that reads as even spacing. With two it opens one
+  chasm in the middle; leave it off.
+- cairosvg PNGs have a **transparent** background. Composite onto white before
+  converting to greyscale, or every ink measurement comes back NaN.
+- Verovio's SVG inner coordinates are 10× the viewBox units (viewBox in 1/10 mm,
+  drawing in 1/100 mm), which matters when you measure anything out of the SVG.
+
+### 8.2 How many bars fit on a line — do the arithmetic, don't guess
+
+Density is usable width ÷ staff height, and it transfers between page sizes.
+A published octavo at a 6.35 mm staff on a 6¾ × 10½ in page has ~137 mm of
+usable width and prints about **2 bars to a system** — call it ~10.8
+staff-heights per bar. US Letter with 14 / 11 mm side margins gives ~191 mm,
+1.4× as wide, so the same density is ~2.8 bars. **Three bars per system is the
+ceiling**, at a 6–7 mm staff. Four runs the words together, and Verovio will not
+always warn: its "justification is highly compressed" warning fires on note
+spacing, not on lyric width, so a system can be flagged clean and still print
+`weknow`.
+
+Vertically, a four-staff system (two voice staves plus piano) with lyrics and
+chord symbols is about 78 mm at a 7 mm staff. **Three fit a Letter page and fill
+it. Two fit and leave the bottom third blank**, and no staff size fixes that:
+filling the page with two systems needs ~11 mm staves, at which only 1–2 bars
+fit per line and the piece grows from 12 pages to 17. Say this to the user
+rather than stretching the spacing — they are usually asking because of paper.
+
+Where you must shorten a system, shorten the *texted* ones. Four-bar systems are
+fine through passages where the voices are resting or holding.
+
+### 8.3 Measure the crowding
+
+`lyric_collisions.py` renders the laid-out file, pulls every syllable's x, y and
+font size out of the SVG, groups them by baseline and reports every pair whose
+gap is smaller than the estimated width of the first. That turns "does this look
+cramped" into a number you can iterate on, which is the only practical way to
+choose system breaks across a whole score. The width estimate is approximate:
+treat a gap a little under the estimate as tight-but-legible and a gap well
+under it as a collision, and use the tool comparatively between candidate
+layouts rather than as an absolute.
+
+### 8.4 Missing-glyph rectangles in the PDF
+
+Verovio draws notated accidentals as **paths**, but **chord-symbol** accidentals
+as `<text font-family="Leipzig">` at private-use code points (sharp = U+EA66).
+cairosvg does not implement `@font-face`, so with no Leipzig installed on the
+system, every chord-symbol sharp and flat renders as a tofu box while the music
+itself looks perfect — `A/C□`, `D/F□`. `smuflTextFont` does not change this.
+Install the font; Verovio ships it base64'd inside its own CSS:
+
+```python
+import re, base64
+from fontTools.ttLib import TTFont          # pip install fonttools brotli
+css = open('.../verovio/data/Leipzig.css').read()
+open('Leipzig.woff2','wb').write(base64.b64decode(
+    re.search(r'base64,([A-Za-z0-9+/=]+)', css).group(1)))
+f = TTFont('Leipzig.woff2'); f.flavor = None; f.save('Leipzig.ttf')
+```
+
+then `mkdir -p ~/.fonts && cp Leipzig.ttf ~/.fonts/ && fc-cache -f`. The same
+trick works for Bravura, Leland, Gootville and Petaluma, which ship the same way.
+On a Mac that is not enough: Homebrew's cairo finds fonts through CoreText, not
+fontconfig, and the boxes stay. `chorale.printing.register_with_coretext` registers
+the file for the rendering process only (`score_video.py` installs it into
+`~/Library/Fonts` instead). An emoji in a text direction prints as a box on any
+system, since cairo cannot put a colour font into a PDF; `chorale.printing.draw_emoji`
+replaces one that opens a text with a picture of it.
+Check for the problem by scanning the SVG for characters above U+007F: anything
+in the private-use range is a font you need installed.
+
+### 8.5 What travels to Sibelius
+
+Layout goes in `<defaults>` — `<scaling>` (millimetres per 40 tenths),
+`<page-layout>`, `<system-layout>`, `<staff-layout>` — plus `<print
+new-system>` / `<print new-page>` on measures. Sibelius honours the breaks and
+then runs its own vertical justification (Engraving Rules → Staves → "Justify
+staves when page is at least N% full").
+
+Set `<system-distance>` generously. 110 tenths at a 6 mm staff is ~17 mm between
+systems, which is not enough clearance for lyrics under one system and chord
+symbols over the next, and Sibelius will overlap them — the same layout that
+renders cleanly in Verovio. 150 tenths with `<staff-distance>` 85 behaved.
+
+Bracket the vocal staves with `<group-barline>no</group-barline>`. A joined
+barline runs down through the lyrics between the staves; engraved choral
+octavos break it at every vocal staff. The piano's two staves still join.
+
+### 8.6 Credits: who wrote the piece, and why nobody sees it
+
+Getting a name onto the page took four rounds, because the two readers want
+opposite encodings and neither complains.
+
+**Position every credit.** MusicXML page coordinates are in tenths and the
+schema's own documentation says the `default-x` and `default-y` attributes
+"adjust the origin relative to the bottom left-hand corner of the page". A
+`<credit>` without them therefore sits at (0, 0) — the corner of the paper,
+flush to the edge, no margin — and several unpositioned credits pile up there,
+so all but one look dropped. Verovio skips them; Sibelius draws the pile.
+
+**Put every line that belongs in one corner into ONE `<credit>`, as successive
+`<credit-words>`.** The spec says "a series of credit-words and credit-symbol
+elements within a single credit element follow one another in sequence
+visually"; only the first carries the position, and the line break is a literal
+newline at the end of each. This is what MuseScore writes. Sibelius keeps one
+credit per zone of the page — given six separate `<credit>` elements aimed at
+the same corner it drew the last and silently dropped five — but renders every
+`<credit-words>` of a single credit as its own line. Verovio is the mirror
+image: it draws every separate credit and only the *first* line of a block. So
+encode the block, and expand it into separate credits on the way into Verovio
+and nowhere else.
+
+**`credit-type` is not decoration.** Sibelius routes a typed credit into its
+Score Info fields instead of onto the page. Leave the type off any line you
+want to see; the names still reach Score Info through
+`<identification><creator>`, which is where that metadata belongs.
+
+**The copyright notice is its own problem.** Sibelius turns `<rights>` into a
+copyright line pinned to the *bottom margin* — which is also where it
+justifies the staves down to after import, so the notice and the last system
+land on each other. Widening the bottom margin moves both together and cannot
+separate them. Drop `<rights>`, place the notice as a positioned credit inside
+the margin band a few millimetres off the paper edge, and justification can no
+longer reach it; leaving `<rights>` in as well gets two notices. Verovio needs
+that line painted onto the rendered page separately — it converts credits into
+the page *head* only and drops a bottom-positioned one under all three
+`footer` settings.
+
+**Page numbers: every print has them.** They are indispensable:
+a director stops a rehearsal with "top of page 4". Verovio draws none in this
+setup, so `Print.render` paints them into each page's SVG, on by default, as
+octavos print them: none on the title page, then the top outside corner (odd
+pages at the right margin, even at the left), baseline 7.5 mm below the paper
+edge. Turn them off (`page_numbers=False`) only for a page nobody sings from.
+Check the first system's ink clears the number (on a TTBB octavo at 11 mm top
+margin the ink starts 10–11 mm down, the bar number on even pages included).
+Not at the bottom: the lowest system can run to within 9 mm of the edge, and
+page 1's copyright line is there.
+
+**When a reader silently omits something, probe rather than tune.** Three
+rounds of adjusting attributes taught nothing. One throwaway file carrying six
+differently-encoded credits, each labelled with the encoding that produced it,
+answered every question in a single import. Build the probe the moment you are
+guessing twice about the same thing.
+
+## Step 9 — Stems and rehearsal tracks
+
+A set of **rehearsal tracks** is four kinds of mp3, and "make rehearsal
+tracks" means all four (so do requests for "part-predominant tracks",
+"part-left tracks" or "practice tracks"): per part, one predominant-left track
+(the part loud and only in the left channel; the other voices faint and the
+piano at its equal-loudness level, both left as exported, not steered; summed to
+mono it is the predominant balance, 9.4); and three Balanced
+tracks with every part at the same level: plain (no panning), panned (the
+voices spread across the stereo field) and 3D (the voices placed around the
+listener, for headphones). Sibelius does not make these.
+Export one audio stem per staff, check every stem, and mix with
+`rehearsal_mix.py`, which makes the whole set in one run (9.4).
+Everything in this step was worked out on the solo-and-TTBB piece
+(TTBB + Solo + piano) with Cantai voices; treat the Cantai findings as
+observations from that session, not documented behaviour.
+
+### 9.0 Separate a recording into stems: the usual settings
+
+"The usual settings" for splitting an mp3 (a part-predominant track, an All Parts mix) into voices and accompaniment
+are Ultimate Vocal Remover's model MDX23C-InstVoc HQ, run from the command line through `audio-separator`, without
+opening the UVR app. It is installed in `~/Models/uvr` (a venv with `audio-separator` 0.48.0, and the model in
+`~/Models/uvr/models`):
+
+```
+~/Models/uvr/venv/bin/audio-separator "IN.mp3" -m MDX23C-8KFFT-InstVoc_HQ.ckpt --model_file_dir ~/Models/uvr/models \
+  --output_dir "SONG FOLDER" --output_format WAV --single_stem Vocals --mdxc_segment_size 256 \
+  --mdxc_override_model_segment_size --mdxc_overlap 8 --normalization 1.0 --log_level info
+```
+
+`--single_stem Vocals` for the voices, `--single_stem Instrumental` for the accompaniment. Where one mp3 gives both (the S1 track gives the voices and the accompaniment), leave `--single_stem` out: one
+run writes both WAVs, where two runs separate the same file twice. It writes
+`IN_(Vocals)_MDX23C-8KFFT-InstVoc_HQ.wav` (or `_(Instrumental)_`) at the input's rate, 16-bit, and runs on the GPU:
+a 3 min 44 s mp3 took 2 min 14 s. These match the UVR app's own saved settings (its `data.pkl`, last saved
+2026-11-06): MDX-Net, MDX23C-InstVoc HQ, segment size 256, overlap 8, GPU on, normalization off. The app writes
+24-bit WAV, with no model name in the file names when that option is off.
+
+**A new instrumental for a song that has a player map.** The map's times come from the old instrumental, so the new
+one is put on the old one's timeline rather than the map being remade. Done for a publisher's replacement All Parts
+mp3 (2026-11-12):
+
+- **Don't trust a whole-track cross-correlation.** The two are different renders: on the waveform the peak is weak
+  (correlation about 0.2), and on the onset envelope it lands a beat or more off (one window gave 7.4 s). Take a rough
+  shift from where the sound starts, then pair the strongest attacks (librosa onsets, the strongest 40%) with the
+  nearest within 150 ms of it, and look at the median per section. That one held at 0.612 s ahead, to about 10 ms,
+  from bar 1 to the final rit; the rit itself showed as both tracks swelling to the last chord together.
+- **Match the loudness, in LUFS.** The voices' stems are balanced against the old instrumental, so the new one gets
+  the old one's integrated loudness (`ffmpeg -i F.wav -af ebur128=peak=true -f null -`, the summary's `I:`), not its
+  RMS. Two renders differ in tone: there the new one had far more above 6 kHz, and an RMS match (-10.8 dB) left it
+  -24.6 LUFS against the old one's -23.0, which left the instrumental audibly too quiet. -9.21 dB matched.
+- **Same length.** Pad the front by the shift in samples and pad or cut the end to the old file's sample count:
+
+```
+ffmpeg -i NEW.wav -af "adelay=26989S:all=1,volume=-9.21dB,apad=whole_len=OLD_SAMPLES,atrim=end_sample=OLD_SAMPLES" \
+  -c:a pcm_s24le "NEW aligned.wav"
+```
+
+Then pair attacks again against the old file (the median was 3 ms) and measure its LUFS again before changing the map's `stems.I`, and keep a
+copy of the old map in `_build/`. A new backing can differ in places (there, beat-by-beat hits in two bars where the
+old one and the score's piano are silent): say where in the handback.
+
+### 9.1 Export one stem per staff
+
+**Wait until Cantai has rendered everything, then export.** Cantai renders in
+the background, from bar 1 onward, after the file is opened or its cache is
+cleared (its guide: "Cantai automatically re-renders just the affected
+segments", https://cantai.app/sibelius), and File > Export > Audio writes only
+what is rendered at that moment. The rest of the stem is digital silence, with
+no warning. Playing a passage renders it on the spot, which is why live
+playback can sing a phrase the export lost. Tell the user to watch for it this
+way: in the Mixer (Play > Mixer, or M) the gear on a Cantai voice's strip
+opens that voice's Cantai panel, and the singer's picture on its first page
+has a spinning halo while the voice is rendering, with a pulsing dot beside the word
+"Rendering..." near its top left corner; all three go when it is done. When one halo stops, open
+every other Cantai voice's panel and check that its halo has stopped too. The
+three dots at the panel's top right open a second page with the cache size,
+which does not update live (leave the page and come back); a size that has
+stopped growing is a second confirmation.
+
+Measured on a TTBB with piano split into six Cantai voices, 3:39 long, all
+exported with File > Export > Audio. The first set of stems, exported within
+two minutes of saving the file, was missing whole runs of phrases in every
+voice (Tenor 1 lost 89 s of 167 s sung), and the gaps shrank in export order,
+since rendering went on between exports. Each gap started and ended on a
+phrase's first syllable. After a cache clear: a Tenor 1 exported about 10 s later
+sang only bars 1–3; a full-score export right after the clear held voices for
+its first half-minute and was the piano stem alone, sample for sample, from
+then on, and a Tenor 1 exported 25 s after that stopped at bar 22; so
+exporting everything first does not fill the cache. Left alone after a clear,
+with nothing played or exported, the cache grew at about 0.5 MB/s, stopped at
+136.5 MB about 4.9 minutes later, and the Tenor 1 halo went out within the
+same half-minute; the Tenor 1 exported then was complete, and so were all six
+voices exported next. Cantai does not render the same performance twice: two
+complete renders of bars 1–3 were different waveforms, so a stem cannot be
+checked against a known-good copy, only against the score (9.2).
+
+An earlier version of this file said every manual export tested came out
+clean, and 9.2's "voice that stops for good" was put down to Cantai. Some of
+those stops may have been exports taken before rendering finished; the
+cure is the wait above, and the score check after it.
+
+**Solo each staff and use File > Export > Audio.** Slow. Bob Zawalich's *Export Each Staff As Audio*
+plug-in is faster but not trustworthy with Cantai (9.3); if you use it, check
+every stem it writes. It writes WAV or AIFF only, not mp3.
+
+The Sibelius staff faders do not change a Cantai voice's volume — they send
+MIDI CC7, which Cantai appears to ignore. Balance with the per-instance Cantai
+strips in the Mixer, or, better, leave the stems flat and balance in the mix.
+
+### 9.2 Check every stem before mixing
+
+**Run `stem_audit.py` on the whole set first**, every stem including the accompaniment,
+against the MusicXML the stems were rendered from:
+
+```
+python3 stem_audit.py score.musicxml "Tenor 1=Tenor 1.wav" "Tenor 2=Tenor 2.wav" \
+  "Baritone=Baritone.wav" "Bass=Bass.wav" "Piano=Piano.wav" --out "stem audit.txt"
+```
+
+It plays the score as Sibelius does (repeats and endings unrolled), lines it up with the
+sum of the stems by chroma, and reports four things: the files (length, peak, clipping,
+level, first sound, identical copies); every stretch of written notes that is silent in
+its stem, by bar (the cache failure of 9.1); per four bars, whose written line each stem
+sings (the plug-in leak of 9.3); and pairs of stems carrying the same audio where their
+parts are written differently. Reading it:
+
+- A MISSING stretch is silence across the whole stretch: a dropout. Short or partly
+  sounding flags are the alignment and are only counted. A stretch silent in every voice
+  stem at once is a pause or hold the alignment placed wrongly (on the Finale TTBB with
+  piano, the break after a fermata at bar 135); it says so, and a listen settles it.
+- "Sings another part's line" names the part it matches; "and on no other part's either"
+  is audio from a staff not in the set, or a wrong render. Parts written identically in a
+  stretch cannot be told apart there, and chordal parts are not checked.
+- The same audio where two parts are written the same is expected (one Cantai voice on
+  the same notes renders identically).
+
+Tested on the Finale TTBB with piano: the clean set passes; the plug-in's set is flagged in
+exactly the four stems whose openings were another staff's (three by name, the first as
+nobody's line) and in the one identical pair; a Tenor 1 exported 10 s after a cache clear
+comes back MISSING from bar 3 to the end in six stretches. About 40 s for a 3:39 piece.
+Before calling a stem bad, look again at the evidence against every part's line: on that
+piece a clean re-export was first condemned for matching a leaked stem, and listening
+overruled it.
+
+**Ask for the MusicXML first, once, if it is not already there.** Look in the
+stems' folder and among the attachments for the MusicXML the stems were
+rendered from. If there is none, before any checking, say that it is optional
+but strongly advised, and why in one sentence: without it, a voice Cantai
+stopped rendering (or never started) is indistinguishable from a voice that is
+resting, so those silences can only be reported as questions; with it,
+`stem_vs_score.py` reports them by bar as errors. Ask once. If the user
+declines, cannot supply it, or is not there to answer, go ahead with the
+audio-only checks below and say in the handback that the score check was not
+run — NOT RUN, not silently skipped.
+
+The case that settled this: the two-soloist TTBB, whose folder had stems
+and no MusicXML. Cantai stopped rendering Solo 1 at 1:04.55 of a 4:48 piece;
+Solo 2 sang on to 1:13.85, then both went to digital silence for good, as the
+score says the solos do. From the audio, Solo 1's early stop and Solo 2's
+correct one are the same shape: a last phrase, a reverb tail, zeros. The level
+report even showed it — Solo 1 sounding 19.3 s against Solo 2's 32.6 s — and
+nothing flagged it. The tracks, a 3D track among them, went out with Solo 1's
+last phrase missing, and were remade after the gap was heard and the staff
+re-exported.
+
+Three failures have all been seen, and none is audible until someone rehearses
+from the wrong track:
+
+```
+# peak per stem: -91.0 dB (ffmpeg's floor) means all zeros
+ffmpeg -hide_banner -i "Tenor 1.aiff" -af volumedetect -f null - 2>&1 | grep max_volume
+
+# a peak that can be ABOVE full scale (a mix before encoding): volumedetect stops
+# at 0.0 dB, so read astats on double-precision samples instead
+ffmpeg -hide_banner -i mix.wav -af aformat=sample_fmts=dbl,astats=measure_overall=Peak_level:measure_perchannel=none \
+  -f null - 2>&1 | grep "Peak level"
+
+# sample-for-sample copies: identical checksums are the same audio.
+# Compare the opening too (-t 40): the plug-in leak copies only the first 25-38 s.
+ffmpeg -loglevel error -i "Tenor 1.aiff" -f s16le - | md5sum
+ffmpeg -loglevel error -i "Tenor 1.aiff" -t 40 -f s16le - | md5sum
+
+# first entrance: when the leading silence ends; compare across the section
+ffmpeg -hide_banner -i "Tenor 1.aiff" -af silencedetect=n=-50dB:d=0.3 -f null - 2>&1 \
+  | grep -m1 silence_end
+```
+
+A silent stem, a stem matching another stem, or a voice entering seconds after
+the rest of its section is a bad export. Re-export that staff by hand. Staggered
+entrances that agree *within* a section point to the score, not the bug (check
+the score when you have it): in the 2008 Sibelius TTBB both tenors came in at
+10.9 s and Baritone and Bass at 3.5 s, each pair within milliseconds, where the
+late-ensemble bug shifts one staff by a different 4–12 s every export.
+
+**A voice that stops for good.** First suspect an export taken before Cantai
+had finished rendering (9.1): then the gaps start and end on phrase starts and
+shrink from one export to the next. Cantai can also stop rendering a staff partway
+through and never resume: the last note fades out normally and the rest of the
+stem is digital silence. On the two-soloist TTBB Tenor 1, Tenor 2 and
+Baritone stopped at 2:48, 3:38 and 4:12 in one export while Bass sang to the
+end; on an export of the solo-and-TTBB piece every voice stopped at a different point. List
+each stem's sounding spans and last sound, and compare with the section partner
+and with any earlier export of the same piece:
+
+```
+ffmpeg -hide_banner -i "Tenor 1.wav" -af silencedetect=n=-50dB:d=2 -f null - 2>&1 \
+  | grep -oE "silence_(start|end): [0-9.]+"
+```
+
+From audio alone this is a question, not a verdict: whether Tenor 2 really rests
+from 3:38 is a fact about the score, and "the other parts keep singing" does
+not settle it. Report the times and ask. **When the user supplies the MusicXML
+the stems were rendered from, check against it instead** with
+`stem_vs_score.py`, which reads each part's notes and rests, converts beats to
+seconds with the tempo marks, fits the score to the audio, and reports by bar
+number every written phrase the stem leaves silent (SILENT) and every written
+rest the stem fills (EXTRA, a leak):
+
+```
+python3 stem_vs_score.py score.musicxml "Tenor 1=Tenor 1.wav" "Tenor 2=Tenor 2.wav" \
+  "Baritone=Baritone.wav" "Bass=Bass.wav"
+```
+
+The part names are the MusicXML `<part-name>`s. Tested on the scanned SATB octavo's stems:
+clean stems all match; a Tenor 2 copy silenced from 1:40 came back as
+`SILENT 1:42.2-2:54.6 (bars 38-66)`; six seconds of Baritone mixed into a
+Tenor 1 rest came back as `EXTRA 1:16.3-1:19.2 (bars 28-29)`. It cannot tell two
+staves with the same rhythm apart (the Baritone stem filed as Bass passed), and
+it does not expand repeats.
+
+**The line-up is anchored at the first entrances.** It used to be fitted to
+every phrase onset, and on the unaccompanied TTBB, which is built from repeated "doo doot"
+figures, that fit locked on 1.5 bars (2.7 s) late: every stem "matched", and
+the one flag it raised, an EXTRA at the Tenor's entrance, was false. It now
+takes the offset from where each part first sounds against where the score
+brings it in, refines only the tempo, and prints each part's first entrance.
+A part that misses the line-up by more than `--tol` is reported LATE — the
+ensemble-voice bug of 9.3, which the old fit absorbed into its offset. Tested on
+the unaccompanied TTBB's stems: clean stems match with the line-up at −0.05 s; Tenor pushed
+5 s late came back `LATE by 5.0 s` (the old fit blamed bars 12–15); Lead
+silenced from 1:20 came back `SILENT 1:24.6-1:55.5 (bars 48-65)`, the phrase
+already under way at 1:20 still sounding enough to pass; four seconds of Bass
+copied into the Tenor's rest in bars 57–58 came back `EXTRA` — only after
+`--gap` went from 2.0 to 1.0 s, because a 4.4 s rest less 1.5 s of slack at
+each end was too short to judge.
+
+**Which stem is which part, when rhythm cannot tell.** Stems named for the
+chorus's sections (Tenor 1, Tenor 2) need not match the score's part names
+(Tenor, Lead), and two parts in the same rhythm pass `stem_vs_score.py` either
+way round. Settle it with the first entrances (the script prints them) and the
+median sung pitch of each stem; on the unaccompanied TTBB, Tenor 1 sat near G4 and Tenor 2 near
+C4, so Tenor 1 was the Tenor and Tenor 2 the Lead.
+
+**Stems rendered at different levels.** On the unaccompanied TTBB the Bass stem sang about
+9 dB hotter than the other three (median level while sounding), which would
+have made the Balanced track mostly Bass. Measure each stem's level while
+sounding, not its mean (a part that rests less has a higher mean), and where
+one stem is off by several dB, trim that stem before the mix gains and say so
+in the handback. That is balancing in the mix (9.1), not evening out the
+tracks' loudness (9.4).
+
+### 9.3 What went wrong in Cantai exports
+
+- **The plug-in leaks the previous staff's audio.** The stem exported right
+  after Solo (Tenor 1) held the Solo's audio, sample for sample, for its first
+  25–38 s, where the score has rests. It reproduced in five exports, with
+  ensemble and single voices, with the same and different singers on the two
+  staves, and with a separate Cantai instance per staff. Live playback and
+  Sibelius's own File > Export > Audio of that staff were both clean.
+  Workaround: export the failing staff by hand. Untested: reorder the staves,
+  or put an empty staff after Solo, to see whether the leak follows export
+  order; if it does, it is worth reporting to the plug-in's author.
+
+  **It is not a rendering-timing artefact.** On the Finale TTBB with piano (six
+  Otteto ensemble voices), with every voice's halo stopped before exporting, the
+  plug-in gave every stem after the first the previous staff's opening, about
+  21 s (bars 1–7, up to the first rest), over sung notes this time and not only
+  rests: Tenor 2a sang Tenor 1's line, the Baritone the tenors', Bass a the
+  Baritone's, and the first stem, Tenor 1, a basses' line from somewhere. The rest
+  of each stem was right. By-hand exports of the same staves were clean. Two
+  stems looked clean only because their part is written identically to the one
+  before in those bars (Tenor 2a and 2b, Bass a and b).
+
+  **How to catch it:** compare every stem's opening with every part's written line,
+  not only its own, and with every other stem sample by sample (2 s windows
+  correlating above 0.99 where the two parts' written lines differ). Checking a
+  stem only against its own part fails both ways: a leaked line has plausible
+  pitches and the right rhythm, and a clean stem can be condemned for matching a
+  leaked one. That happened here, and listening overruled it.
+- **Ensemble voices enter late.** With "Choir Male" (voices = 6), Tenor 1 came
+  in 4–12 s after the rest of the section, by a different amount each export,
+  and the individual singers were audible rather than blended. Single solo
+  voices entered on time. Prefer single voices for learning tracks.
+- **An export before rendering finishes is silent wherever Cantai has not
+  rendered yet** (9.1): whole runs of phrases missing, in every voice, with
+  sung passages in between. Wait for every voice's halo to stop.
+- **The first export after a settings change can be silent.** Three stems were
+  all zeros on the first run and fine on the second.
+
+- **Cantai cannot speak.** Spoken lines printed as x-noteheads are sung on the
+  notehead's pitch, badly. Speech synthesis was no rescue: eSpeak with the MBROLA
+  voices is robotic, and a Piper neural voice placed word by word on the beat
+  (each word synthesised alone, squeezed to fit its notes with a phase vocoder,
+  a noise-based room tail added) was judged worse still. What worked was taking
+  those bars from a real recording of the song and splicing it into the Cantai
+  mix at the barlines (40 ms crossfades on the downbeats, the recording brought
+  to the mix's level), then timing any video from the spliced audio: each
+  section keeps its own timing, and everything after the splice moves by the
+  difference in length. A singer's phone recording of the spoken lines, cut to
+  the beat, is the other route worth trying before any synthesis.
+
+### 9.3b Correct a wrong pitch in a finished stem, in audio
+
+When a score error is a wrong pitch and nothing else (same rhythm, same words),
+shift that note in the stem instead of re-exporting the staff. A re-export is a
+new Cantai render (9.1), so every hand repair made to the old stem has to be
+found and redone, and the new stem needs its level matched to the old one. A
+shift touches half a second of audio and leaves the rest of the stem
+sample-for-sample as it was. Done once, on one note a half step off in two
+tenor stems (the flat on the first of two sixteenths had not been carried to
+the second, which was tied over the barline); it was checked by ear and approved
+for learning tracks.
+
+1. **Find the note in the audio.** Track the pitch around the bar
+   (`pyworld.dio`, 5 ms frames) and find the wrong semitone. `dio` jumps an
+   octave on some frames of a tenor; `pyworld.harvest` with
+   `f0_floor=200, f0_ceil=450` is steadier for the final check. Take the whole
+   voiced note, not the written length: one stem held the note 80 ms past a dip
+   at the nasal ending its word, and a scoop into the note from the previous
+   pitch is part of the note too.
+2. **Shift a window a second or two wider than the note** with ffmpeg's
+   rubberband filter, formants kept:
+   `rubberband=pitch=0.9438743126816935:formant=preserved:pitchq=quality:window=standard`
+   (2^(-1/12), one half step down; 2^(1/12) = 1.0594630943592953 up). The filter
+   compensates its own latency: sine bursts came out 1.9 ms late, and the output
+   was 463 samples short at the end only, so the shifted window lines up with the
+   original to within a millisecond (the phase of the output moves by about 20
+   samples with where the window starts; the crossfades hide it). Measure the
+   latency again on another ffmpeg build.
+3. **Splice it in** with linear crossfades of 20–25 ms at each end, placed where
+   the pitch changes (the end of the previous note, the start of the next), and
+   the shifted audio scaled to the original's RMS over the note (the shift lost
+   0.6–1.7 dB). Write the result as a new file beside the old one, same
+   sample format.
+4. **Check:** `harvest` reads the target semitone through the note; `stem_audit.py`
+   gives the same results as before; remake the mixes (9.4) with the same
+   options, and decode each new mp3 against the one it replaces: outside the
+   note they differ only by encoder noise (-41 to -44 dB between two ffmpeg
+   builds), and inside it they differ. The 3D track is the one whose options
+   can't be read from the file: fit it the same way against a run with and
+   without the trims the notes mention, and use the one that matches. Then
+   remake the videos (Step 10) from the corrected score.
+5. **Record it** in the song folder: the note, the window in seconds, the gain,
+   and which stems the mixes now use. Keep the shift script with the song or in
+   this repository; a script left in a cloud workspace is gone with it, and the
+   next person has to reconstruct what was done from the notes.
+
+A shift of more than a whole step, or of a note whose vowel or consonant is
+also wrong, is a re-export.
+
+```python
+import numpy as np, soundfile as sf, subprocess
+def shift_note(src, dst, t0, t1, semitones, fade=0.02, pad=1.5):
+    """Shift src between t0 and t1 seconds by `semitones`, formants kept; write dst."""
+    x, sr = sf.read(src); info = sf.info(src)
+    w0 = max(0.0, t0 - pad)
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{w0}', '-t', f'{t1 - w0 + pad}', '-i', src,
+                        '-af', f'rubberband=pitch={2 ** (semitones / 12)}:formant=preserved:'
+                               'pitchq=quality:window=standard',
+                        '-f', 'f32le', '-ac', str(x.shape[1]), '-ar', str(sr), '-'],
+                       capture_output=True, check=True)
+    sh = np.frombuffer(r.stdout, np.float32).reshape(-1, x.shape[1]).astype(float)
+    base = int(round(w0 * sr)); sh = np.vstack([sh, np.zeros((sr, x.shape[1]))])
+    i0, i1 = int(round(t0 * sr)), int(round((t0 + fade) * sr))
+    j0, j1 = int(round((t1 - fade) * sr)), int(round(t1 * sr))
+    g = np.sqrt((x[i1:j0] ** 2).mean() / (sh[i1 - base:j0 - base] ** 2).mean())
+    w = np.zeros(len(x)); w[i0:i1] = np.linspace(0, 1, i1 - i0); w[i1:j0] = 1
+    w[j0:j1] = np.linspace(1, 0, j1 - j0)
+    k = np.arange(i0, j1); y = x.copy()
+    y[k] = x[k] * (1 - w[k, None]) + g * sh[k - base] * w[k, None]
+    sf.write(dst, y, sr, subtype=info.subtype)
+    return 20 * np.log10(g)
+```
+
+### 9.4 Mix
+
+```
+python3 rehearsal_mix.py "TITLE" out/ "Bass=Bass.wav" "Baritone=Baritone.wav" \
+  "Tenor 2=Tenor 2.wav" "Tenor 1=Tenor 1.wav" [--accomp "Piano=Piano.wav"] [--trim "Bass=-9"]
+```
+
+List the voices **lowest first**: the order sets the panned and 3D layouts. It
+prints every stem's level while sounding and suggests a `--trim` for a stem
+several dB off the others; apply it and rerun. It writes one mp3 per part + 3 and
+prints each one's peak and the gain applied. For the unaccompanied TTBB (four voices, no
+accompaniment) that is seven tracks (it was eleven while each part had a predominant
+and a part-left track). What it does, and why:
+
+**The piano's level is set first, and every track uses it.** It comes out as loud,
+against the choir, as it would if every stem, voices and piano alike, had been
+normalized to the same integrated loudness (EBU R128) before mixing. Normalized, the
+voices summed land some LU above any one stem; the script puts the piano that far
+below the voices as they are (after any `--trim`), and leaves the voices alone. That
+is the rule since a TTBB with piano whose piano stem came out 17 LU under the
+low voices and 10 under the tenors: the tracks were too quiet in the piano, the rule
+gave +14.89 dB, and it was approved by ear. Matching the piano to the average
+single voice instead would have given +13.25 dB; the choir as a whole is what the
+piano is heard against. The script prints each stem's loudness and the gain. A
+`--trim` on the accompaniment replaces the rule, and `--accomp-as-exported` turns it
+off; use either only when the user asks. Each accompaniment stem, if there are
+several, is set the same way on its own.
+
+**The predominant balance.** For each featured part: the featured voice +3 dB, every other
+voice −21 dB, the piano at its level. These are the defaults;
+use others only when the user asks. The other voices were at −18 dB until
+the 2008 Sibelius TTBB, where they were moved to −21 dB. That lowers the other
+singers only: the featured part stays exactly as far above the piano as before,
+so if a part is lost under the piano, the fix is the piano level or the
+featured level, not the other voices.
+
+**Make one predominant-left track per part, never a separate predominant track and
+part-left track.** Only the featured voice is steered: it is folded to mono and goes
+to the left channel only, at twice its predominant gain (+6.02 dB, so +9.02 dB in
+the left), and the mono sum (L+R)/2 gives it back at exactly +3 dB. Every other voice
+(−21 dB) and the piano (or whatever the accompaniment stem holds, at its level) are
+not steered or folded: each stem goes in as exported, stereo if it is stereo, in
+both channels, and so sums to mono at its predominant gain too. Phones and Bluetooth
+speakers held in the hand play mono, and they get the predominant track's balance.
+With earbuds or a balance knob a singer hears their own part over the piano (left),
+or the piano and everyone else without it (right), and can wean themselves off their
+guide part. The other voices and the piano stay
+centred; a first version put the other voices hard right.
+
+This layout is taken from a set of human-sung tracks
+made this way. Until then each part had a predominant track and a part-left track
+(featured voice hard left and the others hard right, all at 0 dB), and that made twice
+as many files for singers to sift through on the chorus's posting site. Make the old kinds
+only when the user asks for them.
+
+```
+# featured voice -> left only at twice its predominant gain; everything else as exported
+[1:a]pan=stereo|c0=1.4125*c0+1.4125*c1|c1=0*c0[a1]           # featured: 2 x +3 dB, mono-folded
+[0:a]volume=-21dB[a0]                                        # each other voice, unpanned
+[4:a]volume=0dB[a4]                                          # piano at its level
+[a0][a1][a2][a3][a4]amix=inputs=5:normalize=0
+```
+
+(Folding to mono averages the channels, (c0+c1)/2; the doubling makes the
+coefficient the predominant gain itself: 10^(3/20) = 1.4125.) Check the result: the
+mono sum (L+R)/2 should equal the predominant mix of the same stems, and the left
+channel minus the right should correlate with the featured stem (the other voices and
+the piano cancel, apart from any stereo width of their own). On synthetic stems, through the mp3,
+the mono sum had the featured voice 24.0 dB over the others, as in the predominant
+mix, the right channel held no trace of it, and L−R correlated 0.996 with the featured
+stem for every part (the synthetic stems were deliberately wider on the left). The featured voice alone in one channel at
++9 dB is often the loudest sample in the set, so expect the shared peak trim below to
+come from these tracks more often than from the Balanced track.
+
+**Always make a Balanced track as well:** every voice at 0 dB as exported and the
+piano at its level, nothing featured. It is part of every set, not an extra.
+
+**Always make a panned Balanced track and a 3D Balanced track as well.** Cantai
+single voices come out nearly centred with a little reverb, so the plain
+Balanced track puts four singers in one spot. The layouts below are the ones
+settled on, by ear, on the unaccompanied TTBB. Both are standard; change them only
+when the user asks.
+
+- **Panned** (`Title - Balanced panned.mp3`): the voices evenly from 45% left
+  (lowest) to 45% right (highest) — four voices at 45% left, 15% left, 15%
+  right, 45% right. Constant-power pan, scaled so a centred voice keeps its
+  level: at 45% the voice is 6.7 dB louder in the near channel, at 15% 2.1 dB.
+  Accompaniment centred.
+- **3D** (`Title - Balanced 3D, use headphones.mp3`): each voice folded to mono
+  and convolved with the head-related impulse response for its direction, at
+  ear height, listener facing north. The lowest voice is rear-left (135°) and
+  the highest rear-right (225°); the others are spread evenly across the front
+  between 10° left and 10° right — four voices: Bass rear-left, Baritone 10°
+  left, Tenor 2 10° right, Tenor 1 rear-right. Accompaniment straight ahead.
+  The set is the MIT KEMAR dummy head, measured with "a Realistic Optimus Pro 7
+  loudspeaker mounted 1.4 meters from the KEMAR"
+  (https://sound.media.mit.edu/resources/KEMAR.html), every 5° at ear height,
+  and shipped inside the `slab` package (`pip install slab`; the script stubs
+  out slab's audio-playback import, which needs PortAudio). The set is exactly
+  left/right symmetric, so a right-hand direction is the left-hand filter with
+  the ears swapped. It is loudness-matched to the panned track and then turned
+  down on its own if it would clip.
+
+  Headphones only; on speakers it is coloured and the positions collapse. A
+  generic dummy head gives clear left/right but unreliable front/back, so a
+  rear voice may be heard beside or even ahead of the listener. The HRTF barely
+  changes past about a metre and this set has no distance setting: distance
+  would come from level, direct-to-reverberant ratio and treble, and a stem's
+  baked-in reverb means a voice can be pushed back but not brought closer.
+
+Name them without parentheses: a parenthesised word is how the chorus's posting site
+knows a section, and there is no section called "3D".
+
+**Soloists and accompaniment in the 3D layout.** The layout is for the choral
+parts; a solo would otherwise land by pitch order at rear-right. Place it with
+`--place`: the solo-and-TTBB piece has `--place "Solo=0"` (straight ahead, with the
+piano); the two-soloist TTBB has `--place "Solo 2=5L" --place "Solo 1=5R"`
+(the lower soloist 5° left, the higher 5° right; the piano-and-claps stem
+ahead). These have not been checked by ear; move them if asked.
+Accompaniment defaults to straight ahead.
+
+**A 3D track on its own** — for a set made before 3D was standard — is
+`--only 3d`. Every mix is still measured, so the 3D track gets the same gain it
+would have had in a full run; only the 3D mp3 is written. Use the same `--trim`
+values the level report suggests. Made this way for five older sets, with
+trims for choral stems 4 dB or more from the others: a Baritone −4.5 dB; in
+one set Baritone and Bass −4 dB and both Tenors +4 dB (the Tenors sat 8 dB
+under the low voices); a Bass −7.5 dB, and −6.5 dB in the same piece's
+ensemble-voice set. The script builds one mix at a time, so seven 4.8-minute stems fit in about
+2 GB of memory.
+
+`normalize=0` matters. By default amix scales every input down to share the
+headroom and re-scales when a stem ends early, so a track's level would depend
+on how many stems went into it and would jump where one ran out. Measure every
+mix's peak before encoding (`astats`, as above; `volumedetect` cannot read past
+0.0), predominant-left tracks included. Only if one goes over 0 dBFS, trim all of them
+by the same amount, so the tracks keep their loudness relative to one another.
+The Balanced track is usually the one that goes over, because nothing in it is
+turned down: on the 2008 Sibelius TTBB it reached +2.06 dBFS (686 clipped samples),
+so all five tracks were trimmed 3 dB and the Balanced track landed at −1.2 dBFS
+after encoding.
+Do not otherwise even out the tracks' loudness.
+
+**Filenames for the chorus's posting site:** put the section in parentheses —
+`TITLE - (Tenor 2) predominant-left.mp3`. A Solo track gets no parentheses;
+The posting site has no Solo section to file it under. Nor do the Balanced
+tracks, which belong to no section: `TITLE - Balanced.mp3`,
+`TITLE - Balanced panned.mp3`, `TITLE - Balanced 3D, use
+headphones.mp3`. A soloist's track is `TITLE - Solo predominant-left.mp3`.
+
+**Only a real section goes in the parentheses.** The posting site shows a track
+whose parenthesised name is not one of the chorus's sections to *everyone*: on
+a TTBB with piano whose score split Tenor 2 and Bass into a and b parts,
+`(Tenor 2a)` and `(Bass b)` went to the whole chorus, and the files had to be
+renamed on the posting site by hand. A division of a section keeps the section in
+the parentheses and puts the suffix after them: `TITLE - (Tenor 2) a
+predominant-left.mp3`, `TITLE - (Bass) b predominant-left.mp3`. `rehearsal_mix.py` does
+that by default for a part name ending in a lone lower-case letter, takes
+`--section "Voice=Section|suffix"` for anything else (`"Bari=Baritone|"`,
+`"Bass a=Bass 1|"`), and prints the mapping; `score_video.py` reads both forms.
+
+Choruses name their sections differently, so **propose the names and let the
+user click to change them before mixing.** Use a question card (AskUserQuestion),
+one question per voice, up to four per card: the proposed file name
+(`(Tenor 2) a`) as the first option, one plausible alternative (`(Bass 1)` for
+a Bass a, say) as the second, and the card's own free-text answer for the
+chorus's real name. Ask about every voice whose name is not obviously a
+standard section; plain `Tenor 1`, `Baritone` can be listed in the message
+as staying as they are. Pass the answers as `--section`.
+
+**Check what landed, not what was sent.** On the unaccompanied TTBB a file written to the
+user's computer, reported as written, turned out to hold the previous version
+of the same filename: the 3D track the user was told had its front voices at
+10° still had them at 22.5°. File sizes and checksums do not settle it (the
+mp3s written to the user's computer in that delivery each arrived about 5.8 KB larger
+than they left, with the audio intact). After delivering, measure the
+audio in the file on the user's computer — for a panned or 3D track, each
+voice's left/right balance — and resend from a new source path if it is the old
+one.
+
+### 9.5 Tracks from a recording, revoiced in audio (`voiceshift/`)
+
+When the only good audio is a publisher's practice set for other voices, revoice the
+recording itself. The case this section is written from was an SSA set with piano (a
+holiday swing number) turned into TTB. The piece had long spoken passages in x-noteheads,
+which Cantai cannot speak, so the recording was the only source. The tools are in
+`voiceshift/`; build the shifter once with `sh voiceshift/build.sh`.
+
+**The parts and the score.** Make the revoiced MusicXML first (Step 7). Here every sung
+line went down an octave: Soprano 1 became Tenor 1, Soprano 2 Tenor 2, and the Alto became
+both Baritone and Bass, except in two four-bar passages where the Baritone took Soprano 2's
+line. Tenors were written in treble-8vb, Baritone and Bass in bass clef. `verify.py`
+check 16 should pass ("same pitch classes at every onset").
+
+**The stems are mixtures.** The user supplied Ultimate Vocal Remover separations of the
+part-predominant tracks. Each one holds every voice, with one part on top. Know three
+things about them:
+
+- **Duplicate files.** Two of the four supplied files were byte-identical: the Baritone
+  and Bass tracks were the same Alto track. Check checksums first, and process each
+  distinct stem once.
+- **No single "others" level.** In that set's Soprano 1 track the other voices sat about
+  20 dB down. In its Soprano 2 and Alto tracks Soprano 1 sat only 5–10 dB down. So a
+  stem cannot be un-mixed with one ratio.
+- **The publisher's muted mixes don't help.** "Balanced Voices" minus "Soprano 1 Muted"
+  did not null at any gain: the residual stayed 4.7 dB under Balanced. The muted mixes
+  are mixed differently.
+
+**Shift.** `python3 -m voiceshift.shift IN OUT --pitch -12 --formant -3 --calibrate`.
+
+- **Formant target.** The −3 (a minor third) is a figure chosen by listening in
+  Logic. It is where the spectral envelope ends up relative to the original, and it
+  sits in the range of men's formants against women's. Never describe it as "formants
+  up a minor third". Relative to a plain octave shift that is what happens, but it reads
+  backwards.
+- **Engine.** Signalsmith Stretch, formant base 150 Hz. Rubber Band was measured first
+  on synthetic vowels (`python3 -m voiceshift.measure vowels`, which checks itself
+  against vowels built with known factors):
+  - Its R3 engine's formant scale reached only 0.6–0.82 of the target on an octave
+    shift.
+  - Some settings dropped back to moving the formants with the pitch.
+  - Its command line has no formant scale at all.
+  - Correcting its output with a per-frame envelope filter needed gains of 25–40 dB.
+    Whitening the source first was worse.
+- **Signalsmith on synthetic vowels.** C4 to F5 landed at 0.81–0.90 against 0.841.
+- **Calibrate on the real stems.** A setting of −3.0 measured −2.71 st there, and −3.3
+  measured −3.02. `--calibrate` measures and re-runs once.
+- **Record the measurements.** Every run prints the measured pitch (−12.0 st), envelope
+  and time offset (1.5 ms). Those numbers go in the handback, not the settings.
+
+**Bars in the recording.** `python3 -m voiceshift.bargrid SCORE ACCOMP --part Piano`.
+The recording ran at exactly 120 (the print says ca. 120–126).
+
+- **Don't match the piano's notes.** It locked 0.65 s early. A steady part matches
+  itself a beat away, and the score landscape had equal peaks every beat.
+- **Use the rests.** The accompaniment's rests of 1.2 s or more against the gaps in its
+  onsets are unambiguous: bar 1 came out at 1.03 s, and every rest checked within 6 ms.
+- **Measure the swing too.** The offbeats sat at 0.61 of the beat.
+
+**Parts by bars.** `python3 -m voiceshift.splice OUT --base low.wav --take "24-27=t2.wav" ...`.
+Each splice goes 0.3 s before its barline, inside a rest every voice shares, with 50 ms
+crossfades. The tool prints both stems' levels at each splice.
+
+**Mix.** Mix with `rehearsal_mix.py` as in 9.4, then say plainly in the handback that
+each stem holds the others too. A predominant-left track has the other voices
+bleeding through, at whatever level the publisher left them.
+
+**Balance by what is heard.** The tenors sounded soft. Measure before
+changing anything:
+
+- **The shift?** `measure compare` gives brightness (2–4 kHz against 0.3–1 kHz) before
+  and after. It was within 1 dB on every stem, so the processing had not dulled them.
+- **The doubled low line?** `linelevels` measures each line inside each stem at its own
+  harmonics. In the Balanced sum the duplicated Alto-derived stem put the low line 4 dB
+  *under* Tenor 1, so it was not drowning the tenors.
+- **The cause was inherited timbre.** The soprano recordings were 3.5–4 dB darker than
+  the alto's. Top lines duller than the low ones read as soft. `presence --like low.wav`
+  added +3.75–4.25 dB at 3 kHz (Q 0.9, zero-phase). Zwicker loudness
+  (`measure loudness`, ISO 532-1) then put the tenors level with the low parts (0.0 and
+  +0.3 phon) with no level trim.
+- **The piano.** An octave down puts the voices in the piano's register. `audibility`
+  (masking-adjusted, critical bands) showed every part needed +1.25–1.5 dB to be as
+  audible over the piano as its SSA original. Since that was the same for every part,
+  the accompaniment went down 1.5 dB instead: `--trim "Accompaniment=+1.95"` against the
+  rule's +3.45.
+- **Keep the first set.** Move it to a `v1` subfolder before remixing, and copy the
+  videos' picture streams unchanged (`-c:v copy`) with the new audio.
+
+**Videos.** `score_video.py` with:
+
+- **`--swing`** at the measured fraction. Without it, every offbeat light comes about
+  55 ms before its note.
+- **`--anchor 1=M:SS.ss`** from the bar grid.
+- **The recording's tempo** as the MusicXML's playback tempo (`<sound tempo>`). Left at
+  the printed 123, the fit drifted 2.3 s.
+
+Then shift the anchor until the report says the lights lead by 25–30 ms.
+
+**Estimating.** Asked for a duration estimate up front, Claude said 3½–5½ hours. The job
+took about one, and nearly all of the overrun allowance was spent on one unknown, the
+choice of formant engine. The repository's mixing and video tools ran in minutes.
+Estimate the known steps from their real run times, and put the margin only on the
+genuinely new part. Give finish times as clock times. For a batch of several jobs, offer
+the finish-time dial in `needle/` in the side panel (README there): a status script that
+uses `pace.finish_times` keeps the band to the pace actually measured, not a guessed one. For a run of unlike steps
+(transcribe, separate, map) use `needle/milestones.py`, and mark a step done only once its checks pass (the README's two rules).
+
+### 9.6 A human singer's finished practice set (`mixset/`)
+
+Some sets come from a person who sings every part and mixes it: a Balanced mix, an
+accompaniment track, and a Predominant and a Muted mix per part, with no stems. Five such
+sets came in at once, for songs that already had Cantai tracks and videos. Nothing in them
+can be remixed, so `rehearsal_mix.py` does not apply. The deliverable is the singer's own mixes, renamed for
+the chorus's posting site (`TITLE - (Tenor 1) predominant.mp3`, `TITLE - Balanced.mp3`), copied byte
+for byte wherever they are already right. They are the singer's balance, not
+predominant-left tracks; say so in the handback. Keep the singer's name out of this repository
+like a song title.
+
+**Line the files up first.** `python3 -m mixset.lags ACCOMP.mp3 ...` measures each file's lead at
+the start and near the end. In every set the Predominant and Muted mixes ran exactly 1.000 s
+(44101–44103 samples) behind the Balanced and Accompaniment files, the same at both ends: one
+clock, with a second of lead-in. Every time below is on the Balanced file's timeline. A spliced
+track keeps its base file's lead, and a video over a Predominant mix adds it.
+**A player map timed on the Predominant stems is on their clock**, a second behind the Balanced
+file, whatever the videos do with it (the Balanced score video subtracted it). On one song's
+rehearsal-footage video, every script that read the player map's beat times as Balanced
+seconds was a second late. At quarter = 126 a second is about two beats, so it looked like the
+user's taps being two beats early. The claps stayed on 2 and 4 (moved two beats, they land on 4
+and 2), and so did the onset checks. Before pairing a player map with any human-sung set's file, line the two
+up by a landmark: a voice's entrance after a rest, against the map's note start. Convert the map
+once, in one module that every script loads.
+
+**The mixes do not subtract.** Balanced − Muted left the accompaniment only 15 dB down, and
+even a 64-tap filter fitted between the accompaniment track and a mix left −8 to −13 dB. The
+accompaniment sits at a different gain in each kind of mix (0.12 Predominant, 0.35 Muted, 0.15
+Balanced). Two things do hold:
+- **The Predominant mixes of one set share their accompaniment exactly.** Two of them null to
+  digital silence wherever nobody sings. So a stretch of one Predominant mix can replace the
+  same stretch of another: accompaniment and background voices continue unbroken, and only the
+  featured voice changes.
+- **The Muted accompaniment was 3× the Predominant one** (0.3513 / 0.1171; 2.99 fitted on
+  another set). F = 3 × Predominant − Muted cancels it and keeps the featured voice, with a
+  part that rests about 30 dB under the parts that sing. `python3 -m mixset.featured` prints F
+  per hop for each part (`--wav` writes it for a pitch tracker; `--fit T0-T1` measures the factor
+  over a stretch where nobody sings). Fitted over an ending where the choir still held its
+  chord, the factor came out 0.18–0.37, which is wrong.
+
+**Check every part's mix against the score, by bar.** Compute bar times from the tempo map,
+read F per bar for each part, and compare with what the score gives that part. Pitch-track F
+(pYIN) where two parts' mixes might hold different lines. Three kinds of fault turned up, and
+none is audible until someone rehearses from the wrong track:
+- **Unison pasted at background level.** On a TTBB with piano the Tenor 1 mix featured Tenor 1
+  only where the tenors divide: F was 13–20 dB down in every bar the score writes the two
+  tenors identically. It was audible by ear; the
+  measurement matched what was heard bar for bar.
+  - Fix: take the unison bars from the Tenor 2 mix, where the unison is the featured voice.
+  - Joints go in rests both parts share, with 50 ms crossfades.
+  - The two mixes differed in overall gain by 1.45 dB (fitted where neither tenor sings), and
+    both were limited at −0.01 dBFS. Raising the Tenor 2 sections pushed 58 samples over, so
+    bring the whole track to the quieter mix's level instead (`--post`).
+- **Fewer parts than the chorus has.** On a revoiced TTB the set had Tenor 1, Tenor 2 and Bass.
+  The Bass line was the Baritone's too, except two four-bar passages where the Baritone sings
+  Tenor 2's line. Read the revoicing from the record of how the old tracks were made (the
+  song's `_build` notes and revoicing script), not from memory.
+  - Fix: the Baritone track is the Bass mix, with those bars from the Tenor 2 mix, spliced
+    0.3 s before the barlines as in 9.5.
+- **Instructions superseded after the singer recorded.** A unison number with spoken bars came as
+  Tenor, Bass and "cues" mixes. Read by pitch and level:
+  - **Both voice mixes:** both sang the unison line, at the same pitch, spoken bars included.
+  - **Bar 22:** one mix shouted while the other held a note. The current score gives the shout
+    to B2 alone and the held note to T1, T2 and B1.
+  - **Bars 43–45:** both mixes sang the second line. Nobody sang the first line's rest.
+  - **Built from them:** T2 and Baritone from one mix unchanged. T1 and Bass from the other, with
+    T1's bar 22 from the first. For the rest in bars 43–45, the cues mix: its featured part is
+    silent there, so it is everyone else at background level, exactly a part that rests.
+  - **Not quite as written:** the singer ran one line's held note straight into the other's next
+    word on the same pitch, so that hold ended one eighth early.
+  - Put what was found and what was built in the handback, and ask the user to listen to those
+    parts.
+
+**Splice** with `python3 -m mixset.splice OUT.mp3 --base PRED.mp3 --ref BALANCED.mp3 --take
+"T0-T1=OTHER.mp3[:GAIN]" [--post G]`. It allows for each file's lead and writes the base
+file's timeline. Check each stretch afterwards: the new track should match its source mix there
+to encoder noise (−33 to −41 dB) and the base mix elsewhere.
+- **Encoder gain:** ffmpeg's libmp3lame wrote float input at 0.9700× (−0.26 dB) on the build
+  used. The script measures every encode against its input and redoes it with the inverse gain.
+- **Peaks:** the decoded mp3s already go above full scale (+4.4 and +5.4 dBFS in two sets). Keep
+  those as they are; only a peak the splice raised above the source's needs fixing.
+
+**Record it in the song folder** (`_notes/NOTES.md` in the set's folder): every joint in seconds,
+every gain, which mix each part's track comes from, and the time map (10.4).
+
+## Step 10 — Follow-along score videos
+
+**Every MP4 is written fragmented, then finished with `+faststart`** (`mp4out.py`: `FRAG` on the encode, `finalize()`
+after it). A plain MP4 writes its index last, so a render in progress can't be opened: a path given for watching
+a render that was still running led to a file that wouldn't play. A fragmented MP4 plays as far
+as it has got; `finalize()` remuxes it by stream copy, in seconds, to the ordinary form players and uploads expect,
+and keeps the fragmented file (raising) if any stream's packets changed. `FRAG` includes `-flush_packets 1`: without it
+ffmpeg holds even the empty moov in its output buffer, and a small render showed 28 bytes on disk at frame 400 of 450
+(a first test happened to probe a large render just after a 2 MiB buffer flush, and passed). And `delay_moov`: a
+fragmented file otherwise has no edit list for x264's B-frame delay and the AAC encoder's priming, and every video frame
+came out late against the audio, by 24 ms on a retimed follow-along video and by 1.3 s in another configuration; the
+stream copy in `finalize()` keeps it. `python3 mp4out.py --selftest DIR` probes a partial file while ffmpeg still writes
+it, and compares a fragmented-and-finalized VFR video (B-frames, AAC) with the same written plain: identical frame and
+start times. Run it after any change to `FRAG`.
+`score_video.py`, `lyric_sheet.py`, `mixset/retime.py` and `dance_sync.py` do this; anything new that writes an MP4
+does too (a one-off render in a song's `_build/` included), and a long render's path is given to the user while it runs.
+
+A **follow-along video** is the score on screen with each note, and its syllable,
+lighting up in its part's colour while it sounds, over one of the rehearsal mp3s
+(no new audio). The singers this is for may not read
+well; the video is there so that someone who loses their place can find it again
+by colour, and someone who cannot count rests can watch them go by. "Make
+follow-along videos" means one combined video and one per part:
+
+```
+python3 score_video.py "TITLE (Cantai learning version).musicxml" \
+  "TITLE - Balanced.mp3" "TITLE - (Tenor 1) predominant-left.mp3" \
+  "TITLE - (Tenor 2) predominant-left.mp3" "TITLE - (Baritone) predominant-left.mp3" \
+  "TITLE - (Bass) predominant-left.mp3" --display "TITLE.musicxml"
+```
+
+The first file is the one the audio was rendered from: the timing comes from it.
+Each mp3 gives an mp4 of the same name beside it. The Balanced mp3 gives the
+combined video, every sung part in its own colour; a `(Part) predominant-left` (or,
+from an older set, `predominant` or `part-left`, or `Solo …`) mp3 gives that part's video, only that part lit and
+everyone else, piano included, in grey. Use the predominant-left tracks for the part
+videos unless asked otherwise. Always test on short clips first
+(`--clip 104,20`, `--stills 50,114`) and show them before rendering whole
+songs; a whole song is several minutes per video.
+
+What was settled on, on the two-soloist TTBB:
+
+- **Closed score, the one the singers hold.** Non-auditioned singers struggle to
+  follow one line through divisi, so the video pairs the sung parts two to a
+  staff by the Step 7 rules (7.2, 7.4, 7.6: chords where rhythm, ties and words
+  agree, two voices with stems up and down elsewhere, a second lyric line only
+  where the words differ, crossed parts never chorded, a tie never changes
+  voice). Before engraving, the score shown gets `verify.py`'s check 14, and the
+  script stops on a line that runs past its melisma. Pairing defaults to
+  consecutive sung parts in score order with soloists left alone; `--staves` names the pairs, `--open` keeps one part per staff.
+  Staves empty for a whole system are hidden, as in print.
+- **Show the print file, time from the Cantai file.** The Cantai learning file
+  prints Cantai's split syllables ("glea ea ea eams" for "gleams"). Give the print-faithful
+  MusicXML as `--display`; the script checks that it has the same parts, bars,
+  notes and tempo marks, reports any bar that differs, and refuses different
+  tempo marks. On the two-soloist TTBB the two files agreed exactly.
+- **Or show the closed score itself.** When the folder has the closed score
+  the singers hold (two parts to a staff) beside the open Cantai file, give the
+  closed one as `--display`: it is shown as it is, not rebuilt. Whose each
+  notehead, rest and syllable is comes from the open file: the parts singing
+  that pitch at that moment, the parts resting there, the parts starting a
+  syllable there (with two lyric lines at one moment, the second goes to the
+  lower part). Voice 1 / voice 2 is only the fallback, and the script says how
+  many it needed: on the folk-like TTBB with piano all 753 notes and rests
+  matched the open file, none by voice. The staves' part names ("Tenor 1 Tenor
+  2") are matched against the open file's; where a closed score's parts have no
+  names at all (the ballad TTBB's did not), each sung part goes to the staff
+  holding most of its notes, and the staff is labelled with the parts'
+  names.
+- **A unison split by voice belongs to each part by length, not pitch alone.**
+  Where the two parts on a staff start the same pitch together but hold it for
+  different lengths (one part's eighth inside the other's dotted quarter, a
+  melisma's first note under the other part's held note), the closed score prints
+  two noteheads at one spot, one per voice. Matched on moment and pitch only, each
+  notehead went to both parts: on a TTBB with piano a Tenor 1 video lit Tenor 2's
+  dotted half for its whole length and kept Tenor 1's melisma syllable lit 1.2 s
+  into Tenor 1's rest, and the same happened in three other bars (both staves).
+  The script now gives each part the notehead as long as its own note, wherever
+  both lengths are printed there, and reports the count (`check, unisons split by
+  voice`). Generally: whenever whose-is-what comes from matching another file, a
+  key two printed things can share (moment and pitch) is ambiguous; match on
+  every property that tells them apart, and count what the narrowing changed.
+- **Words laid out as the singers' copy prints them** (7.7). Give the display
+  copy built with the print's layout; the script sets its above-the-staff words
+  above, and a part whose words are printed on the other staff reads them
+  there. Where one word prints on two rows (a shared chord), each part lights
+  the row it reads: the upper part the upper row, the lower parts the lower.
+- **A closed score can put a second voice a beat early.** The ballad TTBB's
+  repaired file wrote bar 51 (both staves) and bar 47 (the low staff) as voice 1,
+  a `<backup>` of the whole bar, then voice 2 with no `<forward>` over the beats
+  it shares with voice 1: voice 2's notes land one or two beats early, in the
+  printed score as in the video. The script finds it (the voice is short of a
+  full bar, and every one of its notes matches the open file exactly that gap
+  later), inserts the `<forward>` for the video, names the bars, and says to fix
+  the file. Tell the user.
+- **Repeats are unrolled.** Every lit thing is placed by bar and position in
+  the bar, then at each moment that bar is played: repeat signs (with
+  `times`) and first and second endings, in play order. The screen turns back
+  for a repeat, up to a second early as for any turn, and a fermata inside a
+  repeat is re-anchored each time. D.C., D.S. and codas are not followed; the
+  script warns. The folk-like TTBB repeats its two-bar introduction.
+- **Light mode, black on white like the page.** A dark screen was tried and
+  rejected. `--dark` remains. Colours are colour-blind safe (Okabe–Ito), and
+  the four parts sharing staves get the four strongest.
+- **Rests light up too, with a progress bar.** A lit rest gets the same halo as
+  a note, and a thin bar under the staff (above it for the upper of two voices)
+  that runs from where the rest starts to where it ends *as the other staves
+  print that time*, not just under the rest glyph. The bar fills in abrupt jumps
+  of one pulse, like a note lighting: smooth motion hid the beats. The pulse is
+  the coarsest note value that 95% of the part's sung bars keep to — the
+  two-soloist TTBB's choir parts have six sixteenths in two bars and 224–283
+  eighths, so eighths; "shortest note" would have given sixteenths, eight jumps a
+  second, which reads as smooth again. Each jump lands where the other staves
+  print that time, so the fill meets the piano's notes as they sound.
+- **A part's own staff never disappears in its video.** Hiding empty staves
+  removed the tenors' staff through the solos, so a Tenor 2 had nothing to
+  follow and no rests to see lit.
+- **Pages turn up to a second before the next page's first note**, never before
+  the last note on the old page has started.
+
+**Timing is anchored the way `stem_vs_score.py` does it** (its tempo map, the
+offset from where the audio first sounds against the score's first note, only
+the tempo refined on onsets) **and re-anchored after every fermata.** Sibelius
+holds a fermata longer than written on playback, the MusicXML does not say by
+how much, and everything after it runs that much late: on the two-soloist TTBB
+0.28 s after bar 34 and 0.76 s after bar 123, audible at 4:03.
+The script measures each hold by aligning the score's pitch content with the
+audio's (chroma every 50 ms, dynamic time warping within ±3 s of the straight
+line), then fits the tempo and every hold together by least squares on the
+onsets that the lights now land near. Fitted one after the other, a hold left in
+the tempo fit spreads over the whole piece: a synthetic 0.6 s hold over a
+barline measured 0.49 s that way, and 0.605 s fitted together. On the
+two-soloist TTBB the holds came out 265 and 473 ms, the same from every mp3 to
+within a few ms. A fermata counts wherever it is printed: on a note, on a rest
+(bar 34 there has it on the soloists' rests and the piano's notes) or over a
+barline. A fermata's own note and syllable stay lit through the hold.
+Two things the fit could not do alone, both on a ballad TTBB's last line (two
+fermata eighths 0.4 s apart, a caesura, then three bars of one held chord): with
+no room between them to measure, fermatas less than 1.5 s apart count as one
+hold, after the last of them; and where a stretch has too few onsets to refine
+and one chord leaves the pitch alignment free to slide (it gave -1.1 s), the
+hold is taken from the first onset after the fermata's written end (+0.76 s,
+as measured by hand). A negative hold is flagged in the report as a wrong fit.
+
+**When the fit cannot find a hold, measure it and say so: `--anchor BAR=M:SS.ss`.** On a
+TTBB with piano the fit put −4.6 s on one fermata, and the stretch after it ran seconds
+out: the two fermatas either side of it were only three bars apart, and the bars after it
+were a repeated one-bar piano figure the pitch alignment could lock on to a bar early.
+The stems settle it: the first onset after a fermata, in a stem that rests through it,
+is the next bar's downbeat (there, bar 49 at 1:53.07 and bar 52 at 2:01.15, from the
+piano and the voices' entrances). `--anchor` sets the offset of the stretch that bar is
+in, overruling the fit, and the report says it was set by hand. Check the anchored
+timing against a second entrance in the same stretch (bar 54's voices, 4.6 s after
+bar 52, landed within 20 ms).
+
+**Playback can lose time with no fermata to show for it.** On the Finale TTBB with piano the
+sync check put the lights 400–575 ms ahead of the audio around bars 117–133, a stretch with
+no fermata, only a tempo change and meter changes. The voices' entrances after rests pinned
+it: +1.60 s to bar 118, +1.90 s from bar 122, after a bar rest ending on a double barline,
+then +2.06 s and +2.21 s by bar 131. The file says nothing that explains it. An anchor
+away from a fermata now starts a stretch of its own at its bar, so a run of anchors
+follows the drift piecewise (`--anchor 122=2:09.78 --anchor 125=2:12.65 --anchor
+131=2:18.86`); the report lists each as anchored by hand, and every 15 s window came
+within 50 ms. Measure these downbeats on the piano's onsets in a window of ±0.2 s
+around what the voices say: an unconstrained onset match on a repeating accompaniment
+slips by exactly one beat (0.30 s at quarter = 198) and looks just as confident.
+
+**Caesuras and the opening: measure them from entrances, and distrust the opening's move.** On
+the Finale TTBB with piano, Sibelius paused about 0.4 s at each of the caesuras ending bars 1 and
+3, so the voices entered +0.00 s, +0.42 s and +0.82 s against the tempo in bars 1, 3 and 5. The
+script lit bars 1-7 as one stretch and moved it +808 ms "to agree with the pitch alignment of the
+opening", exactly one beat at quarter = 74: the lights were a beat late in bar 1, and the 15 s sync
+windows could not see it. Treating caesuras as holds did not rescue the fit: it put +814 and -6 ms
+on the two where the entrances say +420 and +400, and a -2.0 s hold on a later one. What worked:
+the first attack after each rest, in the voice stems (a rise of 15 dB within 5 ms frames), then
+`--anchor` at the downbeats between (`1=0:00.00 2=0:03.66 4=0:10.55`). Onset matching and chroma
+both fail here in the same way as on a repeating piano figure: on a steady rhythm they fit a beat
+away just as well.
+
+**Where a hard consonant leads, the lights look late.** In a stretch of staccato shouts (a
+one-word refrain on accented quarters at half = 138) the voices' attacks landed 42 ms before
+their lights, while everywhere else the voices came 0-30 ms and the piano 15-25 ms after. That
+stretch was audibly off, and it was the only one where the sound led the
+picture: sound early is noticed sooner than sound late. An anchor 35 ms earlier over those bars
+(and one after them to restore the offset) put the lights just before the attacks. Measure it
+per section, as the median of each note's nearest audio onset within ±100 ms of its light (less
+than half a beat), per stem, voices and piano apart.
+
+**The words as printed, in the display copy** (7.7). A closed score built for Sibelius
+carries, on the lower staff, the syllables it borrowed from the upper one where the print
+sets one line of words between the staves. In the display copy mark those
+`print-object="no"`, take their `<extend/>` off (Verovio draws a hidden syllable's line
+anyway), and run `end_lines_for_verovio`, or the last printed line on that staff runs on
+across the system under the hidden ones.
+
+**A part's video greys every staff it does not sing on, words and all.** Staff text
+(a piano's "slow down" instruction), dynamics and hairpins belong to the parts on their
+staff, found from the MEI `@staff` and the notes on that staff; in a part's own video
+they are grey where that part is not on the staff, like the notes and rests there.
+Tempo marks are everyone's and stay black. The display copy's staves are named after the
+parts on them for matching (above); give each a `<part-name-display>` with the printed
+name, or the first system's label reads "Tenor 1 Tenor 2a Tenor 2b".
+
+**One solo mp3, several solo staves.** A human set's single Solos mix with two solo staves and a small-group staff: make the open
+file's one part "Solo" (the staves' notes as chords and extra voices), name all three closed staves "Solo" with their printed names as
+`<part-name-display>`, and pass `--closed`, needed because the part counts then come out equal. Give the lyric sheet its own open file
+with the small group's lines left out, on one voice per part: its reader takes one voice's words. Anchor free-tempo bars and any rit from the
+accompaniment's attacks, and set a tempo mark for what the recording does there.
+
+**The all-parts video needs about 5 GB.** In an 8 GB workspace the Balanced video was
+killed for memory when it rendered beside a part video; the log said only "failed". Render
+it on its own (`--jobs 1`), and check `dmesg` for an oom-kill when a render fails silently.
+
+**The last fermata: the lights stay on until the sound stops.** A piece that ends on a
+fermata has a stretch after it with no onsets, holding only the final note's end, and it
+keeps the offset of the stretch before it. It once kept the fit's value instead, which the
+anchors had not moved, so the last bar's lights ended 6 s before they began and the final
+chord never lit. Playback also holds the final fermata as long as it
+likes (3 s past the written length there), so every note or syllable that ends with the
+score stays lit until the audio drops below -50 dBFS. Check the last bar in a still before
+rendering.
+
+**The drift check is aligned around the lights, not the straight line.** The pitch
+alignment looks ±3 s either side of what it is centred on. After three fermatas each
+held about 1.15 s the lights were 3.5 s from the straight line, and the check, centred
+there, locked on to the wrong bar of the piano figure and reported the lights 6.3 s
+behind when they were right. Centred on the lights it reads within 50 ms throughout.
+
+**Name the closed score's staves after the parts on them.** The display file's
+staves are matched to the open file's parts by name: "Tenors" matched none of "Tenor 1",
+"Tenor 2a", "Tenor 2b", so nothing on that staff lit, and "Basses" matched only
+"Bass". Giving the video's copy of the closed score the part names "Tenor 1 Tenor 2a
+Tenor 2b" and "Baritone Bass" placed all 503 notes and rests from the open file, none by
+voice. The staff labels on screen are the abbreviations, so nothing changes there.
+
+**A predominant mix is timed by its Balanced track.** The level-threshold
+anchor misreads a predominant mix whose first entrance is by a voice 21 dB
+down: on the barbershop-voiced TTBB the Tenor 1, Tenor 2 and Baritone mixes
+anchored 0.06-0.1 s late, and their tempo, fitted from that anchor on onsets
+that are mostly the featured voice's consonants, drifted from 50 ms behind to
+50 ms ahead. Every mp3 of a set made by `rehearsal_mix.py` is sample-aligned, so
+when `TITLE - Balanced.mp3` sits beside a `TITLE - (V) predominant-left.mp3` (or an
+older set's `predominant.mp3` or `part-left.mp3`; a soloist's too, `TITLE - Solo predominant.mp3`, whose own fit
+put a -1.1 s hold on a ballad's last fermata), is the same length and its level envelope lines up with it
+(0 ms of lag within +-0.3 s), the script times the mix by the Balanced track and
+says so in the report; the audio check on the mp4 is still against the mix's own
+audio. Without a Balanced track, the pitch alignment of the opening overrules
+the threshold anchor when they differ by 30 ms or more, and the tempo is refitted
+from there.
+
+**Target: the lights 25–30 ms ahead of the sound, section by section.** Seeing is slower
+than hearing, so a light a little before its note looks right; 25–30 ms
+of lead looked right on the Finale TTBB with piano. Sound before the light is what shows. The
+15 s pitch-alignment windows below cannot see a beat's error in a short passage, or a 40 ms
+lead of the sound over one stretch: measure per section too (the median of each note's
+nearest onset within ±100 ms of its light, voices and accompaniment apart) and anchor any
+section outside the target.
+
+**Measure drift against pitch, not against the nearest onset.** The first
+version matched every light to the nearest onset in the audio within 0.35 s and
+reported the median per 15 s; it read the 0.76 s lag as −2 ms, because with a
+piano in sixteenths there is always an onset near enough, and the same check on
+the finished mp4s was fooled the same way. Matching the onset pattern over a few
+seconds fails too: a steady groove matches itself a beat away. Pitch content
+tells repeated bars apart. The report now gives each fermata's hold and the
+lights against the pitch alignment per 15 s (within 85 ms everywhere on the
+two-soloist TTBB, under two 50 ms steps), naming the bar of any stretch 100 ms
+out; ignore the last few seconds, where only reverb is left. Each finished mp4
+is checked for what the file itself can go wrong on: its audio against the mp3
+(0.0 ms) and every frame's time against the time it was meant for (exact).
+All of it goes on record (next paragraph).
+
+**Every check goes on record, whatever it finds.** The script writes everything
+it prints to `TITLE - video checks.txt` beside the videos, a line for each
+check even when it finds nothing: accidentals written out (8.1), lyric lines
+(`verify.py` check 14), a **pitch readback** (every note Verovio engraves, read
+the way a singer reads it, from its written accidental or else the key
+signature and the bar so far, tied notes from their first note, against the
+pitch it sounds; any difference stops the run), and per mp3 the sync report.
+`--proof DIR` also writes one unlit PNG per screen of the all-parts view.
+Compare each with the print PDF bar by bar (pitches and accidentals, rhythms,
+ties and slurs, words and where they sit, extenders) and add to the file, under
+the proof line, per screen, what differs or "as printed", and a one-line
+result; show the user screens only where something differs. The record is so
+the user can see, song by song, which checks still find things and which have
+gone quiet, and decide which to keep. Cost: the automatic checks take seconds;
+the comparison a few minutes for five screens. On the barbershop-voiced TTBB
+the readback found 61 notes in 21 bars reading a half step off (the file wrote
+no `<accidental>` at all), which inspection by eye had passed, and the first
+comparison found 8 cautionary accidentals the print puts in parentheses and
+the video leaves out.
+
+**Shared notes and words split top to bottom.** A notehead, rest or syllable
+two parts share gets its halo and its ink in stacked bands, the higher part's
+colour on top, like the parts on the staff. Split side by side, as first built,
+it read as one part singing the first half of the note and the other the
+second. A shared rest's bar is striped the same way.
+
+**One rest where both voices rest.** In a divided bar where both parts rest at
+the same moment for the same time, voice 2's copy is `print-object="no"` and the
+printed rest lights for both parts. The ballad TTBB had a bar sung in unison
+by Baritone and Bass that had to be divided only because a tie ran on into a
+divided bar, and it printed every rest twice, stacked.
+
+**Triplets with no bracket.** An OMR'd or exported file can give notes their
+triplet timing (`<time-modification>`) and no `<tuplet>` marking, and they print
+as plain eighths that do not add up (the ballad TTBB's exploded file: 28
+groups). The script groups each voice's run of such notes into tuplets and marks
+the ends, in the display copy only.
+
+**Ties light, and ties and slurs are greyed with their notes.** A tie lights
+while either of its notes sounds, so a held note reads as one lit shape. In a
+part's own video every other part's ties and slurs are grey like their notes;
+the first build greyed notes but left every slur and tie black. Neither sits in
+a voice's layer in Verovio's SVG: they hang off the measure, and whose they are
+comes from the MEI, whose `<tie>` and `<slur>` carry `startid`/`endid` and the
+same ids as the SVG. A tie is its notes' part's; a slur that starts or ends on
+a chord two parts share (a merged bar) is both parts'. Pieces carried over a
+system break come without an id, as `class="tie id-<its id> spanning"`, like a
+syllable's extender.
+
+Seven things that cost time:
+
+- **Verovio's `condense` does nothing for MusicXML.** Hiding empty staves works
+  only for MEI with `<scoreDef optimize="true">`: load the MusicXML, take
+  `getMEI()`, add the attribute, reload. Note ids survive the round trip.
+- **Keeping one staff while hiding the others** takes an invisible note:
+  in every bar where that staff has no note, add
+  `<layer n="9"><note dur="1" pname="c" oct="4" visible="false"/></layer>`.
+  `<space>` does not keep the staff. The extra layer pushes the rests off
+  their lines, a whole-bar rest to above the staff: pin them, `loc="6"` for an
+  `mRest` or a whole `<rest>` (some files write a bar's rest as a plain whole
+  rest, and the first fix, on `mRest` only, left those floating in the Bass
+  video), `loc="4"` for any other rest.
+- **A bar rest written as a plain whole rest sits at the left edge.** Verovio
+  centres only a rest marked `<rest measure="yes"/>`; the print file of the
+  two-soloist TTBB wrote many bar rests as whole rests on beat 1, and they sat
+  against the barline. Before engraving, the script marks every rest that fills
+  its bar alone (per voice and staff) as a bar rest. And a layer that holds only the
+  invisible note is no voice: counting it put the Bass's rest bars above its
+  staff, where the upper of two voices goes.
+- **Verovio keeps MusicXML note ids** (`<note id="…">`), rests included, but
+  not lyric ids; a syllable is found through the note or chord it sits under.
+  Except where its extender runs over a system break: the rest of the line is
+  drawn at the start of the next system, outside any note, as
+  `<g class="syl id-<the syllable's svg id> spanning">`, possibly on the next
+  screen. It has to be linked back by that class and lit with its syllable, with
+  its own halo; the first build left the continuation dark (bar 78, Bass).
+- **Which pixel belongs to which note.** The lights are pixel-exact: every
+  lightable piece (note, notehead, rest, syllable) is drawn in a colour that
+  spells three bits of its index, red, green and blue, with the rest of the page
+  hidden, and the index is read back per pixel. `ceil(log2(n)) / 3` renders of
+  the page, about four, plus one all-black one for coverage. The first version
+  drew one bit per render, black or hidden, and needed an inverted render per bit
+  as well to catch overlaps (on the two-soloist TTBB a Baritone–Bass unison in a
+  divided bar drew two noteheads on one spot, their bits ORed into a third
+  note's index, and three unlit notes lit up); that was 21 renders a page and
+  136 of the 180 s a video took. In colour the piece on top simply wins, as on
+  the screen. Noteheads at the same spot are then treated as one note lit in both
+  colours. Place halos from the SVG's notehead positions, not from pixels, or
+  touching seconds give tall ovals.
+- **cairosvg antialiases text with colour fringes**, so each channel of a
+  letter's edge has its own coverage. Read the bits against the coverage of the
+  same channel; reading all three against red's put one syllable's pixels under
+  another staff and blew its halo up across two systems. Draw the base score in
+  grey (the engraving is black and white anyway) and let a lit piece claim the
+  unattributed ink inside its own outline, or a lit word keeps a blue and
+  orange rim.
+- **cairosvg honours `visibility="visible"` inside a hidden parent**, which is
+  what makes the renders cheap: hide the page, show only the lightable pieces.
+  It ignores `@font-face`, so the metronome-mark note is a box until Leipzig is
+  installed (8.4; on a Mac in `~/Library/Fonts`, which cairo reads there); the
+  script does that itself when fonttools and brotli are there.
+
+**Variable frame rate.** The video has one frame per change of lights or page,
+shown from the exact millisecond of the change: about 1,000 frames for 4:48
+where 30 fps is 8,643, so nothing is rounded to a frame grid and nothing is
+encoded twice. The frames go to ffmpeg as PNGs through the concat demuxer with
+a `duration` each; give every file `option framerate 1000`, or the image
+demuxer's 1/25 s time base rounds each change to 40 ms. Keyframes every 30
+frames keep seeking quick. With several mp3s, each renders in its own process,
+one per CPU core, and only the first video's sync is measured (they share one
+timing). The seven videos of the two-soloist TTBB took 35 minutes the first
+way and 9 minutes this way, on 2 cores.
+
+**To see what is on screen at a time, take the frame that starts at or before it.**
+`ffmpeg -ss T -i video.mp4 -frames:v 1` gives the first frame *at or after* T. With
+one frame per change, that is the next change, up to a second later: checking a
+lyric video at 97.3 s showed the frame from 98.05 s, a syllable already out, and
+looked like a syllable that never lit. List the frame times
+(`ffprobe -select_streams v -show_entries frame=pts_time -of csv=p=0`), take the
+last one at or before T, and seek to exactly that time; when checking a passage,
+grab every frame that starts in it and label each with its start time.
+
+**Render in Claude's own workspace and copy the mp4s back** (11–13 MB each for
+4:48 at 1920×1080). A desktop bridge that kills background jobs and stops each
+command at three minutes cannot render a whole song, and the people this repo
+is for should never be asked to install Homebrew packages or paste Terminal
+commands. Running it on the user's own machine is only for someone who asks. Check
+every copy as the rule near the top says: the mp4s arrive a few KB larger, so compare
+the streams, not the files: `ffmpeg -i x.mp4 -map 0:a -c copy -f md5 -` (and `0:v`) on
+both sides.
+
+### 10.1 The lyric sheet: made with the videos, every time
+
+**What it is.** Every sung part's words on one printable page (`TITLE - lyric sheet.pdf`),
+and beside each score video `TITLE - … , lyrics.mp4` and `TITLE - … , lyrics, iPad.mp4`:
+that page, with each syllable lit while it is sung. A memory aid: the score videos teach the notes, this teaches the words
+and who sings them. `score_video.py` makes both in the same run, with the same timing, so
+they are never made separately and never out of step. Asked for on the two-soloist TTBB;
+what was settled on:
+
+- **One page for everyone, two columns.** One sheet per part only if the parts cannot share
+  a page; on the two-soloist TTBB (six parts, 144 bars) they could. Words that several
+  parts sing together (same bar, beat and word) print once. Before each row, a dot per part
+  singing it in the part's colour from the score videos, and a short label under the dots
+  ("Tenors", "All"); a word only some of the row's parts sing is italic with a small tag
+  after it (two words the tenors sing alone). The bar the row starts in, in grey at the
+  right, so a director can say "from 55". Blank space between sections, and each section
+  headed.
+- **Section names come from the musical structure, never from the words.** The first build
+  named them from how the lyrics read and got them wrong: a verse with new words was
+  called the bridge, and the real bridge (the only new melody, over a
+  held pedal note) was called a verse. The rule: compare melody and harmony. The
+  draft letters sections by melody that repeats bar for bar (a change of key allowed), and
+  `lyric_sheet.py structure` prints the highest sung note at each onset, the bass and the
+  accompaniment's pitch classes, bar by bar, to decide by. That piece came out verse,
+  chorus, verse, chorus, verse, chorus, bridge, half verse (the verse melody's last two
+  phrases only), chorus up a half step, tag. Name what the music shows, including a change
+  of key: "Chorus, up a half step" tells singers something.
+- **A bold key word in every row, followed by its emoji.** Without one there is no
+  fixation point and the eye jumps about the page. Pick a word a singer can picture,
+  the same emoji for the same word throughout, a row's second line
+  included when it is written out on its own line. The letters are bold, not the
+  punctuation or quote marks around them.
+- **The largest type the page holds.** The first sheets kept every row on one line, so the
+  longest row set the size for the whole page: 7 pt on the 16:9 page of two songs, too small
+  to read on a phone, and two thirds of one screen left empty. The rule:
+  larger type, as much of the page used as possible, more wrapping allowed, but broken at
+  sensible phrase breaks. So the layout tries one column and more (one to three on the
+  page, one to four on the 16:9 screen) and takes the count with the largest type, less
+  0.5% per wrapped line. A row too wide for its column wraps, indented, onto as few lines
+  as it can (three at most), or one more if that avoids a bad break. The breaks it prefers,
+  best first: a rest of an eighth or more, or the end of a sentence; a comma or a short rest;
+  a held note (two quarters) or a capital starting a sentence the words run into; before a
+  word that starts a phrase ("and", "when", "in", "with"); before a subject ("I", "we",
+  "there"). Never after "the", "a", "my", "to" and the like. A row the plan splits with
+  `"continues": true` (only where the music really rests) still starts a new line. A
+  section stays whole in its column when that fits; otherwise it goes on in the next one
+  between two sung lines, under "NAME (CONTINUED)". Room left over goes into line spacing
+  (1.34 to 1.8). Each row's dots sit high and its label tight under them, so at close line
+  spacing the label reads with its own row, not the one below. On the eight autumn-2026 sets
+  whose old sizes were recorded, the 16:9 type (as printed on page 2) went from 7.0–10.1 pt
+  to 9.4–15.9 pt, and the printed page from 7.4–10.9 pt to 11.6–17.6 pt.
+- **Two videos per mp3: 16:9, and 3:4 portrait for an iPad.** `…, lyrics.mp4` is the
+  same rows in its own columns at 1920×1080 (the portrait page shrunk onto a 16:9 screen is
+  unreadable). `…, lyrics, iPad.mp4` is 1536×2048 and shows the printed page exactly,
+  scaled to the full width at the top, so a singer can read along on the iPad already in
+  their music folder; the bar number sits in the band left below the page. A syllable
+  lights in stacked bands, one per part singing it, top to bottom in score order as in the
+  score videos; nothing is lit while everyone rests. In a part's own video that part's
+  syllables light in its colour, the whole height, and syllables only others sing light
+  grey.
+- **One PDF, two pages: portrait first, then landscape.** Page 1 is the portrait page to
+  print (and the iPad video's page); page 2 is landscape letter with the 16:9 video's page
+  on it, exactly, the full width at the top and the paper below it left empty. One file on
+  the chorus's posting site, so nobody downloads the wrong one.
+
+**The plan.** How the words fall into rows is a judgement the file cannot make alone, so
+it lives in `TITLE - lyric sheet plan.json` beside the videos (it holds the words: never
+in this repository). When there is none, `score_video.py` writes a draft and stops before
+rendering anything; it refuses a plan that still has an unnamed section ("A?"), a row with
+no bold word, a word with no emoji, words in no row, or `"reviewed"` not true, and says
+which. Finish the draft by hand:
+
+1. Read `lyric_sheet.py structure` (the draft prints it too) against the lettering, and
+   name every section.
+2. Check each row starts and ends where a phrase does. The draft breaks rows after two
+   quarters' rest, after any rest ending a sentence, and after a quarter's rest where the
+   singers change; parts singing different words at once get rows of their own (with
+   `"parts"`). It splits a line where a second soloist joins in, and joins two sentences
+   run together over a short rest; fix both kinds.
+3. Add `"words"`: bar, word, emoji (and `"parts"` where two parts sing that word in the
+   same bar on different rows).
+4. `"edits"` changes only what is shown ("ah" to "ah…" for a held vowel).
+5. Set `"reviewed": true`; `python3 lyric_sheet.py pdf PLAN.json` shows the page in
+   seconds, before the videos.
+
+The words come from a print-faithful MusicXML with one part per sung part (`--lyrics`;
+by default `--display` when it has one part per staff, else the score). Never the Cantai
+learning file: its split syllables would print. `--no-lyrics` makes the score videos
+alone. After changing a finished plan, `--lyrics-only` remakes the PDF and the lyric videos
+with the timing fitted as usual and leaves the score videos alone. Each mp3's two lyric
+videos take about two and a half minutes on 2 cores.
+
+### 10.2 Any score animated over audio: the same lights, whatever draws them
+
+Step 10's lighting is the house style for **every** score shown moving over
+audio, not only for `score_video.py`'s output: a one-page memorization sheet, a
+closed-score summary, a page timed to a commercial recording. On a unison TTBB
+the job looked different enough (a one-page sheet, a film soundtrack instead of a
+Cantai render) that a new renderer was written, and it lit only notes and words.
+Everything else this section says then had to be added, one round at a time.
+A renderer written fresh meets this list before its first video goes out:
+
+- **Rests** get a halo and a progress bar that fills in pulse jumps. A bar rest's
+  bar is centred on the rest glyph, as wide as the bar allows on both sides; the
+  first bar of a piece, where the left edge is a repeat sign or a clef, still
+  centres on the glyph.
+- **Ties** light while either of their notes sounds (a stroke along the tie's
+  curve, in its note's colour).
+- **Hyphens and extender lines** light with their syllable, including the piece
+  Verovio carries to the next system (`class="syl id-<syl id> spanning"`).
+- **Two voices on one staff**: shared notes in the everyone colour, each side of
+  a split in its own colour (pink above, cyan below was what was chosen, with
+  purple for everyone), rests of a split voice in that voice's colour.
+- **Portrait and landscape.** Not every singer has a tablet: make a 16:9
+  landscape video beside the portrait one (the same sheet laid out as fewer,
+  longer systems so it still fits one screen), and put both layouts in the PDF,
+  portrait page first. Name new videos with new filenames when the audio changes,
+  so earlier versions are not overwritten.
+- **One frames folder per render.** A command that hits the tool's time limit is
+  not always killed: its render kept writing frames in the background, a second
+  render into the same folder picked some of them up, and one bar's progress bar
+  vanished from the delivered video. Use a fresh temporary folder per render.
+
+**Compare-these boxes (a memorization sheet).** A sheet for memorising a
+strophic song marks what changes between verses by small amounts: a triplet
+ornament in three verses and two 16ths in the fourth, a note held into the next
+bar in one verse and not the other, C♯ against C♮.
+
+- Mark them as the lesson overlay marks unison (11.2): a translucent rounded box,
+  fill 0.2 and outline 0.6. Coloured noteheads alone were hard to see.
+- **One colour per comparison group**, every member of the group boxed in it
+  (three or four passages where the figure recurs, not only a pair), Okabe–Ito
+  colours, and a short label in that colour naming what differs and where the
+  partner is ("two 16ths (vs. m.19)").
+- **Shade only the part that differs**, in time as well as in pitch: where two
+  verses share a word's first note, the box starts after it. A box never covers
+  an unchanged neighbour; clamp its edges against every unboxed notehead, rest
+  and word on the system (estimate a word's width from its font size, about
+  0.45 em per character).
+- **Accidentals in labels as ♯ ♮ ♭**, not spelled out. Verovio's text font has no
+  glyphs for them: set those characters in a font that has them (DejaVu Serif)
+  in the SVG before converting.
+- Spread the systems over the whole page (`justifyVertically`, and a matching
+  `<system-distance>` so Sibelius spreads them too).
+- In the video, when a halo enters a box, that box and all its partners flicker
+  for at least a second. What was settled on, after a stronger flicker proved uncomfortable:
+  **16th-note flicker only** (dark = the resting opacity, then a dip to fill 0.16 /
+  outline 0.49); a burst of 32nds was too much. While the flicker starts, the
+  rest of the page **washes out** rather than darkening (ink 0–255 shown as
+  128–255, over a 16th, back over a quarter, from wherever the fade has got to
+  when the next box arrives): dimming the whole screen, even to 75%, read as
+  someone turning the lights off. Keep every change of this kind mild and slow;
+  the people watching include the photosensitive.
+
+**Timing to a commercial recording** (a soundtrack the score was engraved from,
+not a render of it):
+
+- Unconstrained chroma DTW of the whole piece piled the first 20 bars onto one
+  moment 50 s in. Constrain it (`global_constraints=True`, a band of about 8% of
+  the length around the printed tempo map) and it tracks.
+- Then fit one audio time per barline, with coordinate ascent on the onset
+  envelope at the score's note onsets and a penalty on tempo changes between
+  bars; check the result with a melody pitch track (pYIN on the harmonic part)
+  verse by verse, sweeping a shift of ±0.3 s: the right timing is the peak.
+- **A verse can run at its own tempo.** The second verse ran at about 96 where
+  the print says 100 and the whole-piece fit missed it; aligning that verse on
+  its own (chroma DTW over just its bars and its stretch of audio) put every bar
+  within 50 ms of a straight line. Anchor the last notes of a rallentando from the
+  pitch track by hand.
+- Dense orchestration hides the onsets: the onset check was flat there, and only
+  pitch told the fit apart from a shifted one.
+- Use gender-neutral part labels: "TTBB", or T1/T2/B1/B2, never "Men".
+- **Swing and tempo for `score_video.py` on a commercial recording:** give `--swing` (where
+  offbeat eighths fall, as a fraction of the beat; `voiceshift.bargrid` measures it), set the
+  MusicXML's playback tempo to what the recording plays, and anchor bar 1 by hand (9.5).
+
+### 10.3 A choreography video synced to the tracks
+
+`python3 dance_sync.py DANCE.mp4 "TITLE - Balanced.mp4" "TITLE - Balanced.mp3"
+--accomp ACCOMP --bar1 B1 --beat BEAT --stack OUT1 --overlay OUT2`.
+
+`--bar1` and `--beat` come from `python3 -m voiceshift.bargrid` (9.5).
+
+The dance video was a choreography demo filmed to a different recording, at 120.9 bpm
+against the tracks' 120.
+
+**Mapping time.**
+- **Pitch alignment didn't work.** Chroma DTW against our recording jumped by seconds.
+- **A straight map.** Dance time = c + r·(ours − bar 1), with r searched around the
+  ratio of the two beat periods. A range set by guess missed the right ratio and fitted
+  the edge of the search.
+- **Corrected by the dance recording's beats.** Each beat is paired with our nearest
+  grid beat, the residual is smoothed over ±8 beats, and the map runs piecewise-linear
+  through knots every 8 s. That took the opening from 110 ms off to within ±11 ms of
+  our grid everywhere, at speeds of 0.986–1.004.
+
+**Rendering.**
+- **One `setpts` expression, no cuts.** Cutting into segments, retiming and joining
+  drifted to 130 ms by the end, because each cut rounds to a frame.
+- **Checked on the output file.** Dance frames are found in the output where the map
+  puts them, to within one frame of seek rounding.
+
+**Layouts.**
+- **`--stack`:** dance above the score video, 1920×2160.
+- **`--overlay`:** the score over the dance at 16:9, with the score's white and
+  near-white (for compression noise) at `--white-opacity`, 0.75 there, and
+  its ink opaque. The score stays fully legible. Dancers in a white studio show as faint
+  figures, so offer a lower opacity if the user wants them stronger.
+- **New mixes:** the picture does not depend on the audio. Re-mux with `-c:v copy`.
+- **Checks:** `dance_sync.py` checks the overlay on the lower part of the frame, below the systems.
+  It read one frame later than the stacked render, at all four points.
+
+### 10.3b Rehearsal-room footage: timing a live room to the tracks, and the traps
+
+A phone video of a rehearsal (live piano and choir, no click, the room's own drifting tempo) under the score, either
+on the tracks' clock (the room only times the picture) or on the room's own clock (the room's audio is kept, and the
+tracks' voices are warped onto it). Two of these were built. The scripts are in each song's
+`_build/` folder: `dance_map.py` (a time map fitted per 6 s window with an offset and a tempo ratio, picked by DP),
+`stabilize.py`, `render.py`, `declick.py`, `place_bubbles.py`, `check.py`.
+
+**The trap that cost a render: a steady groove repeats every beat, so the time map can be whole beats off while every
+check passes.** On a TTBB with two tenor solos into a pop groove, the map put the score and the warped voices up to
+2.1 s early (four beats) in bars 34-46. It was visible at once against the vocals. Nothing automatic
+had flagged it:
+- **The map and its check used the same evidence.** Both were onset cross-correlations of the full room audio. In a
+  groove with claps on 2 and 4 that correlation is just as high a clap later (0.73 in the worst window), so the check
+  confirmed the error. A check must use evidence the builder did not.
+- **The search was narrower than the error.** `sync_check` searched ±250 ms, half a beat at q=120, so it cannot see a
+  whole-beat error by construction. Search at least ±2 beats, and report each window's margin over the best lag
+  outside ±0.3 s; a small margin means "ambiguous", not "fine".
+- **Onsets cannot tell beats apart in a groove. Notes can.** Compare the two vocal stems' chroma at each lag
+  (`pitch_sync_check.py`): a melody differs from beat to beat, where claps and piano comping don't. Its lag is coarse
+  on held notes (±0.3 s), so use it to catch beat-level errors, and onsets for the fine timing.
+- **The room's own vocals, not its full mix.** Separate the phone audio (htdemucs_ft: vocals, drums, bass, other) and
+  check the tracks' voices against the room's vocal stem. The user judges sync by the singing, and the vocal stem has no
+  claps or comping to lock onto.
+
+**Pairing repeated events: and a lesson that turned out wrong.** This section used to say that room clapped one
+clap before the written entry (bar 34 beat 4). It didn't. The user's taps put the room's first clap on bar 35 beat 2,
+as written: J for 35 at MOV 89.58 (89.40 less its reaction lag), bars about 2.0 s, first clap at 89.92. The clap pins
+looked right only because two errors cancelled: `clap_pins.py` read the player map as Balanced seconds when it is on
+the Predominant clock, a second (two beats) later (9.6), and it paired the first clap with bar 34 beat 4, two beats
+earlier. Its "Bari/Bass pickup on the 9th clap" landmark sits at bar 39 beat 1.7 by the taps. What stands: to pair
+repeated events (claps, a vamp's bars), count from an unambiguous landmark that is not part of the repetition, and
+put every input on one clock first. A fix that only works by agreeing with something else that is also wrong can
+pass every check, so a story about what the room did needs evidence of its own (the user's taps, their word).
+The tracks' own claps (the human-sung set's Claps Predominant) fall on the written beats, so they give the tracks' side of each
+pair exactly.
+
+**Other traps met on the same job:**
+- **Repetitive passages fool alignment.** A 4-bar piano vamp with the voices resting got squashed into 1 s by both the
+  window fit and a whole-song CENS DTW, which agreed with each other. Agreement between two methods that see the same
+  repetition is not evidence. Pin both ends of a vamp from landmarks outside it (a vocal re-entry by onset correlation
+  with a tempo ratio), and run a straight line between the pins.
+- **Two whole-song alignments disagreeing by a second or more marks a place to look.** It does not tell you which one
+  is right. List every such place and settle each from landmarks, or ask the user.
+- **Whisper's timestamps on singing are not landmarks.** It put the first sung word at 0.0 s when the footage opens
+  on four bars of piano intro, and spread single words over 3-4 s.
+- **A clap check that assumes 2 and 4 is valid only where the claps are the written ones.** Elsewhere the room's
+  drum and choreographed claps (on other beats, by design) muddy it.
+- **Where the evidence stays thin, say so with the times.** Name the bars and the MOV times in the handback, so the user
+  can look there first; don't call it checked.
+
+**The fix that worked: the user taps the whole song.** (Song A; the page, the scripts and a
+hand-over note for song B are in that song's
+`_build/` folder.) A follow-along page plays the room recording under the dark score, two systems
+at a time, after a click calibration of the headphones' delay; the user presses J on every beat 1 (Space on 2-4 is
+optional). One pass of Js alone, 142 bars in about six minutes, gave the map, and the video was approved. The checks
+used evidence the taps didn't: the room's claps fell a median 28 ms before the beats 2 and 4 the Js imply, and the
+note check's median was −70 ms. Its worst window (0.86 s out, at the entry after a silence) had the claps
+agreeing with the taps, so it was the room's singers coming in late, and the map stayed. What it took:
+- **Taps right after a silence or a fermata come a reaction late** (0.18 and 0.23 s at the first claps), even with a
+  note on screen saying late is fine. Replace them with the first clear events after the silence: claps, a sung onset.
+- **Where the user doubts their own taps, show a spectrogram video with every sung onset numbered** (`spectro_check.py`:
+  the score's bars, the clap band and the taps as a strip, a cursor moving with the sound). They pause and name the word at a
+  numbered onset; the number is a measured onset, so it pins that beat to about 10 ms. Eight named onsets settled the two
+  stretches they doubted.
+- **On the last system, show nothing in the other slot.** The page left the system before it there, below, and it
+  read as another line still to tap, casting doubt on the last taps.
+- **The map's human-sung-set times must be on the same clock as the human-sung file** (9.6: a player map timed on the Predominant
+  stems is a second behind Balanced). That second made correct taps look two beats early.
+
+**Song B, the same day: the taps were right, and two other things were wrong.** (Its `_build/` folder: `tap/`, `map_from_taps.py`, a map-scan script and a tap-tweak script.)
+- **The tap page must not lean on the automatic map it replaces.** The page judged each J against that map's bar
+  times and lengths. The map squeezed bars 8-12, so the user's J on bar 8 was thrown out as a test press and the
+  count went a bar late. At 128-131 its bar lengths were off by up to 1.8x, so a correct J looked like a double
+  press, was held invisibly, and Esc dropped it. The fix: after one full pass counted one J per bar, make that pass
+  the page's fixed reference for every retake; show a held J on screen; settle it at Esc, never drop it silently.
+- **A warp has two sides: check the tracks' map too.** The bar-by-bar warp put the room's beat 1s (the taps) against
+  the human-sung set's player map, and only the taps were checked. That map put bar 121 (a piano run, no singing) 0.5 s late, and
+  the warp played its bars at 1.31x then 0.41x. It was audible as a lurch. The map report
+  had flagged a 2.26x tempo jump there, and Claude called it a hold without looking: check every such flag against
+  the score. Scan the tracks' map for impossible bars before rendering (the map-scan script: beats out of order,
+  per-beat length outside 0.6-1.6x its neighbours). That map was also garbled through the stringendo (161-175),
+  including no notes at all for a repeat's second time.
+- **Where the tracks' map is bad, the user taps the tracks too: at half speed for fast passages.** At stringendo tempo
+  the user's 1x taps lagged 50-170 ms.
+  The same page played the human-sung track slowed 2x by rubberband with the pitch kept; track time = tap / 2,
+  plus the slowed file's measured offset (17 ms). The bars then shortened evenly.
+- **Tweaks to taps: an attack's first frame, not its strongest.** The strongest frame of an attack comes 30-40 ms
+  after it starts, so snapping there moves every tap late. Move a tap only where exactly one clear attack lies within
+  ±70 ms. Leave subdued beat 1s (the arranger's quiet opening of a stringendo) as tapped. On a slow chordal ending,
+  the parts' sung beat-1 onsets beat the taps: here they caught a J 0.3 s early and one 0.2 s late.
+
+**Smaller things that worked:**
+- **Phone frames by timestamp.** Phone MOVs are variable frame rate (one: 29.645 average, `r_frame_rate` 89/3), so
+  pick frames by their pts, never by index divided by fps, and decode in order: `CAP_PROP_POS_FRAMES` seeks can land
+  one frame off.
+- **A periodic tick in phone audio** (every 333.5 ms there): template subtraction did nothing measurable, because the
+  tick's high end jitters by a fraction of a millisecond and averages away. Ducking the >2 kHz band for 7 ms at each
+  tick found on the fitted grid took it from 12.5 dB above its surroundings to about 2. Measure it grid-locked, before
+  and after.
+- **The tracks' voices on the room's clock:** rubberband R3 with `--timemap` (source sample, target sample) from the
+  map, then the lag per window against the room's vocals folded back into the map once (`refine_knots.py`).
+- **Overlays never cover the score:** fit each one's own alpha shape, dilated 10 px, against the union of ink over
+  every score frame shown while it is up, from full size down until a place is ink-free.
+- **Write long renders as fragmented MP4** (now `mp4out.py`, Step 10: it also needs `delay_moov`, or the video runs late
+  against the audio, and `-flush_packets 1`) so the user can watch while it
+  renders, then remux with `+faststart` (stream copy, seconds). A plain MP4 writes its index last, so the partial file
+  doesn't play until the end.
+
+### 10.3c Rehearsal footage: stabilising, framing, and the phone as the clock
+
+**Outcome first: the score overlay was dropped.** After four renders the timing was judged poor by ear in some
+places, the stringendo included, and only the stacked footage with the phone's own audio was kept. Every automatic check
+had passed (onsets end to end median +2 ms, 90% within 39 ms; the notes check of 10.3b found no beat-level shift but
+resolves only about 0.3 s). So: for a live room against a stretched studio track, the automatic checks are necessary
+and not sufficient. Before any full render, give the user a 15-20 s excerpt of the hardest passage (a stringendo, a
+fermata, a groove) to judge by ear, and build 10.3b's tap-the-beats pins where they hear it wrong. The stabilising
+and framing below stood.
+
+More from the same kind of job as 10.3b (a second song; scripts and every measurement in that song's
+`_build/` folder, DESIGN.md). Timing traps are in 10.3b; this is what the picture and the clock needed.
+
+- **The phone as the master clock** was the final choice. With the tracks as the clock, the dance was retimed
+  to the studio track and sped 2-3x through fermatas the room held longer. On the phone's clock the dance plays at
+  its own speed; the score video is shown at the track time the map gives, and the track is stretched to it. Footage
+  that starts late: the track's opening, stretched by the room's own ratio once the footage runs, with the first
+  frame held, so the tempo doesn't jump when the footage starts. Smooth the map 0.5 s before stretching audio.
+- **Rubberband: check the result against its map.** Here R3 (`-3`) with `--timemap` fell 265 ms behind the map after
+  a 2.9x stretch and stayed there; R2 (the default) held the map to a median within 7 ms per 20 s. (10.3b's job used
+  R3 without trouble.) Check every stretch by chroma DTW against the unstretched audio (`audio_check.py`).
+- **`ffmpeg -ss t` on a CFR output lands on the next frame** when t sits exactly on a frame time: seek half a frame
+  early in checks.
+- **Stabilise on the far wall, at constant scene scale.** A similarity per frame (SIFT + RANSAC) to one wide reference,
+  through rolling keyframes, then the reference at full size (SIFT is scale-free: a half-size frame matches it; scale
+  the fit's linear part by the half, not by its inverse), then optical flow anchored at both ends. Register on the wall
+  behind the dancers only: chairs nearer the camera move with parallax once it moves, and pulled scale and tilt.
+- **Tilt from a plumb landmark** the user named (a door jamb or another true vertical), median over 3 s: all
+  verticals frame by frame misread when props cross them, and the side framing leans under the camera's pitch.
+- **Scale smoothed hard but never across a zoom.** The fitted scale flickered 0.6% a frame (up to 6%), which was
+  nauseating to watch. A 0.4 s Gaussian lagged a fast phone zoom (2x in half a second) by 15%, and a kernel narrowed
+  near the zoom still made a 9% step; smooth the steady stretches and the zooms separately (0.03% a frame where steady).
+- **Check stabilisation by tracking the landmark in the output**, not by correlating the wall: the wall's look
+  changes with the viewpoint, aligned or not.
+- **Framing and layout:** cropped to the room's width; very wide strips,
+  unmirrored on top and **mirrored at the bottom** (what people practise with, and the score's bottom half is blank
+  more often), labelled "Unmirrored" and "Mirrored" in corners no score frame inks. The score's white at 0.75 over
+  the footage, but its **paper fully transparent below the lowest staff line** (the ink stays: ledger-line notes and
+  stems hang there; clearing the whole alpha once took them away too) whenever no system starts in the bottom half
+  (group staves by system: a tall system's piano staff can cross the middle), fading over 0.4 s and in before ink
+  arrives.
+
+### 10.4 Old videos retimed onto new audio (`mixset/`)
+
+When a song already has its follow-along videos and new audio arrives in a different
+performance (a human singer's set, 9.6), the videos do not need redrawing. Every frame of a
+`score_video.py` video belongs to a moment of the old audio. So move each frame's start through
+a time map from the old audio to the new, and encode again over the new mp3:
+
+```
+python3 -m mixset.retime "OLD - (Tenor 1) predominant.mp4" knots.npy "NEW - (Tenor 1) predominant.mp3" OUT.mp4 --lag 1.0
+```
+
+- **Cost:** about 7 s a video, against minutes for a render; 82 videos (score, lyrics and lyrics
+  iPad for 28 mp3s, plus three dance composites) in a few minutes.
+- **What can be retimed:** anything timed to the old audio. The memorization videos (10.2) and
+  the dance composites (10.3, `--tune film` for 30 fps of motion) went through the same map as
+  the score videos; the dance stays with the music because it was already synced to the old
+  audio.
+- **Frames:** frames that land in one millisecond keep the later. Frames mapped before zero
+  collapse into the first: the new audio started 1.2 s sooner on one set, and the old intro's
+  first second went.
+- **Same picture, other audio:** a song whose old videos have no per-part versions (the
+  one-staff memorization video) gets its one picture over every part's mp3.
+
+**The time map** (`python3 -m mixset.timemap`, old seconds → new Balanced seconds) comes from
+the audio, not the score:
+1. `dtw` for the coarse path.
+2. `refine` to correct it by onset cross-correlation in 3 s windows every 0.5 s.
+3. Run both twice: old accompaniment stem against the new accompaniment track (sharp where the
+   piano plays), and old Balanced against new Balanced (needed where the piano rests).
+4. `build` keeps windows correlating 0.5 or more and drops outliers more than 60 ms from their
+   neighbours' median.
+
+Where the two performances follow the same tempo map, that is the whole job. On one set the
+offset held at −1.155 s within 10 ms for two and a half minutes; the singer's accompaniment was
+another recording at the same tempo. The rest needs looking at, in a plot of new − old against
+old, and hand pins for what the windows cannot see:
+- **A tempo the old render ignored.** The old render played q=66 throughout; the singer played
+  16 bars at about q=76 and came back. That is a straight segment between the two bars' times,
+  which onsets confirmed to a 2 ms median. The drift shows as a steady slope in the plot.
+- **A rit., a fermata or a breath taken differently.** At the end of a TTBB with piano the piano
+  rests for three bars, the windows find nothing, and DTW on the voices wandered. Pin the
+  featured part's notes one by one from its pitch track (F, 9.6) against the old stem's. Pin the
+  piano's re-entry and each eighth of the rit. from onsets. The singer took a 2 s breath the
+  render does not have; the map stretches the rest to cover it.
+- **A spliced old track.** An old track built from a film soundtrack in its middle bars has
+  bar times of its own. Pair them, bar by bar, with the new performance's bars.
+- **The end.** Pin where the sound stops (−50 dBFS) in each, so the last chord stays lit as long
+  as it sounds. Then pin file end to file end.
+
+`timemap local OLD NEW O0 O1 N0 N1 --png` aligns one stretch with both ends pinned
+and draws both chromagrams. A passage DTW found jumpy could be read off the picture as a constant
+offset.
+
+**Check, and compare with the old video.**
+- `python3 -m mixset.check frames RESULT.json MP3`: every frame where planned (0.0 ms in every
+  video) and the audio not shifted (0.0 ms).
+- `python3 -m mixset.check sync VIDEO MP3`: the lights against the sound, per 20 s, as the median
+  of the nearest onset within ±100 ms. Its numbers are this detector's, so read them against the
+  old video on its own audio (+0 to +21 ms on these songs).
+- **What it found:** maps built on the accompaniment left two sets' lights 13–18 ms later than
+  the old videos, up to 35 ms in places. A singer's consonants come ahead of the piano, and
+  sound before light is what shows (Step 10). Moving the map earlier per 15 s window by the
+  difference brought them to +4 and −3 ms against the old +5 and +4.
+- **Stills:** look at a few at the hand-pinned moments, old against new.
+
+## Step 11 — Note-learning lesson plans
+
+A different job from tracks and revoicing. A section leader teaches notes and
+rhythms online (Jamulus for the singers, muted listeners on Zoom), playing each
+part from existing tracks in Logic: "Tenors, listen once, then sing it twice." The
+plan says, for every lettered section, who is played first, how many times, what
+is a repeat and what is nearly one, and where to cue Logic. By hand that means working it
+out by eye and scribbling circled labels on the PDF in forScore; this does both.
+
+```
+python3 -m lesson "Song.musicxml" --pdf "Song - Full score.pdf" --pages 1-13 --out .
+python3 -m lesson "Song.musicxml" --pdf "Song - Full score.pdf" --rhythm slow
+```
+
+It writes `<title> - lesson plan.pdf` (a checklist to print: US Letter, landscape,
+two columns) and, with `--pdf`, `<pdf name> (lesson marks).pdf`: the score with
+the steps stamped on it. The MusicXML is what the plan is worked out from, one voice per staff (any piano
+ignored): SATB, or any other sung parts, taken from the score's part names (Soprano, Alto 1,
+Alto 2, Tenor, Bass). A numbered part keeps its name in the checklist ("Alto 1+Alto 2 in
+unison"), since A1 is already a step label; a second part of the same voice is drawn in
+reddish purple. The PDF must be the vector
+engraving it was read from, since the marks are placed from that PDF's own staff
+and bar positions (`dorico_reader.py`, 2.7); `--pages` picks the full-score pages
+when parts follow. The director prepares the whole piece and may be asked to stop
+anywhere, so the plan always covers every letter.
+
+### 11.1 The rules, as the director teaches
+
+- **The unit is the lettered section.** An intro whose only singing is the pickup
+  into A is "piano only".
+- **The same notes as an earlier letter** (at any transposition, words free to
+  differ): everyone sings it once, **all S**. The plan names the most recent
+  identical letter ("= L"); a key change adds "give the starting pitches".
+- **A letter runs from phrase to phrase, not barline to barline.** Notes at the end
+  of a letter's last bar that start the next phrase are the pickup to the next
+  letter (its cue starts there): from beat 3 on, with words, after a rest, or
+  straight after a word that ends a phrase with punctuation ("long." then the next
+  phrase's first word, no rest between). The letter's last bar is compared only up to where that
+  pickup starts, and the earlier bar it is compared with is cut at the same beat.
+  A note held over into a letter's first bar from the phrase before, up to a rest,
+  belongs to the letter before. Otherwise a letter that repeats an earlier one
+  exactly, except that the earlier one's basses pick up into the letter after it,
+  reads as a near repeat with a "new notes, rhythm and words" bar to drill; and on
+  an SAATB, L's last bar was drilled for every part because three of them began
+  M's first word on its beat 3, straight after L's "long.". A bar that is only a beat's
+  rest and then words running over the barline leads in too, from beat 2: in a swung
+  SATB the chorus's three-note entry was cued without its lead-in, and its last bar
+  was drilled as all new though every part had sung it.
+- **A note held for another length before a rest is not drilled.** Where a bar
+  has the same attacks, pitches and words as the earlier letter's and only a
+  note's length before a rest differs, it is a **say** step at that bar,
+  "m99: '<syllable>' is a crotchet, then a crotchet rest (m51: a minim)", for the
+  director to announce. A note's length follows its ties ("a quaver tied to a
+  minim, then a crotchet rest"), and each rest is measured, not inferred. Every
+  sung bar is checked against its parallel bar in the earlier letter, also one
+  that matches some other earlier bar. That holds at the letter's last note too:
+  a brief announcement belongs there as well. In a letter that also
+  has drilled bars, the announcements come first, each part's together (the
+  second "And in bar 105 …"), not in bar order: the singers see only their own
+  part, so the director turns to each part once. Without this, on
+  an SAATB the basses had been given P+SS for one shortened note. A letter's last
+  bar holding only the next letter's lead-in, where the parallel bar still had the
+  part singing, is a say step as well: the held note stops at the barline, or one
+  note less comes (`Planner.ended_early`).
+- **Nearly the same:** at most a third of the sung bars differ (and under half).
+  Only the parts that changed, only the bars that changed, from one bar earlier
+  for a run-in; then everyone from the top of the letter. A "why" note says which
+  bars differ from which bars of the earlier letter ("m62–63 differs from m30–31
+  (in C)"), and for each part whether the
+  notes, the rhythm or the words are new. Bars sung to other words on the same
+  notes (punctuation aside; a vocalise spelt "a" or "aa" is one sound) are
+  drilled with them, though they don't count towards how much of the letter
+  is new: on an SAATB, F's two-syllable line (a word, then one slurred "oo") came back in L as a
+  full line of new words, and the sopranos' block had started only
+  where their notes changed, three bars later, with the altos left out. A part
+  whose bars there differ only in their words gets P+S ("new words only"), never
+  P+SS. A bar sung as some other earlier bar, words and all, is known and not
+  drilled. The
+  spoken line names each run of bars ("Only bar 67 and bar 72"). On the score
+  the why tag is laid out after every badge: within the block's bars, short of
+  the next badge on its row, in short form ("m101–105 vs m53–57 (F): S new
+  notes…") or a row up where the long one doesn't fit.
+- **Otherwise it is taught part by part:** **P** (play, they listen), then **SS**
+  (play twice, they sing), or **S** once when the part is easy, or has the same
+  rhythm and words as a part already taught. Parts in unison for most of the
+  letter are taught together.
+- **Who goes first rotates:** never the part that led the previous letter, the
+  part that has led least otherwise. Nobody wants the same part first yet again.
+- **Long or hard letters are taught in halves** (10+ bars and not easy, or 8+ bars
+  and hard): the part whole once (P), then each half P+SS; a half the part has
+  already sung elsewhere is sung once, S(known); a half the part rests through is
+  left out (not "S(known)" for bars it never sings). A dashed line marks the split
+  on the score.
+- **Halves split the learning, not the bars.** The split is a bar line where most
+  parts breathe that divides the effort evenly, with a pull towards the letter's
+  four-bar phrases. Effort is each bar's difficulty, cut where the part has sung
+  the bar before (earlier in the piece, or earlier in the letter) and cut less
+  where only its rhythm is familiar. In an 11-bar letter of three bars of one
+  motif, a cadence bar, two bars of a new and harder motif and five easy ones,
+  the split goes after the cadence (4 + 7 bars), keeping the new motif with the
+  easy tail rather than cutting at the middle bar.
+- **A part that sings over the split has its own.** Its second half starts at the
+  nearest new phrase of its own (after a beat's rest or more), scored by how long
+  the breath before it is, whether it comes back in with another part's rhythm
+  there, and how close it is. A countermelody that runs on over the others' split
+  finishes its phrase; a pickup into the split bar starts the second half. The
+  checklist gives that part's halves and cue ("altos: m78–83 and m84–88, in on
+  beat 4 of m83"), and the dashed line runs through that part's staff alone, just
+  before its pickup note.
+- **Rhythm.** Bars a part finds tricky (attacks on 16ths, off-beat notes held over
+  the beat, ties across it, dotted figures) are found by score. Two ways to treat
+  them, chosen per piece with `--rhythm`:
+  - `drill`: slow spoken rhythm work, **Rh m24**. Where several parts share the
+    rhythm in those bars (flagged or not), it is one step for all of them, first
+    in the letter, and it leaves their own turns.
+  - `slow`: for a song the choir already has in its ears. No drills: a part with
+    its own tricky bit gets **P↓+S↓+S** (listen and sing down tempo, then at
+    tempo); shared tricky bars make the closing everyone step **S↓+S**.
+- **Compound meter is counted in its own beats.** 6/8, 9/8 and 12/8 have
+  dotted-quarter beats, counted `1 & a 2 & a` (16ths `ta` between, only in a
+  beat with a note on one). 8ths on `&` and `a` are ordinary there, not
+  off-beats; an 8th held over the next dotted-quarter beat, a tie across it, 16ths
+  and dotted 8ths still count as tricky. The dashed beat lines fall on the dotted
+  quarters, a lead-in starts in the bar's second half, and cues read "in on beat
+  2a" (the a of 2). Counted in quarters, a 6/8 piece read `1 e & a 2 & 3`, put a
+  beat line mid-beat, and flagged most bars. Simple meters are untouched.
+- Difficulty is measured, not heard (`--easy`, `--hard`, `--rhythm-threshold`).
+  Expect the director to overrule some of it; the plan is a draft for their pen.
+
+### 11.2 What the plan prints, and why
+
+- **One label per step, with the plays in shorthand** after it: `A1 Tenor P+SS`,
+  not a box per play. `P`, `S`, `SS`, `Rh m24`, `↓`, `m26–29 P+SS`.
+- **"Say" lines only where they earn their place:** a repeat ("Letter J is the same
+  as letter F, so let's sing it together just once"), a near repeat, taking a
+  letter in halves, parts in unison, and the closing "now everyone together". The
+  arrangers this was built for write homorhythm as a matter of course: never
+  remark on parts sharing rhythm and words, in a letter's opener or before a part.
+  A letter taught in full gets no remarks about resembling earlier material.
+- **Texture notes name each group once:** "S+Alto 1+Alto 2+T same rhythm and words; Alto 1+Alto 2 in unison",
+  not every pair (ten pairs with five parts). Parts in unison count as sharing rhythm and
+  words too, and a group inside a stronger one is not repeated.
+- **Printable, and dense:** landscape, two columns, 7.5–8.5 pt. A part's step stays
+  in one piece but a letter may break across columns; keeping whole letters
+  together left half-empty columns.
+- **Logic cues.** `/72` is what to type (Logic's Go to Position). Logic counts every
+  bar in the project's first time signature, so a 2/4 bar or a meter change moves
+  its bar numbers off the printed ones; `analyze.logic_positions` works out where
+  each printed bar falls ("/32 3" for printed m34) and the checklist prints both.
+  A phrase with a pickup is cued at the pickup bar's downbeat, "in on beat 4½",
+  so the singers hear a lead-in. There is a blank for a track that does not start
+  on bar 1.
+- **The marks go on the PDF, not the MusicXML.** MusicXML can carry circled,
+  coloured words as directions, but where and how they appear is up to the reader,
+  and forScore reads only PDF. The engraving's own geometry places each mark:
+  - A step's badge: a translucent circle in the part's colour (Okabe–Ito:
+    soprano vermilion, alto gold, tenor green, bass blue; everyone purple) above
+    that part's staff where its phrase starts (on a pickup note in the bar before
+    the letter, lifted over a dynamic there, or left of it with the caption on
+    the left where the words above leave no room; after a note held over into
+    the letter; otherwise the letter's bar; a badge on a note, a say step's
+    too, goes over a beam or stem there, or just after it where the words above
+    leave no room), below the words of the staff
+    above, stepped right of a dynamic under it and clear of the boxed rehearsal
+    letter, with the shorthand beside it. Several on one staff and bar share one
+    caption; a caption keeps off a boxed letter on the top staff; with no room on the right it goes left; with no room on
+    either side it runs on to the right past the dynamic in its way, and only
+    then above (where it lands on the words of the staff above).
+  - "Everyone" steps sit a row higher, by the letter; a spoken drill for everyone
+    shares that row.
+  - Bars flagged as rhythmically tricky get dashed red beat lines through the
+    staves of the parts they are tricky for, like bar lines just before the first
+    note of each beat (interpolated where no note starts on it), so the beats can be
+    seen in a bar full of 16ths and off-beat entries. They are drawn in both rhythm
+    modes: slowing a bar down does not make its beats easier to find.
+  - Over the same staves, the count to speak, each syllable over the moment it
+    names: `1 & 2 &`, or `1 e & a` where the part's run of flagged bars has
+    16ths (decided per run, so one passage reads one way). A beat with no note on
+    its `e` or `a` shows only `2 &`. The count sits just above the staff, higher
+    where notes climb over it; a badge's caption moves back into the bar before so
+    the count can run on, and a count syllable under a badge's circle is left out.
+  - A small `Rh` circle marks a part's own rhythm spot; a pale yellow "why" tag sits
+    on the highest staff a near-repeat's micro-work touches.
+  - **Unison is shaded amber:** a solid box over the parts on the very same notes,
+    bar by bar, and a dashed box of the same shade over a part doubling it at the
+    octave, as though extending the first. Boxes run from the first sung note to
+    the last, one per system and per run of adjacent staves. Two parts only an
+    octave apart get dashed boxes if it lasts two bars or more; single bars of
+    that are everywhere and are left alone.
+
+### 11.3 Not done yet
+
+- Unisons shorter than most of a letter are shaded on the score but not yet taught
+  together in the plan (a letter whose first four bars are S+A+T in unison still
+  teaches them one at a time).
+- One voice per staff; the marks need a PDF `dorico_reader.py` can read.
+- A caption keeps off printed words at its own height (the staff above's words, a boxed letter at a system's start),
+  running on past them to the right when neither side is clear. Below the top staff it never crosses the system's
+  bracket and opening barline; on the top staff the badge circles also step past a tempo word or boxed letter, and a
+  split label steps past a bar number (the Dorico 6.2.40 SATB with piano, 2026-11-16; swept over six other songs' marks, where the
+  same rules moved badges off bar numbers and boxed letters and captions off brackets).
+- Between the words under one staff and the next staff there can be too little room for a badge (10 pt against 12.6):
+  a lower staff's badge then steps right past the word it touches, or left of it, never further than about a word
+  (an SATB with piano, m73, G1 on "oh"). A part's own "2nd half" label, 12 pt over its line, goes just under the
+  words of the staff above when it would sit on them, stepping past a dynamic or bar number there (m58).
+- A marked PDF the user has loaded into forScore is not remade when the marks code improves: their hand markings there
+  are drawn over the old placements, and a moved badge could end up half under one. Ask which songs are not loaded yet
+  and remake only those, keeping the old PDFs in `_build/`. Captions can still collide where systems are tight, and counts crowd in a narrow bar
+  of 16ths. With five staves the gap between systems is small: an "everyone" badge, a
+  "why" tag and a split label are kept below the words of the system above, and an
+  "everyone" badge with no room there joins the letter's row (after the part badges, or
+  before the boxed letter at the page edge). Look at every page.
+
+## Step 12 — Memorization cards for a repetitive part
+
+For a part that is mostly one rhythm on "doot doo", memorizing by the words doesn't help. What works, after
+trying tonic/subdominant/dominant "route maps" (a path bouncing between functions; useful for seeing
+the harmony, too much to read in time), is one landscape US Letter page in simplified notation, read in time while
+singing. The first one (a TTBB bass part) was built by a script in that song's `_build/` folder (song-specific row
+lists; not general code yet). The rules it ended with:
+
+- **Plain bars: stemless heads, one per new pitch, packed.** A bar is only as wide as its heads: no hidden filler
+  reserving the width of the notes left out. A bar that repeats the previous bar's pitch still gets its head, so
+  every bar is visible. Each bar gets its barline and its own small number.
+- **Everything else is written out in rhythm**, with its syllables: words, any other rhythm, held notes, an extra
+  note. Include a bar whose rhythm is easy to get wrong on autopilot even if it is "plain-ish" (a dotted figure in
+  an intro of long notes). Also write out the plain bar that sits in the same column as a written-out variant: the
+  matching rests make the variant's extra note obvious.
+- **Extra notes** (a "doo" added on beat 4) are orange with a soft halo. **Optional printed octaves** are cue-size
+  heads under the sung note, as the print has them (see 1.2 on reading sizes).
+- **Bar order, no cross-references.** "26–33: same as 10–17" was unreadable in time; draw every bar where it
+  comes. The only exception kept was an immediate repeat ("1 more time").
+- **Verse passes stacked in shared columns.** Lay each pass of the same blocks out together (one part per pass in
+  a single Verovio layout, so measures share widths), then print each staff as its own line in bar order. Looking
+  straight down shows the same musical job in every pass. A pass that skips a block leaves blank space there (no
+  staff lines, no barlines), not empty measures. Never join different passes with a brace or barline.
+- **Narrow gaps between four-bar phrases**, the same columns on every line; a phrase after a gap opens with its
+  own barline. A bridge starts a new line.
+- **Shade the motifs**: each recurring motif and the bridge its own pale colour, exactly over the staff's height
+  (a box that runs past the outer lines has edges that read as extra staff lines). Match motifs by
+  pitch name, so a bar with only the low octave still counts.
+- **Align excerpts on one line by their staff lines**, not their boxes (labels above push a box down). The intro
+  goes alongside the title block, not under it.
+- Chord symbols above the staff, from the score's `<harmony>`, each directly over the head where its chord starts. A
+  new chord gets its own head even on the same pitch, so no symbol floats over empty space. In Verovio the heads'
+  `<duration>` must match their `<type>` (a packed head of duration 1 at 2 divisions is an eighth, not a 16th), or
+  harmony timestamps land beside the heads; and a long symbol needs hidden spacer rests after its head, or Verovio
+  pushes the next symbol right, off its head. They widen packed bars, so scale the shared layout to the page width
+  after adding them.
+- Where the part's note differs from the piano's left hand by more than an octave, a faint grey cue-size copy of
+  the piano's note beside it, marked "Piano differs".
+- Page number, as always, and a version line at the foot ("Version: Mon 9 Nov 2026, 3:18 PM", the time it was
+  built), so singers can tell which printout is current.
+
+Verovio details that bit: its SVG is `overflow="visible"`, so cropping one staff out of a shared layout needs
+`overflow="hidden"` and the inner `definition-scale` sized to the whole system; self-closing `<g .../>` must be
+skipped when matching group nesting; `size="cue"` on `<type>` draws cue heads.
+
+## Scripts
+
+All twelve are complete and standalone. Write them out as-is; nothing else is
+needed. `check_pdf_type.py` and `find_performer_instructions.py` need only
+`pdfplumber`; `musicxml_qc.py` and `cantai_mode.py` need only the standard
+library; `lyric_collisions.py` needs `verovio` and `lxml`; `stem_vs_score.py`
+and `stem_audit.py` need `numpy` and `ffmpeg`; `verify.py` needs `lxml`, plus `pdfplumber` with
+`--pdf` and `verovio` and `cairosvg` with `--render`, and calls
+`musicxml_qc.py`, `find_performer_instructions.py` and `lyric_collisions.py`, so
+keep all three beside it; `rehearsal_mix.py` needs `numpy`, `ffmpeg` with
+libmp3lame, and `slab` for the 3D track; `score_video.py` needs `verovio`,
+`cairosvg`, `lxml`, `numpy`, `pillow`, `fonttools`, `brotli` and `ffmpeg` with
+libx264, and imports `stem_vs_score.py`, `verify.py` and `lyric_sheet.py`, so keep all
+three beside it; `lyric_sheet.py` needs `pycairo`, `pillow`, `numpy`, `lxml`, the Noto
+Color Emoji font and one of Carlito, Lato or Liberation Sans, and imports `score_video.py`; `dance_sync.py` needs `numpy`, `librosa` and `ffmpeg` with
+libx264.
+
+
+### check_pdf_type.py
+
+```python
+#!/usr/bin/env python3
+"""Tell whether a sheet-music PDF is vector (extractable) or a scan (needs OMR)."""
+import sys, pdfplumber
+def verdict(path):
+    with pdfplumber.open(path) as pdf:
+        pages = pdf.pages[:4]
+        glyphs = sum(len(p.chars) for p in pages)
+        paths  = sum(len(p.lines) + len(p.curves) + len(p.rects) for p in pages)
+        images = sum(len(p.images) for p in pages)
+        music  = sum(1 for p in pages for c in p.chars
+                     if any(k in c['fontname'] for k in
+                            ('Opus','Helsinki','Maestro','Sonata','Petrucci','Emmentaler','Bravura','November')))
+        lyr    = sum(1 for p in pages for c in p.chars if 'Opus' not in c['fontname'] and 'Helsinki' not in c['fontname'])
+    if music > 200 and paths > 200:
+        v = 'VECTOR - fully extractable, OMR adds nothing'
+    elif glyphs > 200 and paths > 200:
+        v = 'VECTOR (unrecognised music font) - probably extractable'
+    elif images and glyphs < 50:
+        v = 'SCAN - pixels only, OMR is the only option'
+    else:
+        v = 'MIXED / uncertain - inspect by hand'
+    return dict(file=path.split('/')[-1], music_glyphs=music, text_glyphs=lyr,
+                vector_paths=paths, embedded_images=images, verdict=v)
+for f in sys.argv[1:]:
+    r = verdict(f)
+    print(f"{r['file']}\n  music glyphs {r['music_glyphs']:6d} | other text {r['text_glyphs']:6d} | "
+          f"vector paths {r['vector_paths']:6d} | images {r['embedded_images']}\n  -> {r['verdict']}\n")
+```
+
+### find_performer_instructions.py
+
+```python
+#!/usr/bin/env python3
+"""List the instructions in an engraving that say WHO sings.
+
+    python3 find_performer_instructions.py score.pdf [--start N]
+
+"Basses only", "unis.", "div.", "tutti", "soli", "tacet", section names. These
+change which singers perform a passage. They are invisible to every pitch,
+rhythm, bar-length and lyric check, and OMR drops them. Read them before you
+decide anything about voice assignment.
+
+--start sets the number of the first bar (use 0 for an uncounted pickup).
+Self-contained: needs only pdfplumber.
+
+Note: instructions are not always italic (see 2.4). If this reports nothing,
+rerun with --all-text to scan every non-music-font run, then filter by size.
+"""
+import sys, re, pdfplumber
+
+PERFORMER = re.compile(r'\b(only|unis\.?|div\.?|divisi|tutti|soli|solo|tacet|all|men|women|'
+                       r'sopranos?|altos?|tenors?|baritones?|basses?|bari|clap)\b', re.I)
+TEMPO_ONLY = re.compile(r'^(ritard|rit\.?|a tempo|accel\.?|rall\.?|gently|smoothly|smmothly|'
+                        r'big ritard!?|molto|poco|sub\.?|cresc\.?|dim\.?|[\d\s]+)$', re.I)
+
+def staves_of(page):
+    """-> list of staves on the page, each a list of 5 line tops."""
+    hs = sorted((l for l in page.lines
+                 if abs(l['y0'] - l['y1']) < 0.6 and (l['x1'] - l['x0']) > 150),
+                key=lambda l: l['top'])
+    tops = [l['top'] for l in hs]
+    staves, i = [], 0
+    while i <= len(tops) - 5:
+        w = tops[i:i + 5]
+        gaps = [w[j + 1] - w[j] for j in range(4)]
+        if max(gaps) - min(gaps) < 0.15 and gaps[0] > 1.0:
+            staves.append(w); i += 5
+        else:
+            i += 1
+    return staves
+
+def split_systems(page, staves):
+    """Group staves into systems using the system-start barline: the vertical line
+    at the left edge that runs from the top staff to the bottom staff of a system.
+    Vertical gaps are NOT reliable — a system break can be smaller than the
+    stretch between two staves on a busy page."""
+    if not staves: return []
+    sh = staves[0][4] - staves[0][0]
+    cands = []
+    for l in page.lines:
+        if abs(l['x0'] - l['x1']) > 0.8: continue
+        if (l['bottom'] - l['top']) < sh * 1.6: continue
+        idx = tuple(k for k, w in enumerate(staves)
+                    if l['top'] - 1 <= w[0] and w[4] <= l['bottom'] + 1)
+        if len(idx) >= 2: cands.append((len(idx), idx))
+    if not cands:
+        return [staves]
+    best = max(n for n, _ in cands)
+    groups = sorted({idx for n, idx in cands if n == best})
+    return [[staves[k] for k in g] for g in groups]
+
+def barlines(page, system):
+    """x of every barline in a system: a vertical line spanning a staff, on >=3 staves.
+    Brackets and braces sit left of the staff lines, so they are excluded."""
+    from collections import Counter
+    left = min(l['x0'] for l in page.lines
+               if abs(l['y0'] - l['y1']) < 0.6 and (l['x1'] - l['x0']) > 150
+               and any(abs(l['top'] - t) < 0.2 for w in system for t in w))
+    c = Counter()
+    for w in system:
+        for l in page.lines:
+            if abs(l['x0'] - l['x1']) < 0.6 and l['top'] <= w[0] + 0.6 and l['bottom'] >= w[4] - 0.6:
+                c[round(l['x0'])] += 1
+    def build(need):
+        xs = sorted(x for x, n in c.items() if n >= need and x >= left - 2)
+        out = []
+        for x in xs:
+            if out and x - out[-1] < 5: continue
+            out.append(x)
+        return out
+    # a real barline is drawn on every staff of the system; stems and slur edges
+    # can fake one on a few staves. Prefer the strict reading.
+    strict = build(len(system))
+    return strict if len(strict) >= 2 else build(max(len(system) - 1, 1))
+
+def text_runs(page, all_text=False):
+    rows = {}
+    for c in page.chars:
+        if any(k in c['fontname'] for k in ('Opus', 'Helsinki', 'Maestro', 'Bravura', 'Emmentaler', 'Leland')): continue
+        if not all_text and 'Italic' not in c['fontname']: continue
+        rows.setdefault((round(c['top'] / 2) * 2, round(c['size'], 1)), []).append(c)
+    out = []
+    for (top, size), cs in rows.items():
+        cs.sort(key=lambda c: c['x0'])
+        s, prev = '', None
+        for c in cs:
+            if prev is not None and c['x0'] - prev > 1.0: s += ' '
+            s += c['text']; prev = c['x1']
+        out.append({'text': s.strip(), 'top': top, 'size': size,
+                    'x0': cs[0]['x0'], 'x1': cs[-1]['x1']})
+    return out
+
+def scan(path, start=1, all_text=False):
+    hits, measure = [], start
+    with pdfplumber.open(path) as pdf:
+        layout = []
+        for page in pdf.pages:
+            staves = staves_of(page)
+            systems = split_systems(page, staves)
+            layout.append((page, systems, [barlines(page, s) for s in systems]))
+        for page, systems, bars in layout:
+            for si, system in enumerate(systems):
+                bl = bars[si]
+                first = measure
+                measure += max(len(bl) - 1, 0)
+                for r in text_runs(page, all_text):
+                    t = r['text']
+                    if not t or TEMPO_ONLY.match(t) or not PERFORMER.search(t): continue
+                    # an instruction sits ABOVE the staff it governs
+                    below = [(pi, w) for pi, w in enumerate(system) if 0 < w[0] - r['top'] < 30]
+                    if not below: continue
+                    pi, w = min(below, key=lambda z: z[1][0] - r['top'])
+                    m = None
+                    for k in range(len(bl) - 1):
+                        if bl[k] - 2 <= r['x0'] < bl[k + 1] - 2: m = first + k
+                    if m is None: continue
+                    # text butting against a barline belongs to the bar after it
+                    if any(abs(r['x1'] - b) < 4 for b in bl): m += 1
+                    hits.append({'text': t, 'page': page.page_number, 'size': r['size'],
+                                 'system': si, 'staff': pi, 'measure': m})
+    return hits
+
+if __name__ == '__main__':
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    start = 1
+    if '--start' in sys.argv: start = int(sys.argv[sys.argv.index('--start') + 1])
+    all_text = '--all-text' in sys.argv
+    for path in args:
+        hits = scan(path, start, all_text)
+        print(f'{path.split("/")[-1]}: {len(hits)} performer instruction(s)')
+        for h in hits:
+            print(f"   p{h['page']} system {h['system']} staff {h['staff']} "
+                  f"bar {h['measure']} ({h['size']}pt): {h['text']!r}")
+        if not hits:
+            print('   none — but say so in your notes; "none found" and '
+                  '"never looked" look identical downstream')
+```
+
+### musicxml_qc.py
+
+```python
+#!/usr/bin/env python3
+"""Pre-synthesis QC for MusicXML. Catches the failure modes that wreck singing synthesis:
+short/overfull bars, garbled lyrics, and octave discontinuities.
+
+    python3 musicxml_qc.py score.musicxml
+"""
+import sys, re, zipfile, io
+import xml.etree.ElementTree as ET
+from fractions import Fraction as F
+from collections import defaultdict
+
+def load(path):
+    if path.lower().endswith('.mxl'):
+        with zipfile.ZipFile(path) as z:
+            name=[n for n in z.namelist() if n.endswith(('.xml','.musicxml')) and not n.startswith('META')][0]
+            return ET.parse(io.BytesIO(z.read(name))).getroot()
+    return ET.parse(path).getroot()
+
+# A syllable may open with an apostrophe or a quote mark: pris-'ner, 'tis, "Hark.
+OK_CHARS=re.compile(r"^\(?[\"'’‘“]?[A-Za-z][A-Za-z'’‘\-\.,!?;:\"”…]*\)?[.,!?;:]?$")   # curly quotes and an ellipsis are punctuation too; a verse printed in parentheses
+
+def syllable_onsets(part):
+    """Where each syllable of one part starts (quarters from the start), and whether any staff of
+    the part carries two voices."""
+    div=1; bar_start=F(0); out=set(); voices=set()
+    for m in part.findall('measure'):
+        for a in m.findall('attributes'):
+            d=a.find('divisions')
+            if d is not None: div=int(d.text)
+        pos=F(0); mx=F(0)
+        for e in m:
+            if e.tag=='backup': pos-=F(int(e.find('duration').text),div)
+            elif e.tag=='forward': pos+=F(int(e.find('duration').text),div)
+            elif e.tag=='note':
+                if e.find('chord') is not None: continue
+                if e.find('rest') is None:
+                    voices.add((e.findtext('staff') or '1', e.findtext('voice') or '1'))
+                    if e.find('lyric') is not None and (e.findtext('lyric/text') or '').strip():
+                        out.add(bar_start+pos)
+                pos+=F(int(e.find('duration').text),div) if e.find('duration') is not None else 0
+            mx=max(mx,pos)
+        bar_start+=mx
+    return out, bool(out) and len({v for st,v in voices})>1     # a sung part (not a piano) on two voices
+
+def qc(path):
+    root=load(path)
+    issues=defaultdict(list)
+    # A closed score (two parts to a staff) prints words once where the staves sing them together,
+    # often between the staves: the other staff's notes there carry none and read that line. So in
+    # a closed score a note may also borrow a syllable another part starts at the same moment. Not
+    # in an open score, where every part carries its own words and a gap is a lost syllable.
+    ons={p.get('id'): syllable_onsets(p) for p in root.findall('part')}
+    closed=any(two for _,two in ons.values())
+    for part in root.findall('part'):
+        pid=part.get('id'); div=1; ts=None
+        prev_oct={}; octjumps=[]
+        # One sequence per part on each staff: on a shared staff the two
+        # singers' notes interleave in document order, and walking back from a
+        # voice-2 note would otherwise land on voice 1's syllables and rests.
+        seqs=defaultdict(list)   # (staff, part) -> [(measure, is_pitched, lyric, has_extend, is_tie_stop, onset, dur)]
+        bar_start=F(0)
+        for m in part.findall('measure'):
+            num=m.get('number')
+            for a in m.findall('attributes'):
+                d=a.find('divisions')
+                if d is not None: div=int(d.text)
+                t=a.find('time')
+                if t is not None: ts=(int(t.find('beats').text),int(t.find('beat-type').text))
+            # --- bar length ---
+            pos=F(0); mx=F(0)
+            for e in m:
+                if e.tag=='note':
+                    if e.find('chord') is None and e.find('duration') is not None: pos+=F(int(e.find('duration').text),div)
+                elif e.tag=='backup': pos-=F(int(e.find('duration').text),div)
+                elif e.tag=='forward': pos+=F(int(e.find('duration').text),div)
+                mx=max(mx,pos)
+            if ts:
+                exp=F(ts[0]*4,ts[1])
+                # a pickup (or any bar marked implicit, as a printed short bar is) may be short; never overfull
+                if mx and mx!=exp and not (m.get('implicit')=='yes' and mx<exp):
+                    kind='SHORT' if mx<exp else 'OVERFULL'
+                    issues['bar length'].append(f"{pid} m{num}: {mx} beats in a {ts[0]}/{ts[1]} bar ({kind})")
+            # --- lyrics + octave continuity ---
+            pos=F(0)
+            for e in m:
+                if e.tag=='backup': pos-=F(int(e.find('duration').text),div); continue
+                if e.tag=='forward': pos+=F(int(e.find('duration').text),div); continue
+                if e.tag!='note': continue
+                n=e
+                dur=F(int(n.find('duration').text),div) if n.find('duration') is not None else F(0)
+                # voices 1/5 are the upper part of a staff; any other voice is the
+                # lower part (chorale writes a stray lower-part note in voice 3)
+                key=(n.findtext('staff') or '1', 'upper' if (n.findtext('voice') or '1') in ('1','5') else 'lower')
+                if n.find('chord') is None:
+                    onset=bar_start+pos
+                    pos+=dur
+                    ties = [x.get('type') for x in n.findall('tie')]
+                    ly = n.find('lyric')
+                    if n.find('rest') is not None:
+                        seqs[key].append((num, False, None, False, False, onset, dur))
+                    else:
+                        seqs[key].append((num, True,
+                                    ly.findtext('text') if ly is not None else None,
+                                    ly is not None and ly.find('extend') is not None and ly.find('extend').get('type') != 'stop',
+                                    'stop' in ties, onset, dur))
+                        if 'stop' in ties and ly is not None and ly.findtext('text'):
+                            issues['syllable on a tie continuation'].append(
+                                f"{pid} m{num}: {ly.findtext('text')!r} — a tied note sustains "
+                                f"the previous syllable and cannot begin a new one")
+                for l in n.findall('lyric'):
+                    t=l.find('text')
+                    if t is None or not t.text: continue
+                    w=t.text.strip()
+                    if not OK_CHARS.match(w):
+                        issues['garbled lyric'].append(f"{pid} m{num}: {w!r}")
+                    elif re.fullmatch(r'(\w{2,})\1', w, re.I):   # 'songsong'; not 'Oo'
+                        issues['doubled lyric'].append(f"{pid} m{num}: {w!r}")
+                p=n.find('pitch')
+                if p is None or n.find('chord') is not None: continue
+                o=int(p.find('octave').text)
+                if key in prev_oct and abs(o-prev_oct[key])>=2:
+                    octjumps.append(f"{pid} m{num}: {prev_oct[key]}->{o}")
+                prev_oct[key]=o
+            bar_start+=mx
+        # octave leaps only matter where there are lyrics to sing
+        if any(True for n in part.iter('lyric')):
+            issues['octave jump in a sung line'].extend(octjumps)
+            # On a staff two parts share, one lyric line serves both where they
+            # sing the same words (SKILL.md 7.4): the lower part's note then has
+            # no syllable of its own and sings the one printed for the other
+            # part at the same moment.  So a note with no syllable is fine if
+            # the other part on its staff starts a syllable at that onset, or if
+            # it continues -- contiguous in its own part -- a note that has one
+            # (with an extender) or that borrows one, or if its part's notes
+            # before it were merged into the other part's chords and that
+            # part's syllable is still being held.
+            starts=defaultdict(set)   # (staff, part) -> onsets of syllables
+            for (st,ln),seq in seqs.items():
+                for (mn,pit,txt,ext,tie,on,du) in seq:
+                    if pit and txt is not None: starts[(st,ln)].add(on)
+            def borrowed(st,ln,on):
+                return any(on in s for (st2,ln2),s in starts.items() if st2==st and ln2!=ln) or \
+                    (closed and any(on in o for p2,(o,_) in ons.items() if p2!=pid))
+            # where each syllable is held with an extender: onset to the end of its melisma
+            held=defaultdict(list)    # (staff, part) -> [(from, to)]
+            for (st,ln),seq in seqs.items():
+                for i,(mn,pit,txt,ext,tie,on,du) in enumerate(seq):
+                    if not (pit and txt is not None and ext): continue
+                    end=on+du
+                    for q in seq[i+1:]:
+                        if not q[1] or q[2] is not None or q[5]!=end: break
+                        end=q[5]+q[6]
+                    held[(st,ln)].append((on,end))
+            for (st,ln),seq in seqs.items():
+                for i,(mn,pit,txt,ext,tie,on,du) in enumerate(seq):
+                    if not pit or txt is not None or tie or borrowed(st,ln,on): continue
+                    j=i-1; ok=False
+                    while True:
+                        q=seq[j] if j>=0 else None
+                        if q is None or q[5]+q[6]!=seq[j+1][5]:
+                            # a gap: the part's earlier notes merged into the other
+                            # part's chords, so the other part's melisma is this one's
+                            ok=any(a<seq[j+1][5]<b for (st2,ln2),iv in held.items()
+                                   if st2==st and ln2!=ln for a,b in iv)
+                            break
+                        if not q[1]: break                 # a rest ends the melisma
+                        if q[2] is not None: ok=q[3]; break
+                        if borrowed(st,ln,q[5]): ok=True; break
+                        j-=1
+                    if not ok:
+                        issues['sung note with no syllable and no extend'].append(f'{pid} m{mn}')
+        # --- clef octave consistency (the tenor-8vb trap) ---
+        ocs=set()
+        for c in part.iter('clef'):
+            e=c.find('clef-octave-change')
+            ocs.add(e.text if e is not None else '0')
+        if len(ocs)>1:
+            issues['clef octave flips'].append(f"{pid}: clef-octave-change takes values {sorted(ocs)}")
+    return issues
+
+for path in sys.argv[1:]:
+    print('='*66); print(path.split('/')[-1])
+    iss=qc(path)
+    if not iss: print('  clean'); continue
+    for k in sorted(iss):
+        v=iss[k]
+        print(f'  {k}: {len(v)}')
+        for line in v[:6]: print(f'      {line}')
+        if len(v)>6: print(f'      ... and {len(v)-6} more')
+```
+
+### cantai_mode.py
+
+```python
+#!/usr/bin/env python3
+"""Post-process a finished, print-faithful MusicXML so Cantai (Sibelius's AI singer) sings every note.
+
+    python3 cantai_mode.py in.musicxml out.musicxml [--parts P3,P4,...] [--keep-dotted-ties] [--untie-all]
+
+What it changes (vocal parts only, one voice per part assumed):
+  * Inside every melisma that contains a tie, each note that starts a sound gets a piece of the
+    syllable: onset+vowel on the syllable note, the bare vowel on intermediate notes, vowel+coda on
+    the last.  "gleams" over E♭-(E♭)-(E♭)-D-B♭-C-(C)-D becomes  glea / ea / ea / ea / eams.
+  * A dotted tie-continuation in the middle of such a melisma is un-tied and re-sung on the vowel.
+    (--keep-dotted-ties turns this off.)
+  * --untie-all: EVERY tie continuation inside a real melisma (tie chain followed by at least one
+    further sung note) is un-tied and re-sung on the vowel, so no tie survives in a melisma at all
+    (blunt fallback for renderers that mis-stitch tied phrases). Plain tied holds that lead straight
+    into the next syllable are left alone.
+  * Pure slur melismas (no tie) are left as printed — Cantai handles those.
+  * Lyric extension lines are re-derived: a piece gets <extend/> only if lyric-less notes follow it.
+Prints one line per change.  Standard library only.
+"""
+import sys, re, copy
+import xml.etree.ElementTree as ET
+
+VOWELS = 'aeiouy'
+
+def split_syllable(text, n):
+    m = re.match(r"^([^A-Za-z]*)([A-Za-z']*)([^A-Za-z']*)$", text)
+    prefix, core, suffix = m.groups() if m else ('', text, '')
+    low = core.lower()
+    mm = (re.match(r"^(y)([aeiou]+[wy]?)(.*)$", low) if low.startswith('y')
+          else re.match(r"^([^aeiou]*?)([aeiouy]+[wy]?)(.*)$", low))
+    if n == 1 or not mm or not mm.group(2):
+        return [text] + [core] * (n - 1)
+    o, nu = mm.group(1), mm.group(2)
+    onset, nucleus, coda = core[:len(o)], core[len(o):len(o) + len(nu)], core[len(o) + len(nu):]
+    return [prefix + onset + nucleus] + [nucleus] * (n - 2) + [nucleus + coda + suffix]
+
+def is_rest(n): return n.find('rest') is not None
+def tie_types(n): return {t.get('type') for t in n.findall('tie')} | {t.get('type') for t in n.findall('tied')}
+def lyric_text(n):
+    ly = n.find('lyric')
+    return ly.findtext('text') if ly is not None else None
+def is_dotted(n): return n.find('dot') is not None and n.findtext('type') not in ('whole', 'breve')
+
+def set_lyric(n, text, syllabic, extend):
+    for ly in n.findall('lyric'): n.remove(ly)
+    ly = ET.SubElement(n, 'lyric'); ly.set('number', '1')
+    ET.SubElement(ly, 'syllabic').text = syllabic
+    ET.SubElement(ly, 'text').text = text
+    if extend: ET.SubElement(ly, 'extend')
+    # <lyric> must follow <notations>; move it after the last notations/beam if needed
+    kids = list(n)
+    n.remove(ly)
+    idx = len(kids) - 1
+    for i, k in enumerate(kids):
+        if k.tag in ('play', 'listen'): idx = i - 1; break
+    n.insert(idx + 1 if idx >= 0 else len(kids), ly)
+
+def untie(prev, cur):
+    for t in prev.findall('tie'):
+        if t.get('type') == 'start': prev.remove(t)
+    for nots in prev.findall('notations'):
+        for t in nots.findall('tied'):
+            if t.get('type') == 'start': nots.remove(t)
+        if len(nots) == 0: prev.remove(nots)
+    for t in cur.findall('tie'):
+        if t.get('type') == 'stop': cur.remove(t)
+    for nots in cur.findall('notations'):
+        for t in nots.findall('tied'):
+            if t.get('type') == 'stop': nots.remove(t)
+        if len(nots) == 0: cur.remove(nots)
+
+def process_part(part, keep_dotted, log, untie_all=False):
+    notes = []   # (measure number, note element) in order, excluding chord members
+    for m in part.findall('measure'):
+        for n in m.findall('note'):
+            if n.find('chord') is None: notes.append((m.get('number'), n))
+    i = 0
+    while i < len(notes):
+        mn, n = notes[i]
+        if is_rest(n) or not lyric_text(n):
+            i += 1; continue
+        j = i + 1
+        while j < len(notes) and not is_rest(notes[j][1]) and not lyric_text(notes[j][1]):
+            j += 1
+        group = [x for _, x in notes[i:j]]
+        has_tie = any('stop' in tie_types(g) for g in group[1:])
+        has_melisma = any('stop' not in tie_types(g) for g in group[1:])   # a plain tied hold is not a melisma
+        if has_tie and len(group) > 1 and (has_melisma or not untie_all):
+            targets = [group[0]]
+            for gi in range(1, len(group)):
+                g = group[gi]
+                followed = any('stop' not in tie_types(h) for h in group[gi + 1:])
+                if 'stop' not in tie_types(g):
+                    targets.append(g)
+                elif untie_all or (is_dotted(g) and followed and not keep_dotted):
+                    untie(group[gi - 1], g); targets.append(g)
+                    log.append(f"{part.get('id')} m{mn}: tie into {'dotted ' if is_dotted(g) else ''}{g.findtext('type')} removed, note re-sung")
+            if len(targets) > 1:
+                ly = group[0].find('lyric'); text = ly.findtext('text'); syl = ly.findtext('syllabic') or 'single'
+                pieces = split_syllable(text, len(targets))
+                first = 'end' if syl in ('middle', 'end') else 'single'
+                last = 'begin' if syl in ('begin', 'middle') else 'single'
+                for ti, (t, ptxt) in enumerate(zip(targets, pieces)):
+                    s = first if ti == 0 else last if ti == len(targets) - 1 else 'single'
+                    # extend if lyric-less notes follow before the next target
+                    k = group.index(t) + 1
+                    ext = k < len(group) and group[k] not in targets
+                    set_lyric(t, ptxt, s, ext)
+                log.append(f"{part.get('id')} m{mn}: {text!r} -> {' / '.join(pieces)}")
+        i = j
+
+def main():
+    args = [a for a in sys.argv[1:] if not a.startswith('--')]
+    keep_dotted = '--keep-dotted-ties' in sys.argv
+    untie_all = '--untie-all' in sys.argv
+    only = None
+    if '--parts' in sys.argv: only = set(sys.argv[sys.argv.index('--parts') + 1].split(','))
+    tree = ET.parse(args[0]); root = tree.getroot()
+    log = []
+    for part in root.findall('part'):
+        if only and part.get('id') not in only: continue
+        if not any(True for _ in part.iter('lyric')): continue      # not a vocal part
+        process_part(part, keep_dotted, log, untie_all)
+    for l in log: print(l)
+    print(f'{len(log)} changes')
+    tree.write(args[1], encoding='UTF-8', xml_declaration=True)
+
+if __name__ == '__main__':
+    main()
+```
+
+### lyric_collisions.py
+
+```python
+#!/usr/bin/env python3
+"""Flag lyric syllables that would collide horizontally in a Verovio layout.
+
+    python3 lyric_collisions.py laid_out.musicxml [staff_mm]
+
+The input must already carry its <print new-system>/<print new-page> breaks.
+Renders it, pulls every syllable's x, baseline and font size out of the SVG,
+groups by baseline and reports every consecutive pair whose gap is smaller than
+an estimate of the first syllable's printed width.
+
+This is how you choose bars-per-system across a whole score without rendering
+and squinting at every page. Verovio's own "justification is highly compressed"
+warning is about NOTE spacing and will not fire on a system whose words overlap.
+
+The width estimate is approximate. A gap a little under the estimate is tight
+but legible; a gap well under it overlaps. Use it to compare candidate layouts.
+Needs verovio and lxml.
+"""
+import sys
+import verovio
+from lxml import etree
+
+NS = {'s': 'http://www.w3.org/2000/svg'}
+NARROW = set("ijltfr.,'’ ")
+
+def width(t, fs):
+    return sum(fs * (0.30 if c in NARROW else 0.56) for c in t)
+
+def load(tk, path):
+    """Load the file so words marked placement="above" are drawn above the staff.
+
+    Verovio reads no placement from a MusicXML lyric and prints every word below,
+    so on a closed score whose higher part's words sit above the staff the two
+    parts' words land on one row and every pair reads as a collision.  It does
+    honour @place on an MEI verse, and a note's MusicXML id survives into MEI:
+    give the notes ids, load, mark those verses above, load the MEI.
+    """
+    xml = open(path, encoding='utf-8').read()
+    if 'placement="above"' not in xml or '<lyric' not in xml:
+        tk.loadData(xml)
+        return
+    head = xml[:xml.index('<score-partwise')]
+    root = etree.fromstring(xml[len(head):].encode())
+    above, k = set(), 0
+    for n in root.iter('note'):
+        if not n.get('id'):
+            k += 1
+            n.set('id', f'n{k:05d}')
+        for ly in n.findall('lyric'):
+            if ly.get('placement') == 'above':
+                above.add((n.get('id'), ly.get('number') or '1'))
+    tk.loadData(head + etree.tostring(root, encoding='unicode'))
+    if not above:
+        return
+    M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+    mei = etree.fromstring(tk.getMEI().encode())
+    for el in mei.iter(M + 'note', M + 'chord'):
+        ids = [el.get(X)] + ([n.get(X) for n in el.iter(M + 'note')] if el.tag == M + 'chord' else [])
+        for v in el.findall(M + 'verse'):
+            if any((i, v.get('n') or '1') in above for i in ids):
+                v.set('place', 'above')
+    tk.loadData(etree.tostring(mei, encoding='unicode'))
+
+def check(path, staff_mm=7.0, page=(2159, 2794), marg=(140, 110, 130, 120)):
+    """page and margins in 1/10 mm: (w, h) and (left, right, top, bottom)."""
+    tk = verovio.toolkit()
+    tk.setOptions({"pageWidth": page[0], "pageHeight": page[1],
+                   "pageMarginLeft": marg[0], "pageMarginRight": marg[1],
+                   "pageMarginTop": marg[2], "pageMarginBottom": marg[3],
+                   "unit": staff_mm / 4 * 10 / 2, "adjustPageHeight": False,
+                   "breaks": "encoded", "svgViewBox": True})
+    load(tk, path)
+    bad = []
+    for pg in range(1, tk.getPageCount() + 1):
+        root = etree.fromstring(tk.renderToSVG(pg).encode())
+        rows = {}
+        for g in root.xpath('//s:g[@class="syl"]', namespaces=NS):
+            ts = g.xpath('.//s:text', namespaces=NS)
+            inner = g.xpath('.//s:tspan[@font-size]', namespaces=NS)
+            if not ts or not inner: continue
+            txt = ''.join(ts[0].itertext()).strip()
+            if not txt: continue
+            fs = float(inner[-1].get('font-size').rstrip('px'))
+            try:
+                x, y = float(ts[0].get('x')), float(ts[0].get('y'))
+            except (TypeError, ValueError):
+                continue
+            # SVG inner units are 10x the viewBox; /20 buckets one lyric baseline
+            rows.setdefault(round(y / 20), []).append((x, txt, fs))
+        for row in rows.values():
+            row.sort()
+            for (x1, t1, fs), (x2, t2, _) in zip(row, row[1:]):
+                need = width(t1, fs)
+                if x2 - x1 < need:
+                    bad.append((pg, t1, t2, round(x2 - x1), round(need)))
+    return tk.getPageCount(), bad
+
+if __name__ == '__main__':
+    mm = float(sys.argv[2]) if len(sys.argv) > 2 else 7.0
+    n, bad = check(sys.argv[1], mm)
+    print(f'{n} pages, {len(bad)} overlapping syllable pair(s)')
+    for pg, a, b, gap, need in bad:
+        print(f'   p{pg}: {a!r} -> {b!r}   gap {gap} < {need}')
+    if not bad:
+        print('   none — this layout is printable')
+```
+
+### stem_vs_score.py
+
+```python
+#!/usr/bin/env python3
+"""Check exported audio stems against the MusicXML they were rendered from.
+
+    python3 stem_vs_score.py score.musicxml "Tenor 1=T1.wav" "Tenor 2=T2.wav" ...
+        [--thresh -50] [--gap 1.0] [--tol 1.5]
+
+Each argument after the score pairs a part name (as in <part-name>) with its
+stem. For every part the script lists where the score has notes and where it
+rests, converts beats to seconds with the score's tempo marks, lines the score
+up with the audio, and reports, by bar number:
+
+  SILENT  - a written phrase (or run of phrases) with next to no sound in the
+            stem: a renderer that stopped, or a staff exported empty
+  EXTRA   - a written rest (at least --gap s long once the slack is taken
+            off) that mostly sounds in the stem: audio leaked in from another
+            staff
+  LATE    - a part whose first entrance misses the line-up by more than --tol:
+            the late-entrance bug of an ensemble Cantai voice
+
+It cannot tell apart two staves that sing the same rhythm (a stem filed under
+the wrong name in homophonic writing passes); the checksum comparison in the
+stem checks catches exact copies. Repeats, D.S. and D.C. are not expanded, so
+a score that uses them reports everything after the first jump; check against
+a copy with the repeats written out.
+
+Alignment: a straight-line map from score seconds to audio seconds, anchored at
+the parts' first entrances (the median of stem entrance minus score entrance),
+with only the tempo refined on the onsets of every part's phrases. A part whose
+first entrance misses the anchor by more than --tol is reported LATE or EARLY:
+that is the late-entrance bug of an ensemble Cantai voice. The map absorbs the
+lead-in silence and a uniformly faster or slower playback, but not a ritard or fermata that playback
+stretches more than the file says; --tol (seconds of slack at every phrase edge)
+covers most of that. A phrase counts as missing only when under 10% of its
+middle sounds, and a rest as leaked only when over 30% of its middle sounds,
+so breaths, reverb tails and short rests do not trigger anything.
+
+Needs numpy and ffmpeg on the PATH.
+"""
+import sys, subprocess, argparse
+import xml.etree.ElementTree as ET
+import numpy as np
+
+HOP = 0.05   # seconds per envelope frame
+
+
+def load_score(path):
+    root = ET.parse(path).getroot()
+    names = {sp.get('id'): (sp.findtext('part-name') or '').strip()
+             for sp in root.iter('score-part')}
+    parts, bar_starts, tempos = {}, None, []
+    for pi, part in enumerate(root.findall('part')):
+        div, pos, spans, starts = 1, 0.0, [], []
+        for m in part.findall('measure'):
+            starts.append((pos, m.get('number')))
+            t, mx = pos, pos
+            for e in m:
+                if e.tag == 'attributes' and e.find('divisions') is not None:
+                    div = int(e.findtext('divisions'))
+                elif e.tag in ('direction', 'sound'):
+                    s = e if e.tag == 'sound' else e.find('sound')
+                    if pi == 0 and s is not None and s.get('tempo'):
+                        off = e.findtext('offset')
+                        tempos.append((t + (int(off) / div if off else 0.0), float(s.get('tempo'))))
+                elif e.tag == 'backup':
+                    t -= int(e.findtext('duration')) / div
+                elif e.tag == 'forward':
+                    t += int(e.findtext('duration')) / div
+                elif e.tag == 'note':
+                    if e.find('grace') is not None:
+                        continue
+                    d = int(e.findtext('duration') or 0) / div
+                    if e.find('chord') is not None:
+                        continue
+                    if e.find('rest') is None and d > 0:
+                        spans.append((t, t + d))
+                    t += d
+                mx = max(mx, t)
+            pos = mx
+        spans.sort()
+        merged = []
+        for a, b in spans:
+            if merged and a <= merged[-1][1] + 1e-6:
+                merged[-1][1] = max(merged[-1][1], b)
+            else:
+                merged.append([a, b])
+        parts[names.get(part.get('id'), part.get('id'))] = merged
+        if bar_starts is None:
+            bar_starts = starts + [(pos, 'end')]
+    tempos.sort(key=lambda bt: bt[0])          # stable: keeps file order at equal positions
+    if not tempos or tempos[0][0] > 0.0:
+        tempos.insert(0, (0.0, tempos[0][1] if tempos else 120.0))
+    return parts, bar_starts, tempos
+
+
+def beats_to_sec(b, tempos):
+    s, (b0, q0) = 0.0, tempos[0]
+    for b1, q1 in tempos[1:]:
+        if b <= b1:
+            break
+        s += (b1 - b0) * 60.0 / q0
+        b0, q0 = b1, q1
+    return s + (b - b0) * 60.0 / q0
+
+
+def envelope(wav, thresh):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', wav, '-ac', '1', '-ar', '8000',
+                          '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    a = np.frombuffer(raw, dtype=np.float32)
+    w = int(8000 * HOP)
+    n = len(a) // w
+    rms = np.sqrt(np.mean(a[:n * w].reshape(n, w) ** 2, axis=1) + 1e-20)
+    return 20 * np.log10(rms) > thresh
+
+
+def runs(mask, value=True):
+    out, i, n = [], 0, len(mask)
+    while i < n:
+        if mask[i] == value:
+            j = i
+            while j < n and mask[j] == value:
+                j += 1
+            out.append((i * HOP, j * HOP))
+            i = j
+        else:
+            i += 1
+    return out
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('score')
+    ap.add_argument('pairs', nargs='+', help='"Part name=stem.wav"')
+    ap.add_argument('--thresh', type=float, default=-50.0, help='dBFS; quieter counts as silent')
+    ap.add_argument('--gap', type=float, default=1.0, help='shortest rest (after slack) worth judging (s)')
+    ap.add_argument('--tol', type=float, default=1.5, help='slack at every phrase edge (s)')
+    a = ap.parse_args()
+
+    parts, bars, tempos = load_score(a.score)
+    stems = {}
+    for p in a.pairs:
+        name, wav = p.split('=', 1)
+        if name not in parts:
+            sys.exit(f'no part named {name!r}; the score has {sorted(parts)}')
+        stems[name] = envelope(wav, a.thresh)
+
+    # phrase onsets: score (seconds at the written tempo) and audio
+    sc = {n: [(beats_to_sec(x, tempos), beats_to_sec(y, tempos)) for x, y in parts[n]] for n in stems}
+    au = {n: [r for r in runs(stems[n]) if r[1] - r[0] >= 0.3] for n in stems}
+    # Anchor the line-up at the first entrances: where each part first sounds in its stem
+    # against where the score says it comes in. Fitting on phrase onsets alone can lock on a
+    # bar or two late in music built from repeated figures (one piece: 2.7 s late, a false EXTRA
+    # at the Tenor entrance), because every "doo doot" looks like its neighbour.
+    firsts = {n: (sc[n][0][0], au[n][0][0]) for n in stems if sc[n] and au[n]}
+    if not firsts:
+        sys.exit('no part has both notes in the score and sound in its stem')
+    off = float(np.median([y - x for x, y in firsts.values()]))
+    scale, pairs = 1.0, []
+    for win in (1.5, 1.0, 0.75):             # refine the tempo only; the anchor stays put
+        pairs = []
+        for n in stems:
+            ons = np.array([r[0] for r in au[n]])
+            if not len(ons):
+                continue
+            for x, _y in sc[n]:
+                g = off + scale * x
+                k = int(np.argmin(np.abs(ons - g)))
+                if abs(ons[k] - g) < win:
+                    pairs.append((x, ons[k]))
+        if len(pairs) >= 4:
+            X = np.array(pairs)
+            s = float(np.dot(X[:, 0], X[:, 1] - off) / max(np.dot(X[:, 0], X[:, 0]), 1e-9))
+            scale = min(max(s, 0.9), 1.1)
+    to_audio = lambda s: off + scale * s
+
+    bar_sec = [(to_audio(beats_to_sec(b, tempos)), num) for b, num in bars]
+    def bar_at(t):
+        cur = bar_sec[0][1]
+        for s, num in bar_sec:
+            if s <= t + 1e-6 and num != 'end':
+                cur = num
+        return cur
+    fmt = lambda t: ('-' if t < 0 else '') + f'{int(abs(t) // 60)}:{abs(t) % 60:04.1f}'
+
+    print(f'alignment: audio = {off:+.2f} s + {scale:.4f} x score time '
+          f'(anchored at the first entrances; {len(pairs) if len(pairs) >= 4 else 0} phrase onsets fitted)')
+    problems = 0
+    print('\nfirst entrances (score -> audio):')
+    for n, (x, y) in firsts.items():
+        late = y - to_audio(x)
+        flag = ''
+        if abs(late) > a.tol:
+            flag = f'   <- {"LATE" if late > 0 else "EARLY"} by {abs(late):.1f} s'
+            problems += 1
+        print(f'   {n}: bar {bar_at(to_audio(x))}, {fmt(to_audio(x))} expected, {fmt(y)} in the stem{flag}')
+    for n in stems:
+        mask = stems[n]
+        L = len(mask)
+        found = []
+        # SILENT: judge each written phrase as a whole; a phrase whose middle is
+        # (almost) soundless is missing, and consecutive missing phrases merge
+        miss = []
+        for x, y in sc[n]:
+            s0, s1 = to_audio(x), to_audio(y)
+            edge = min(a.tol, 0.25 * (s1 - s0))
+            i0, i1 = int((s0 + edge) / HOP), int((s1 - edge) / HOP)
+            if i1 - i0 < int(0.5 / HOP):
+                continue                     # too short to judge
+            cov = float(mask[max(i0, 0):min(i1, L)].mean()) if i0 < L else 0.0
+            if cov < 0.1:
+                if miss and miss[-1][2]:
+                    miss[-1][1] = s1
+                else:
+                    miss.append([s0, s1, True])
+            elif miss:
+                miss[-1][2] = False
+        for t0, t1, _ in miss:
+            found.append(('SILENT', t0, t1))
+        # EXTRA: judge each written rest (including before the first note and
+        # after the last) the same way; a rest whose middle mostly sounds is a leak
+        edges = [(to_audio(x), to_audio(y)) for x, y in sc[n]]
+        rests, prev = [], 0.0
+        for s0, s1 in edges:
+            rests.append((prev, s0)); prev = s1
+        rests.append((prev, L * HOP))
+        for r0, r1 in rests:
+            i0, i1 = int((r0 + a.tol) / HOP), int((r1 - a.tol) / HOP)
+            if (i1 - i0) * HOP < a.gap or i0 >= L:
+                continue
+            seg = mask[max(i0, 0):min(i1, L)]
+            if seg.mean() > 0.3:
+                on = np.flatnonzero(seg)
+                found.append(('EXTRA ', (max(i0, 0) + on[0]) * HOP, (max(i0, 0) + on[-1] + 1) * HOP))
+        found.sort(key=lambda f: f[1])
+        print(f'\n{n}: ' + ('matches the score' if not found else f'{len(found)} disagreement(s)'))
+        for kind, t0, t1 in found:
+            print(f'   {kind} {fmt(t0)}-{fmt(t1)}  (bars {bar_at(t0)}-{bar_at(t1)})')
+        problems += len(found)
+    sys.exit(1 if problems else 0)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### stem_audit.py
+
+```python
+#!/usr/bin/env python3
+"""Audit a set of exported audio stems against the MusicXML they were rendered from.
+
+    python3 stem_audit.py score.musicxml "Tenor 1=T1.wav" "Tenor 2=T2.wav" ... ["Piano=piano.wav"]
+                          [--out report.txt] [--thresh -50]
+
+Each argument after the score pairs a part name (as in <part-name>) with its stem. Give every
+stem of the set, accompaniment included: the alignment uses all of them, and a stem can only be
+caught holding another staff's audio if that staff's stem is there too.
+
+Written after a Cantai set in which every failure below happened at once (SKILL.md 9.1-9.3):
+
+  1. Files. Length, peak, clipped samples, checksum of the audio, first sound, level while
+     sounding. A silent stem, a stem that copies another, one entering late.
+  2. Missing singing. Cantai exports only what it has rendered so far, silence for the rest, with
+     no warning: whole runs of phrases vanish, starting and ending on a phrase's first syllable.
+     Every written note of 0.15 s or more is looked up in the stem; stretches of notes with no
+     sound are listed by bar. Under 0.5 s is usually the timing, not the stem (a short staccato
+     note at the edge of the alignment); look at anything longer.
+  3. Whose line each stem sings. The export plug-in gave every stem after the first the opening
+     (about 21 s, up to the first rest) of the staff exported before it, over sung notes: right
+     rhythm, plausible pitches, wrong part. Per stem and per chunk of bars, the share of
+     quarter-or-longer notes sung within half a semitone of each part's written line. A chunk
+     where the stem fits another part's line and not its own is flagged. Where two parts are
+     written identically the check cannot tell them apart, and says so.
+  4. Identical audio. Two stems that are the same audio (2 s windows correlating above 0.99)
+     where their parts are written differently: one holds the other's sound. The same audio
+     where the parts are written the same is expected (the same voice on the same notes).
+
+The score is played as Sibelius plays it: repeats and first/second endings unrolled (D.C., D.S.
+and codas are not followed; the script warns), tempo from <sound tempo>. It is lined up with the
+audio by chroma and dynamic time warping over the sum of all stems, so holds, fermatas and
+caesuras longer than written are absorbed (to about a beat, which is why check 3 uses notes a
+quarter or longer and check 2 allows half a second at each note's edge).
+
+Needs numpy and ffmpeg on the PATH.
+"""
+import sys, subprocess, argparse, hashlib, collections
+import xml.etree.ElementTree as ET
+import numpy as np
+
+SR = 22050
+HOP = 0.05
+STEP = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+
+
+# ----------------------------------------------------------------------------- score
+
+def play_order(measures):
+    """Measure indices in the order they are played: repeats and endings, nothing else."""
+    rep_start, order, i, passes = 0, [], 0, {}
+    n = len(measures)
+    warned = False
+    while i < n:
+        m = measures[i]
+        for bl in m.findall('barline'):
+            r = bl.find('repeat')
+            if r is not None and r.get('direction') == 'forward':
+                rep_start = i
+            if (bl.find('segno') is not None or bl.find('coda') is not None) and not warned:
+                warned = True
+        for d in m.iter('sound'):
+            if (d.get('dacapo') or d.get('dalsegno') or d.get('tocoda')) and not warned:
+                warned = True
+        ending = next((bl.find('ending') for bl in m.findall('barline')
+                       if bl.find('ending') is not None and bl.find('ending').get('type') == 'start'), None)
+        p = passes.get(rep_start, 1)
+        if ending is not None and str(p) not in (ending.get('number') or '1').replace(' ', '').split(','):
+            # skip this ending: jump past its stop
+            j = i
+            while j < n and not any(bl.find('ending') is not None and bl.find('ending').get('type') in ('stop', 'discontinue')
+                                    for bl in measures[j].findall('barline')):
+                j += 1
+            i = j + 1
+            continue
+        order.append(i)
+        back = next((bl.find('repeat') for bl in m.findall('barline')
+                     if bl.find('repeat') is not None and bl.find('repeat').get('direction') == 'backward'), None)
+        if back is not None:
+            times = int(back.get('times') or 2)
+            if p < times:
+                passes[rep_start] = p + 1
+                i = rep_start
+                continue
+            passes[rep_start] = 1
+        i += 1
+    if warned:
+        print('warning: the score has D.C., D.S. or a coda; only repeats and endings are followed')
+    return order
+
+
+def load_score(path):
+    root = ET.parse(path).getroot()
+    names = {sp.get('id'): (sp.findtext('part-name') or '').strip() for sp in root.iter('score-part')}
+    parts_el = root.findall('part')
+    order = play_order(parts_el[0].findall('measure'))
+    # quarter-note positions of every played bar, and the tempo map, from the first part
+    tempos, bar_q, q = [], [], 0.0
+    ms0 = parts_el[0].findall('measure')
+    div = 1
+    lens = []
+    for mi, m in enumerate(ms0):
+        t, mx = 0.0, 0.0
+        for e in m:
+            if e.tag == 'attributes' and e.find('divisions') is not None:
+                div = int(e.findtext('divisions'))
+            elif e.tag == 'backup':
+                t -= int(e.findtext('duration')) / div
+            elif e.tag == 'forward':
+                t += int(e.findtext('duration')) / div
+            elif e.tag == 'note':
+                if e.find('chord') is None and e.find('grace') is None:
+                    t += int(e.findtext('duration') or 0) / div
+            mx = max(mx, t)
+        lens.append(mx)
+    tempo_in = {}
+    div_ = 1
+    for mi, m in enumerate(ms0):
+        t = 0.0
+        for e in m:
+            if e.tag == 'attributes' and e.find('divisions') is not None:
+                div_ = int(e.findtext('divisions'))
+            elif e.tag == 'backup':
+                t -= int(e.findtext('duration')) / div_
+            elif e.tag == 'forward':
+                t += int(e.findtext('duration')) / div_
+            elif e.tag == 'note' and e.find('chord') is None and e.find('grace') is None:
+                t += int(e.findtext('duration') or 0) / div_
+            s = e if e.tag == 'sound' else (e.find('sound') if e.tag == 'direction' else None)
+            if s is not None and s.get('tempo'):
+                off = e.findtext('offset') if e.tag == 'direction' else None
+                tempo_in.setdefault(mi, []).append((t + (int(off) / div_ if off else 0.0), float(s.get('tempo'))))
+    seen = collections.Counter()
+    for mi in order:
+        seen[mi] += 1
+        bar_q.append((q, ms0[mi].get('number') + "'" * (seen[mi] - 1), mi))
+        for off, bpm in tempo_in.get(mi, []):
+            tempos.append((q + off, bpm))
+        q += lens[mi]
+    end_q = q
+    tempos.sort()
+    if not tempos or tempos[0][0] > 0:
+        tempos.insert(0, (0.0, tempos[0][1] if tempos else 120.0))
+
+    def q2s(x):
+        s, (b0, t0) = 0.0, tempos[0]
+        for b1, t1 in tempos[1:]:
+            if x <= b1:
+                break
+            s += (b1 - b0) * 60.0 / t0
+            b0, t0 = b1, t1
+        return s + (x - b0) * 60.0 / t0
+
+    start_q = {mi: [] for mi in range(len(ms0))}
+    for q0, num, mi in bar_q:
+        start_q[mi].append(q0)
+    notes = {}
+    for p in parts_el:
+        nm = names[p.get('id')]
+        out = []
+        div = 1
+        for mi, m in enumerate(p.findall('measure')):
+            t, last = 0.0, 0.0
+            evs = []
+            for e in m:
+                if e.tag == 'attributes' and e.find('divisions') is not None:
+                    div = int(e.findtext('divisions'))
+                elif e.tag == 'backup':
+                    t -= int(e.findtext('duration')) / div
+                elif e.tag == 'forward':
+                    t += int(e.findtext('duration')) / div
+                elif e.tag == 'note':
+                    if e.find('grace') is not None:
+                        continue
+                    d = int(e.findtext('duration') or 0) / div
+                    st = t - last if e.find('chord') is not None else t
+                    pt = e.find('pitch')
+                    tie_stop = any(x.get('type') == 'stop' for x in e.findall('tie'))
+                    if pt is not None:
+                        midi = 12 * (int(pt.findtext('octave')) + 1) + STEP[pt.findtext('step')] + int(float(pt.findtext('alter') or 0))
+                        evs.append((st, st + d, midi, tie_stop, e.find('chord') is not None))
+                    if e.find('chord') is None:
+                        last = d
+                        t += d
+            for k, q0 in enumerate(start_q.get(mi, [])):
+                lab = m.get('number') + ("'" * k)
+                for a, b, midi, ts, ch in evs:
+                    out.append((q2s(q0 + a), q2s(q0 + b), midi, ts, ch, lab))
+        out.sort()
+        notes[nm] = out
+    bars = [(q2s(q0), lab) for q0, lab, mi in bar_q]
+    return notes, bars, q2s(end_q)
+
+
+# ----------------------------------------------------------------------------- audio
+
+def decode(path, sr=SR, stereo=False):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path] + ([] if stereo else ['-ac', '1']) +
+                         ['-ar', str(sr), '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    x = np.frombuffer(raw, np.float32)
+    return x.reshape(-1, 2) if stereo else x
+
+
+def level_db(x, hop):
+    w = int(SR * hop)
+    n = len(x) // w
+    return 20 * np.log10(np.sqrt((x[:n * w].reshape(n, w).astype(np.float64) ** 2).mean(1)) + 1e-12)
+
+
+def chroma_audio(x):
+    N, hop = 4096, int(SR * HOP)
+    fr = np.lib.stride_tricks.sliding_window_view(np.pad(x, (N // 2, N // 2)), N)[::hop] * np.hanning(N)
+    X = np.abs(np.fft.rfft(fr, axis=1))
+    f = np.fft.rfftfreq(N, 1 / SR)
+    sel = (f > 55) & (f < 2000)
+    pcs = (np.round(12 * np.log2(f[sel] / 440)) + 9) % 12
+    A = np.stack([X[:, sel][:, pcs == k].sum(1) for k in range(12)], 1)
+    A = np.log1p(A)
+    return A / (np.linalg.norm(A, axis=1, keepdims=True) + 1e-9)
+
+
+def chroma_score(notes, n):
+    C = np.zeros((n, 12))
+    for ns in notes.values():
+        for a, b, midi, *_ in ns:
+            i0, i1 = int(a / HOP), min(n, int(b / HOP))
+            if i1 > i0:
+                C[i0:i1, midi % 12] += np.exp(-np.arange(i1 - i0) * HOP / 1.5)
+    return C / (np.linalg.norm(C, axis=1, keepdims=True) + 1e-9)
+
+
+def dtw_path(Cs, Ca):
+    """Score frames -> audio frames. Steps (1,1), (1,2), (2,1); start within 2 s, end free."""
+    cost = 1 - Cs @ Ca.T
+    cost[np.linalg.norm(Cs, axis=1) < 0.5] = 0.5
+    cost[:, np.linalg.norm(Ca, axis=1) < 0.5] = 0.5
+    n, m = cost.shape
+    INF = 1e18
+    D = np.full((n, m), INF)
+    P = np.zeros((n, m), np.int8)
+    D[0, :int(2 / HOP)] = cost[0, :int(2 / HOP)]
+    for i in range(1, n):
+        c = cost[i]
+        a = np.full(m, INF); a[1:] = D[i - 1, :-1]
+        b = np.full(m, INF); b[2:] = D[i - 1, :-2] + c[1:-1]
+        d = np.full(m, INF)
+        if i >= 2:
+            d[1:] = D[i - 2, :-1] + cost[i - 1, 1:]
+        st = np.vstack([a, b, d])
+        k = st.argmin(0)
+        D[i] = st[k, np.arange(m)] + c
+        P[i] = k
+    j, i = int(np.argmin(D[-1])), n - 1
+    path = [(i, j)]
+    while i > 0:
+        k = P[i, j]
+        i, j = (i - 1, j - 1) if k == 0 else ((i - 1, j - 2) if k == 1 else (i - 2, j - 1))
+        path.append((i, j))
+    path = np.array(path[::-1], float)
+    return lambda s: np.interp(np.asarray(s) / HOP, path[:, 0], path[:, 1]) * HOP
+
+
+def f0(x, a, b):
+    s = x[int(a * SR):int(b * SR)][:4096]
+    if len(s) < 2048 or np.sqrt((s ** 2).mean()) < 1e-3:
+        return None
+    S = np.abs(np.fft.rfft(s * np.hanning(len(s)), 8 * len(s)))
+    f = np.fft.rfftfreq(8 * len(s), 1 / SR)
+    h = S.copy()
+    for k in (2, 3):                      # harmonic product spectrum: no octave errors
+        h[:len(S) // k] *= S[::k][:len(S) // k]
+    k = np.argmax(h * ((f > 60) & (f < 700)))
+    return 12 * np.log2(f[k] / 440) + 69
+
+
+def fmt(t):
+    return f'{int(t // 60)}:{t % 60:04.1f}'
+
+
+# ----------------------------------------------------------------------------- main
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('score')
+    ap.add_argument('pairs', nargs='+', help='"Part name=stem file"')
+    ap.add_argument('--thresh', type=float, default=-50.0, help='dBFS; quieter counts as silent')
+    ap.add_argument('--chunk', type=int, default=4, help='bars per chunk for the whose-line check')
+    ap.add_argument('--out', help='also write the report here')
+    a = ap.parse_args()
+    lines = []
+
+    def say(s=''):
+        print(s)
+        lines.append(s)
+
+    notes, bars, end_s = load_score(a.score)
+    pairs = [p.split('=', 1) for p in a.pairs]
+    for nm, _ in pairs:
+        if nm not in notes:
+            sys.exit(f'no part named {nm!r}; the score has {list(notes)}')
+    say(f'Stem audit: {a.score}')
+    say(f'{len(bars)} bars as played; {fmt(end_s)} at the written tempo')
+
+    # 1. files
+    say('\n1. Files')
+    X = {}
+    for nm, path in pairs:
+        st = decode(path, stereo=True)
+        x = st.mean(1)
+        X[nm] = x
+        db = level_db(x, 0.05)
+        snd = db > a.thresh
+        pk = float(np.abs(st).max())
+        clip = int((np.abs(st) >= 0.999).sum())
+        md5 = hashlib.md5(st.tobytes()).hexdigest()[:8]
+        first = float(np.argmax(snd) * 0.05) if snd.any() else None
+        med = float(np.median(db[snd])) if snd.any() else None
+        say(f'   {nm:12} {len(x) / SR:7.2f} s  peak {20 * np.log10(pk + 1e-12):6.1f} dB  clipped {clip:5d}  '
+            f'audio md5 {md5}  first sound {fmt(first) if first is not None else "never"}  '
+            f'level while sounding {med:6.1f} dB' if med is not None else f'   {nm:12} SILENT')
+    lens = {nm: len(x) for nm, x in X.items()}
+    if len(set(lens.values())) > 1:
+        say('   <- the stems differ in length: exported from different takes or ranges?')
+    md5s = collections.Counter(hashlib.md5(x.tobytes()).hexdigest() for x in X.values())
+    if any(v > 1 for v in md5s.values()):
+        say('   <- two stems are the same audio, sample for sample')
+
+    # alignment on the sum of all stems
+    n = min(lens.values())
+    mix = sum(x[:n] for x in X.values())
+    Ca = chroma_audio(mix)
+    Cs = chroma_score(notes, int(end_s / HOP) + int(4 / HOP))
+    to_audio = dtw_path(Cs, Ca)
+    bar_audio = [(float(to_audio(s)), lab) for s, lab in bars]
+
+    def bar_at(t):
+        cur = bar_audio[0][1]
+        for s, lab in bar_audio:
+            if s <= t + 1e-6:
+                cur = lab
+        return cur
+
+    # 2. missing singing
+    say('\n2. Written notes with no sound in the stem: stretches of 0.5 s or more that are silent throughout')
+    found2 = {}
+    for nm, _ in pairs:
+        env = level_db(X[nm], HOP) > a.thresh
+        miss = []
+        tot = 0.0
+        for s0, s1, midi, tie_stop, chord, lab in notes[nm]:
+            if chord:
+                continue
+            t0, t1 = float(to_audio(s0)), float(to_audio(s1))
+            if t1 - t0 < 0.15:
+                continue
+            tot += t1 - t0
+            fr = env[int((t0 + 0.1) / HOP):max(int((t0 + 0.1) / HOP) + 1, int((t1 - 0.05) / HOP))]
+            if len(fr) and fr.mean() < 0.2:
+                miss.append([t0, t1, lab, lab])
+        merged = []
+        for m in miss:
+            if merged and m[0] - merged[-1][1] < 1.5:
+                merged[-1][1], merged[-1][3] = m[1], m[3]
+            else:
+                merged.append(m)
+        # a real dropout is silence across the whole stretch; a stretch the alignment put a little
+        # off, or quiet notes near the threshold, still has sound in it
+        def silent_share(t0, t1):
+            fr = env[int(t0 / HOP):max(int(t0 / HOP) + 1, int(t1 / HOP))]
+            return 1 - fr.mean() if len(fr) else 0
+        long_ = [m for m in merged if m[1] - m[0] >= 0.5 and silent_share(m[0], m[1]) > 0.9]
+        short = len(merged) - len(long_)       # short, or with sound in it: timing, not a dropout
+        found2[nm] = (long_, short)
+    # the same stretch silent in every stem that has notes there is a hold or pause the alignment
+    # placed wrongly (a fermata released early), not a dropout: Cantai drops one staff at a time
+    envs = {nm: level_db(X[nm], HOP) > a.thresh for nm in found2}
+    chordal = {nm for nm, ns in notes.items() if sum(1 for n_ in ns if n_[4]) > 0.05 * max(1, len(ns))}
+
+    def everyone(t0, t1, nm):
+        others = [o for o in found2 if o != nm and o not in chordal]   # voices, not the accompaniment
+        quiet = [1 - envs[o][int(t0 / HOP):max(int(t0 / HOP) + 1, int(t1 / HOP))].mean() > 0.7 for o in others]   # mostly silent: tails ring on
+        return bool(others) and all(quiet)
+    for nm, _ in pairs:
+        long_, short = found2[nm]
+        real = [m for m in long_ if not everyone(m[0], m[1], nm)]
+        shared = [m for m in long_ if everyone(m[0], m[1], nm)]
+        verdict = f'{len(real)} silent stretch(es)' if real else 'none silent'
+        extra = []
+        if short:
+            extra.append(f'{short} short or partly sounding: the alignment, not the stem')
+        if shared:
+            extra.append(f'{len(shared)} silent in every stem at once, bars ' +
+                         ', '.join(f'{m[2]}-{m[3]}' for m in shared) + ': a hold the alignment misplaced; check by ear')
+        say(f'   {nm}: {verdict}' + (f' ({"; ".join(extra)})' if extra else ''))
+        for t0, t1, l0, l1 in real:
+            say(f'      MISSING {fmt(t0)}-{fmt(t1)}  bars {l0}-{l1}  ({t1 - t0:.1f} s)')
+
+    # 3. whose line
+    say(f'\n3. Whose written line each stem sings, per {a.chunk} bars (share of notes a quarter or longer, '
+        'within half a semitone)')
+    long_notes = {nm: [(s0, s1, midi, lab) for s0, s1, midi, ts, ch, lab in ns if not ch and not ts]
+                  for nm, ns in notes.items()}
+    labs = [lab for _, lab in bars]
+    chunks = [labs[i:i + a.chunk] for i in range(0, len(labs), a.chunk)]
+    sung_parts = [nm for nm, _ in pairs]
+    X22 = X
+    flagged = 0
+    for nm, _ in pairs:
+        if nm in chordal:
+            say(f'   {nm}: plays chords, not checked (a pitch tracker reads its top note, often the melody)')
+            continue
+        bad = []
+        for ch in chunks:
+            chs = set(ch)
+            share = {}
+            written = {}
+            for pn in [p_ for p_ in sung_parts if p_ not in chordal]:
+                ns = [(s0, s1, midi) for s0, s1, midi, lab in long_notes[pn] if lab in chs]
+                written[pn] = tuple(midi for _, _, midi in ns)
+                hits, cnt = 0, 0
+                for s0, s1, midi in ns:
+                    t0, t1 = float(to_audio(s0)), float(to_audio(s1))
+                    if t1 - t0 < 0.25:            # quarter-ish or longer: steady enough to read
+                        continue
+                    v = f0(X22[nm], t0 + 0.08, t1 - 0.04)
+                    if v is None:
+                        continue
+                    cnt += 1
+                    hits += abs(v - midi) < 0.5
+                share[pn] = (hits / cnt, cnt) if cnt >= 3 else None
+            own = share.get(nm)
+            if own is None:
+                continue
+            best = max((p for p in share if share[p] is not None), key=lambda p: share[p][0])
+            if own[0] < 0.5 and best != nm and share[best][0] >= 0.75 and written[best] != written[nm]:
+                bad.append((ch[0], ch[-1], best, own[0], share[best][0]))
+            elif own[0] < 0.3 and own[1] >= 6:        # six notes or more: fewer is too few to judge
+                # nobody's line: audio from a staff not in this set (the first stem the plug-in
+                # exported sang a basses' line), or a wrong render
+                bad.append((ch[0], ch[-1], None, own[0], 0))
+        if bad:
+            flagged += 1
+            say(f'   {nm}: sings another part\'s line in {len(bad)} chunk(s)')
+            for l0, l1, other, o, b in bad:
+                say(f'      bars {l0}-{l1}: {100 * o:.0f}% on its own line, ' +
+                    (f'{100 * b:.0f}% on {other}\'s' if other else 'and on no other part\'s either'))
+        else:
+            say(f'   {nm}: its own line throughout (where its line differs from every other part\'s)')
+
+    # 4. identical audio
+    say('\n4. The same audio in two stems (2 s windows correlating above 0.99)')
+    names_ = [nm for nm, _ in pairs]
+    w = 2 * SR
+    found = False
+    for i in range(len(names_)):
+        for j in range(i + 1, len(names_)):
+            p, q = names_[i], names_[j]
+            x, y = X[p], X[q]
+            m = min(len(x), len(y)) // w
+            same_diff, same_same = [], 0
+            for k in range(m):
+                s = slice(k * w, (k + 1) * w)
+                if np.sqrt((x[s] ** 2).mean()) < 1e-4 or np.sqrt((y[s] ** 2).mean()) < 1e-4:
+                    continue
+                if np.corrcoef(x[s], y[s])[0, 1] > 0.99:
+                    t0 = k * 2.0
+                    # are the two parts written the same here?
+                    wp = [(round(s0, 2), midi) for s0, s1, midi, *_ in notes[p] if t0 - 1 <= to_audio(s0) < t0 + 3]
+                    wq = [(round(s0, 2), midi) for s0, s1, midi, *_ in notes[q] if t0 - 1 <= to_audio(s0) < t0 + 3]
+                    if sorted(wp) == sorted(wq):
+                        same_same += 1
+                    else:
+                        same_diff.append(t0)
+            if same_diff:
+                found = True
+                say(f'   {p} / {q}: SAME AUDIO where the parts are written differently, {len(same_diff)} window(s), '
+                    f'{fmt(same_diff[0])}-{fmt(same_diff[-1] + 2)} (bars {bar_at(same_diff[0])}-{bar_at(same_diff[-1] + 2)})')
+            elif same_same:
+                say(f'   {p} / {q}: same audio in {same_same} window(s), all where the parts are written the same (expected)')
+    if not found:
+        say('   no stem holds another part\'s audio')
+
+    say('\nVerdict: re-export by hand (File > Export > Audio, one staff at a time, after every Cantai voice\'s halo')
+    say('and "Rendering..." dot have gone) any stem with a MISSING stretch of 0.5 s or more, one flagged in 3,')
+    say('or one holding SAME AUDIO in 4. A stem flagged only in 3 or 4 may also be the source for another\'s leak:')
+    say('fix the flagged one, then run this again.')
+    if a.out:
+        open(a.out, 'w').write('\n'.join(lines) + '\n')
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### verify.py
+
+```python
+#!/usr/bin/env python3
+"""Run every Step 5 check on a finished MusicXML and print one line per check.
+
+    python3 verify.py score.musicxml [--pdf score.pdf] [--lanes "0a=Tenor,0b=Lead,1a=Baritone,1b=Bass"]
+                      [--original before.musicxml] [--render out_dir] [--xsd schema_dir]
+
+Every check ends as one of
+    PASS      checked, nothing found
+    FAIL      checked, something to fix (details follow the table)
+    WARN      checked, something to look at
+    MANUAL    needs a person; the line says what to look at
+    N/A       does not apply to this file (the line says why)
+    NOT RUN   could not run; the line says what input is missing
+
+Paste the table into the handback as printed. A check that did not run is
+reported as NOT RUN, never left out: an empty result and a check nobody ran look
+the same in the output, and that is how check 10 was once skipped.
+
+--pdf enables the checks that compare against the engraving (6, 10, 11, 12, 17).
+--original is the file this one was made from: the score before a revoicing (check 16),
+or the open score a closed score was collapsed from, with its printed words, not a Cantai
+learning file, which re-sings melismas (check 14: lines under notes whose words moved to
+the other line).
+--lanes says which part each lyric line of the PDF belongs to: `<staff>a` is
+the line above that staff of a system, `<staff>b` the line below, staves counted
+from 0 within a system. Default when the PDF has one staff per part: `<k>b` is
+part k. A closed score (two parts to a staff) needs --lanes.
+
+Needs lxml; pdfplumber with --pdf; verovio and cairosvg with --render.
+Exit status 1 if any check FAILs.
+"""
+import sys, os, re, argparse, subprocess, difflib, statistics
+from collections import defaultdict
+from fractions import Fraction as F
+import xml.etree.ElementTree as ET
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+SCHEMA = 'https://raw.githubusercontent.com/w3c/musicxml/v4.0/schema/'
+MUSIC_FONTS = ('Opus', 'Helsinki', 'Maestro', 'Sonata', 'Petrucci', 'Emmentaler', 'Bravura',
+               'Leland', 'November', 'Leipzig', 'Finale', 'Engraver')
+STEPS = 'CDEFGAB'
+
+results = []          # (number, name, status, summary)
+details = defaultdict(list)
+
+
+def report(n, name, status, summary, lines=()):
+    results.append((n, name, status, summary))
+    details[n].extend(lines)
+
+
+# ----------------------------------------------------------------- the MusicXML
+
+def load(path):
+    root = ET.parse(path).getroot()
+    names = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in root.iter('score-part')}
+    return root, names
+
+
+def notes_of(part):
+    """[(measure number, note element, voice, onset in quarters from the bar line)] in file order."""
+    out, div = [], 1
+    for m in part.findall('measure'):
+        pos = {}
+        t = F(0)
+        for e in m:
+            if e.tag == 'attributes' and e.find('divisions') is not None:
+                div = int(e.findtext('divisions'))
+            elif e.tag == 'backup':
+                t -= F(int(e.findtext('duration')), div)
+            elif e.tag == 'forward':
+                t += F(int(e.findtext('duration')), div)
+            elif e.tag == 'note':
+                d = F(int(e.findtext('duration') or 0), div)
+                if e.find('chord') is not None:
+                    out.append((m.get('number'), e, e.findtext('voice') or '1', out[-1][3] if out else t))
+                    continue
+                out.append((m.get('number'), e, e.findtext('voice') or '1', t))
+                if e.find('grace') is None:
+                    t += d
+    return out
+
+
+def pitch_midi(p):
+    return 12 * (int(p.findtext('octave')) + 1) + [0, 2, 4, 5, 7, 9, 11][STEPS.index(p.findtext('step'))] + int(float(p.findtext('alter') or 0))
+
+
+def pname(midi):
+    return ['C', 'C#', 'D', 'Eb', 'E', 'F', 'F#', 'G', 'Ab', 'A', 'Bb', 'B'][midi % 12] + str(midi // 12 - 1)
+
+
+# ----------------------------------------------------------------- checks on the file alone
+
+def check_xsd(path, xsd_dir):
+    try:
+        from lxml import etree
+    except ImportError:
+        return report(1, 'XSD', 'NOT RUN', 'lxml not installed')
+    xsd_dir = xsd_dir or os.path.join(HERE, '.musicxml-schema')
+    os.makedirs(xsd_dir, exist_ok=True)
+    main = os.path.join(xsd_dir, 'musicxml.xsd')
+    try:
+        for f in ('musicxml.xsd', 'xml.xsd', 'xlink.xsd'):
+            dst = os.path.join(xsd_dir, f)
+            if not os.path.exists(dst):
+                import urllib.request
+                urllib.request.urlretrieve(SCHEMA + f, dst)
+        s = open(main).read()
+        s2 = re.sub(r'schemaLocation="[^"]*/(xml|xlink)\.xsd"', r'schemaLocation="\1.xsd"', s)
+        if s2 != s: open(main, 'w').write(s2)
+        schema = etree.XMLSchema(etree.parse(main))
+    except Exception as ex:
+        return report(1, 'XSD', 'NOT RUN', f'schema unavailable ({ex.__class__.__name__}); pass --xsd DIR with musicxml.xsd, xml.xsd, xlink.xsd')
+    ok = schema.validate(etree.parse(path))
+    report(1, 'XSD', 'PASS' if ok else 'FAIL', 'valid MusicXML 4.0' if ok else f'{len(schema.error_log)} schema error(s)',
+           [str(e) for e in list(schema.error_log)[:10]])
+
+
+def check_bars(root, names):
+    bad = []
+    for part in root.findall('part'):
+        div, ts = 1, None
+        for m in part.findall('measure'):
+            for a in m.findall('attributes'):
+                if a.find('divisions') is not None: div = int(a.findtext('divisions'))
+                if a.find('time') is not None:
+                    ts = (int(a.find('time').findtext('beats')), int(a.find('time').findtext('beat-type')))
+            pos = mx = F(0)
+            for e in m:
+                if e.tag == 'note' and e.find('chord') is None and e.find('grace') is None:
+                    pos += F(int(e.findtext('duration')), div)
+                elif e.tag == 'backup': pos -= F(int(e.findtext('duration')), div)
+                elif e.tag == 'forward': pos += F(int(e.findtext('duration')), div)
+                mx = max(mx, pos)
+            if ts and m.get('implicit') != 'yes' and mx != F(ts[0] * 4, ts[1]):
+                bad.append(f"{names[part.get('id')]} bar {m.get('number')}: {mx} quarters in {ts[0]}/{ts[1]}")
+    report(2, 'Bar lengths', 'FAIL' if bad else 'PASS', f'{len(bad)} bar(s) off' if bad else 'every bar fills its meter', bad)
+
+
+RANGES = [  # (name keyword, lowest, highest) sounding, generous
+    ('sop', 'A3', 'C6'), ('alt', 'E3', 'F5'), ('ten', 'B2', 'C5'), ('lead', 'A2', 'A4'),
+    ('bari', 'F2', 'F4'), ('bass', 'C2', 'E4')]
+
+
+def midi_of(name):
+    m = re.fullmatch(r'([A-G])(b|#)?(-?\d)', name)
+    return 12 * (int(m.group(3)) + 1) + [0, 2, 4, 5, 7, 9, 11][STEPS.index(m.group(1))] + {'b': -1, '#': 1, None: 0}[m.group(2)]
+
+
+def check_ranges(root, names):
+    lines, status = [], 'PASS'
+    for part in root.findall('part'):
+        ps = [pitch_midi(n.find('pitch')) for _, n, _, _ in notes_of(part) if n.find('pitch') is not None]
+        if not ps: continue
+        nm = names[part.get('id')]
+        lo, hi = min(ps), max(ps)
+        rule = next((r for r in RANGES if r[0] in nm.lower()), None)
+        verdict = ''
+        if rule:
+            a, b = midi_of(rule[1]), midi_of(rule[2])
+            if lo < a - 11 or hi > b + 11:
+                verdict = '  <- an octave outside the usual range: octave/clef error?'; status = 'FAIL'
+            elif lo < a or hi > b:
+                verdict = f'  <- outside {rule[1]}-{rule[2]}'; status = 'WARN' if status == 'PASS' else status
+        lines.append(f'{nm}: {pname(lo)}-{pname(hi)}{verdict}')
+    report(3, 'Ranges', status, '; '.join(l.split('  <-')[0] for l in lines), [l for l in lines if '<-' in l])
+
+
+def check_qc(path):
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'musicxml_qc.py'), path], capture_output=True, text=True)
+    cats = [l.strip() for l in r.stdout.splitlines() if re.match(r'\s+\S.*: \d+$', l)]
+    bad = [c for c in cats if not c.endswith(': 0')]
+    report(4, 'musicxml_qc.py', 'FAIL' if bad else 'PASS', '; '.join(bad) if bad else 'clean',
+           [l for l in r.stdout.splitlines()[2:] if l.strip()] if bad else [])
+
+
+def check_render(path, out):
+    if not out:
+        return report(5, 'Render vs PDF', 'MANUAL', 'pass --render DIR to write page images, then compare them with the PDF page by page')
+    try:
+        import verovio, cairosvg
+    except ImportError:
+        return report(5, 'Render vs PDF', 'NOT RUN', 'verovio / cairosvg not installed')
+    os.makedirs(out, exist_ok=True)
+    tk = verovio.toolkit()
+    tk.setOptions({'pageWidth': 2159, 'pageHeight': 2794, 'unit': 8, 'breaks': 'auto', 'adjustPageHeight': True})
+    tk.loadFile(path)
+    for i in range(1, tk.getPageCount() + 1):
+        cairosvg.svg2png(bytestring=tk.renderToSVG(i).encode(), write_to=os.path.join(out, f'page{i}.png'),
+                         output_width=1400, background_color='white')
+    report(5, 'Render vs PDF', 'MANUAL', f'{tk.getPageCount()} page(s) in {out}/ - compare with the PDF, page by page')
+
+
+def check_ties(root, names):
+    bad = []
+    for part in root.findall('part'):
+        # events per voice, a chord being one event: a tie on any chord member must meet the same
+        # pitch, carrying the stop, in the voice's next event (a tie on the upper note of a chord was
+        # once compared with the next chord's lowest note)
+        byv = defaultdict(list)
+        for mn, n, v, _ in notes_of(part):
+            if n.find('chord') is not None and byv[v]:
+                byv[v][-1][1].append(n)
+            else:
+                byv[v].append((mn, [n]))
+        def ties_of(ns, kind):
+            return {pitch_midi(x.find('pitch')) for x in ns if x.find('pitch') is not None
+                    and kind in {t.get('type') for t in x.findall('tie')}}
+        # endings: a tie into a 2nd (3rd ...) ending comes from the bar before the 1st ending, not from the bar
+        # printed just before it
+        order = [m.get('number') for m in part.findall('measure')]
+        ending_at = {}
+        for m in part.findall('measure'):
+            for e in m.iter('ending'):
+                if e.get('type') == 'start': ending_at[m.get('number')] = e.get('number')
+        firsts = [mn_ for mn_, no in ending_at.items() if no.split(',')[0].strip() == '1']
+        before_first = order[order.index(firsts[0]) - 1] if firsts and order.index(firsts[0]) > 0 else None
+        for v, seq in byv.items():
+            for i, (mn, ns) in enumerate(seq):
+                for p in ties_of(ns, 'start'):
+                    nxt = seq[i + 1][1] if i + 1 < len(seq) else []
+                    if p not in ties_of(nxt, 'stop'):
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie start with no matching stop")
+                for p in ties_of(ns, 'stop'):
+                    prv = seq[i - 1][1] if i else []
+                    first_in_bar = not i or seq[i - 1][0] != mn
+                    if first_in_bar and ending_at.get(mn, '1').split(',')[0].strip() != '1' and before_first:
+                        from_ = [x for (mm, x) in seq if mm == before_first]
+                        if from_ and p in ties_of(from_[-1], 'start'): continue
+                    if p not in ties_of(prv, 'start'):
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: tie stop with no start")
+        # slurs: each start closed by the next stop of the same number, in the same voice. On a shared
+        # staff a slur that starts in voice 2 and ends on a note merged into a voice-1 chord is closed
+        # by nothing: the chord's one stop closes the upper part's slur, and the lower part's is drawn
+        # on to whatever stop comes next, bars later (SKILL.md 7.2)
+        open_ = {}
+        for mn, n, v, _ in notes_of(part):
+            for sl in n.iter('slur'):
+                num, typ = sl.get('number') or '1', sl.get('type')
+                if typ == 'start':
+                    if num in open_:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}: slur {num} (voice {open_[num][1]}) "
+                                   f"never closed before another starts in bar {mn}")
+                    open_[num] = (mn, v)
+                elif typ == 'stop':
+                    if num not in open_:
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} stop with no start")
+                    elif open_[num][1] != v:
+                        bad.append(f"{names[part.get('id')]} bar {open_[num][0]}-{mn}: slur {num} starts in voice "
+                                   f"{open_[num][1]} and stops in voice {v}")
+                    open_.pop(num, None)
+        for num, (mn, v) in open_.items():
+            bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: slur {num} never closed")
+    report(8, 'Ties and slurs pair up', 'FAIL' if bad else 'PASS', f'{len(bad)} unpaired' if bad else
+           'every tie and slur pairs', bad)
+
+
+def check_words(root, names, out_dir):
+    bad, words = [], []
+    for part in root.findall('part'):
+        cur = {}
+        for mn, n, v, _ in notes_of(part):
+            for l in n.findall('lyric'):
+                k = (v, l.get('number', '1'))
+                syl, txt = l.findtext('syllabic') or 'single', l.findtext('text') or ''
+                if syl in ('single', 'begin'):
+                    if k in cur: bad.append(f"{names[part.get('id')]} bar {mn}: word {cur[k][1]!r} never ended")
+                    cur[k] = (mn, txt)
+                elif k not in cur:
+                    bad.append(f"{names[part.get('id')]} bar {mn}: {syl} syllable {txt!r} with no word start")
+                    cur[k] = (mn, txt)
+                else:
+                    cur[k] = (cur[k][0], cur[k][1] + txt)
+                if syl in ('single', 'end') and k in cur:
+                    words.append(f"{names[part.get('id')]} bar {cur[k][0]}: {cur[k][1]}")
+                    del cur[k]
+        for k, (mn, w) in cur.items():
+            bad.append(f"{names[part.get('id')]} bar {mn}: word {w!r} never ended")
+    fn = os.path.join(out_dir, 'words.txt')
+    open(fn, 'w').write('\n'.join(words) + '\n')
+    if bad:
+        report(9, 'Words reassemble', 'FAIL', f'{len(bad)} broken hyphen chain(s)', bad)
+    else:
+        report(9, 'Words reassemble', 'MANUAL', f'hyphen chains all close; read the {len(words)} words in {fn} for typos')
+
+
+def sung_positions(root, only=None):
+    """{(bar, onset, midi)} where a note of `root` starts a syllable: which notes of a derived score
+    (a closed score, a revoicing) sing a syllable of their own, whatever line prints it. `only`: the
+    part names to take, those sharing the staff being checked (a soloist singing the same pitch at
+    the same moment is not the tenors' word)."""
+    out = set()
+    names = {sp.get('id'): (sp.findtext('part-name') or '').strip() for sp in root.iter('score-part')}
+    for part in root.findall('part'):
+        if only is not None and names.get(part.get('id')) not in only:
+            continue
+        for mn, n, v, t in notes_of(part):
+            if n.find('pitch') is not None and any(l.findtext('text') for l in n.findall('lyric')):
+                out.add((mn, t, pitch_midi(n.find('pitch'))))
+    return out
+
+
+def parts_on(staff_name, source_names):
+    """The source parts a derived staff carries, by name ("Tenor 1\nTenor 2", "Tenor 1 + Tenor 2");
+    all of them when the name does not say."""
+    got = {n for n in source_names if n and re.search(r'(^|[\n+/&,])\s*' + re.escape(n) + r'\s*($|[\n+/&,])', staff_name)}
+    return got or set(source_names)
+
+
+def lyric_line_runs(part, sung=frozenset()):
+    """Each lyric line as an engraver draws it: from a syllable with <extend/> on to the next note in
+    the same voice with a syllable on that line, over every syllable-less note between, rests or no
+    (SKILL.md 7.6). A line is wrong when a note under it comes after a printed rest, or sings a
+    syllable of its own (`sung`, from the source) that is printed on the other line (7.4).
+    Returns [(bar, voice, line, text, bar it runs to, why)]."""
+    byv = defaultdict(list)
+    for mn, n, v, t in notes_of(part):
+        if n.find('chord') is None and n.find('grace') is None:
+            byv[v].append((mn, n, t))
+    out = []
+    for v, seq in byv.items():
+        for i, (mn, n, _) in enumerate(seq):
+            for l in n.findall('lyric'):
+                e = l.find('extend')
+                if e is None or e.get('type') == 'stop' or not l.findtext('text'):
+                    continue
+                num = l.get('number') or '1'
+                rest, last, why = False, None, ''
+                for mn2, n2, t2 in seq[i + 1:]:
+                    if any((l2.get('number') or '1') == num for l2 in n2.findall('lyric')):
+                        break                                   # the next syllable on the line ends it
+                    if n2.find('rest') is not None:
+                        rest = rest or n2.get('print-object') != 'no'
+                        continue
+                    p2 = n2.find('pitch')
+                    held = any(x.get('type') == 'stop' for x in n2.findall('tie'))   # a tied note begins no word
+                    own = p2 is not None and not held and (mn2, t2, pitch_midi(p2)) in sung
+                    if rest or own:
+                        last, why = mn2, 'past a rest' if rest else 'under notes that sing their own words'
+                if last is not None:
+                    out.append((mn, v, num, l.findtext('text'), last, why))
+    return out
+
+
+def check_extend_runs(root, names, original=None):
+    """14: an <extend/> needs a following note in the same voice for the line to run under, and the
+    line must stop where the melisma does (SKILL.md 7.6)."""
+    bad = []
+    oroot, onames = load(original) if original else (None, {})
+    for part in root.findall('part'):
+        sung = sung_positions(oroot, parts_on(names[part.get('id')], onames.values())) if original else frozenset()
+        byv = defaultdict(list)
+        for mn, n, v, _ in notes_of(part):
+            if n.find('chord') is None: byv[v].append((mn, n))
+        for v, seq in byv.items():
+            for i, (mn, n) in enumerate(seq):
+                for l in n.findall('lyric'):
+                    e = l.find('extend')
+                    if e is None or e.get('type') == 'stop': continue
+                    nxt = seq[i + 1][1] if i + 1 < len(seq) else None
+                    num = l.get('number') or '1'
+                    # the next note ends the line if it sings a syllable on this line; a lyric with no text (only
+                    # <extend type="stop"/>, where a line's extender ends) is not a syllable
+                    own = nxt is not None and any((l2.get('number') or '1') == num and l2.findtext('text')
+                                                  for l2 in nxt.findall('lyric'))
+                    if nxt is None or nxt.find('rest') is not None or own:
+                        bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} extends over no note")
+                    if (l.findtext('syllabic') or 'single') in ('begin', 'middle'):
+                        # mid-word: a line over a melisma of moving notes, a hyphen over a tie-only hold (2.5)
+                        held = []
+                        for _, n2 in seq[i + 1:]:
+                            if n2.find('rest') is not None or n2.find('lyric') is not None: break
+                            held.append(n2)
+                        if held and all(any(t.get('type') == 'stop' for t in n2.findall('tie')) for n2 in held):
+                            bad.append(f"{names[part.get('id')]} voice {v} bar {mn}: {l.findtext('text')!r} is mid-word "
+                                       f"and held only by a tie; it prints a hyphen, and an extender would replace it")
+        for mn, v, num, text, last, why in lyric_line_runs(part, sung):
+            bad.append(f"{names[part.get('id')]} voice {v} line {num}: the line from {text!r} (bar {mn}) runs on "
+                       f"to bar {last}, {why}")
+    report(14, 'No extender outruns its voice', 'FAIL' if bad else 'PASS', f'{len(bad)} problem(s)' if bad else
+           'every extender has notes under it and stops where its melisma does' +
+           ('' if original else ' (lines under notes whose words moved to the other line need --original)'), bad)
+
+
+def multi_voice_staves(root):
+    for part in root.findall('part'):
+        vs = {n.findtext('voice') for n in part.iter('note') if n.find('rest') is None}
+        if len(vs) > 1: return True
+    return False
+
+
+def check_shared_staff(root):
+    if not multi_voice_staves(root):
+        return report(13, 'Shared-staff lyric reads', 'N/A', 'no staff carries two voices')
+    report(13, 'Shared-staff lyric reads', 'MANUAL',
+           'staves carry two voices: rebuild each singer\'s read (line 2 where it has its own note, line 1 where shared) '
+           'and compare with that voice\'s syllables (SKILL.md 7.4)')
+
+
+def check_layout(path, root):
+    if root.find('.//print[@new-system="yes"]') is None and root.find('.//print[@new-page="yes"]') is None:
+        return report(15, 'Lyric collisions', 'N/A', 'no print layout in the file (no system or page breaks)')
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'lyric_collisions.py'), path], capture_output=True, text=True)
+    m = re.search(r'(\d+) overlapping', r.stdout)
+    n = int(m.group(1)) if m else -1
+    report(15, 'Lyric collisions', 'PASS' if n == 0 else ('FAIL' if n > 0 else 'NOT RUN'),
+           f'{n} overlapping pair(s)' if n >= 0 else 'lyric_collisions.py failed', r.stdout.splitlines()[1:21])
+
+
+def check_original(root, names, original):
+    if not original:
+        return report(16, 'Revoicing vs original', 'N/A', 'no --original given (not a revoicing)')
+    oroot, onames = load(original)
+    def grid(r, nm):
+        g = defaultdict(set)
+        for part in r.findall('part'):
+            for mn, n, v, t in notes_of(part):
+                if n.find('pitch') is not None:
+                    g[(mn, t)].add(pitch_midi(n.find('pitch')) % 12)
+        return g
+    a, b = grid(oroot, onames), grid(root, names)
+    diff = sorted({k[0] for k in set(a) | set(b) if a.get(k) != b.get(k)}, key=lambda x: int(re.sub(r'\D', '', x) or 0))
+    report(16, 'Revoicing vs original', 'MANUAL' if diff else 'PASS',
+           f'pitch classes differ in {len(diff)} bar(s); each must be on the instruction list' if diff else 'same pitch classes at every onset',
+           [f'bars: {", ".join(diff)}'] if diff else [])
+
+
+# ----------------------------------------------------------------- checks against the PDF
+
+def staves_of(page):
+    hs = sorted((l for l in page.lines if abs(l['y0'] - l['y1']) < 0.6 and (l['x1'] - l['x0']) > 150), key=lambda l: l['top'])
+    tops = []
+    for l in hs:
+        if not tops or abs(l['top'] - tops[-1][0]) > 0.3: tops.append((l['top'], l['x0'], l['x1']))
+    st, i = [], 0
+    while i <= len(tops) - 5:
+        w = [t[0] for t in tops[i:i + 5]]
+        g = [w[j + 1] - w[j] for j in range(4)]
+        if max(g) - min(g) < 0.2 and g[0] > 1.0:
+            st.append({'lines': w, 'x0': tops[i][1], 'x1': tops[i][2]}); i += 5
+        else:
+            i += 1
+    return st
+
+
+def systems_of(page, st):
+    """group staves into systems by the vertical line that joins them at the left edge"""
+    if not st: return []
+    sh = st[0]['lines'][4] - st[0]['lines'][0]
+    joins = set()
+    for l in page.lines:
+        if abs(l['x0'] - l['x1']) > 0.8 or l['bottom'] - l['top'] < sh * 1.6: continue
+        idx = tuple(k for k, s in enumerate(st) if l['top'] - 1 <= s['lines'][0] and s['lines'][4] <= l['bottom'] + 1)
+        if len(idx) >= 2: joins.add(idx)
+    groups, used = [], set()
+    for idx in sorted(joins, key=len, reverse=True):
+        if used & set(idx): continue
+        groups.append(list(idx)); used |= set(idx)
+    for k in range(len(st)):
+        if k not in used: groups.append([k])
+    groups.sort()
+    return [[st[k] for k in g] for g in groups]
+
+
+def is_ledger(l, st, p):
+    """a short line on a staff's ledger grid with a notehead over it"""
+    if not st or l['x1'] - l['x0'] > 20: return False
+    s = min(st, key=lambda s: abs((s['lines'][0] + s['lines'][4]) / 2 - l['top']))
+    sp = (s['lines'][4] - s['lines'][0]) / 4
+    edge = s['lines'][0] if l['top'] < s['lines'][0] else s['lines'][4]
+    k = abs(l['top'] - edge) / sp
+    if abs(k - round(k)) > 0.15 or round(k) < 1 or round(k) > 6: return False
+    mid = lambda t: (t['lines'][0] + t['lines'][4]) / 2
+    for c in p.chars:
+        if any(f in c['fontname'] for f in MUSIC_FONTS) and (ord(c['text'][0]) in HEADS or c['text'] == 'w') \
+                and c['x0'] < l['x1'] and c['x1'] > l['x0'] and abs((p.height - c['matrix'][5]) - l['top']) <= 4 * sp:
+            # the notehead must belong to the same staff: an extender between two staves can sit on
+            # the upper staff's ledger grid right over a note of the lower staff (a TTBB with piano)
+            y = p.height - c['matrix'][5]
+            if min(st, key=lambda t: abs(mid(t) - y)) is s:
+                return True
+    return False
+
+
+class Engraving:
+    def __init__(self, path, lyric_font=None, lyric_size=None):
+        import pdfplumber
+        self.pages = []
+        with pdfplumber.open(path) as pdf:
+            from collections import Counter
+            text = Counter()
+            for p in pdf.pages:
+                for c in p.chars:
+                    if not any(f in c['fontname'] for f in MUSIC_FONTS) and c['text'].isalpha():
+                        text[(c['fontname'], round(c['size'], 1))] += 1
+            lf = text.most_common(1)[0][0] if text else (None, None)
+            self.lyric_font = lyric_font or lf[0]
+            self.lyric_size = lyric_size or lf[1]
+            for p in pdf.pages:
+                st = staves_of(p)
+                sysl = systems_of(p, st)
+                self.pages.append({
+                    'n': p.page_number, 'height': p.height, 'systems': sysl,
+                    'sp': statistics.median([(s['lines'][4] - s['lines'][0]) / 4 for s in st]) if st else 4.0,
+                    'chars': [dict(t=c['text'], x0=c['x0'], x1=c['x1'], top=c['top'], font=c['fontname'],
+                                   size=round(c['size'], 1), y=p.height - c['matrix'][5]) for c in p.chars],
+                    'hlines': [(l['x0'], l['x1'], l['top']) for l in p.lines
+                               if abs(l['y0'] - l['y1']) < 0.3 and l['x1'] - l['x0'] > 2
+                               and not any(abs(l['top'] - y) < 0.3 for s in st for y in s['lines'])
+                               and not is_ledger(l, st, p)],
+                    'vlines': [(l['x0'], l['top'], l['bottom']) for l in p.lines if abs(l['x0'] - l['x1']) < 0.3],
+                })
+
+    def home(self, page, y):
+        """(system index, lane) for a mark at height y: lane '<staff>a' above that staff, '<staff>b' below."""
+        best = None
+        for si, sy in enumerate(page['systems']):
+            top, bot = sy[0]['lines'][0], sy[-1]['lines'][4]
+            d = top - y if y < top else (y - bot if y > bot else 0)
+            if best is None or d < best[0]: best = (d, si)
+        if best is None: return None, None
+        d, si = best
+        sy = page['systems'][si]
+        for k, s in enumerate(sy):
+            if s['lines'][0] <= y <= s['lines'][4]: return si, None     # inside a staff
+        for k, s in enumerate(sy):
+            if y < s['lines'][0]:
+                if k == 0: return si, f'{k}a'
+                prev = sy[k - 1]['lines'][4]
+                return si, (f'{k - 1}b' if y - prev < s['lines'][0] - y else f'{k}a')
+        return si, f'{len(sy) - 1}b'
+
+    def lyric_rows(self):
+        """-> [(page idx, system idx, lane, top, [syllable dicts])] in reading order."""
+        out = []
+        for pi, page in enumerate(self.pages):
+            # the lyric font at its size, or a page scaled a few percent (Finale scales pages one by one:
+            # a TTBB with piano set its last two pages' lyrics at 12.1 pt against 11.5)
+            cs = [c for c in page['chars'] if c['font'] == self.lyric_font
+                  and 0.92 * self.lyric_size <= c['size'] <= 1.09 * self.lyric_size]
+            rows = []
+            for c in sorted(cs, key=lambda c: c['top']):
+                for r in rows:
+                    if abs(r[0] - c['top']) < 1.0: r[1].append(c); break
+                else: rows.append([c['top'], [c]])
+            for top, chars in rows:
+                si, lane = self.home(page, top + 0.75 * self.lyric_size)
+                if si is None or lane is None: continue
+                sy = page['systems'][si]
+                if top < sy[0]['lines'][0] - 12 * page['sp'] or top > sy[-1]['lines'][4] + 12 * page['sp']: continue
+                syl = syllables(chars)
+                for x in syl: x['top'] = top
+                out.append((pi, si, lane, top, syl))
+        # one lane can be set at two heights in one system (a phrase nudged down to clear
+        # something): merge them and read left to right
+        merged = {}
+        for pi, si, lane, top, syl in out:
+            merged.setdefault((pi, si, lane), [pi, si, lane, top, []])[4].extend(syl)
+        out = []
+        for r in merged.values():
+            r[4].sort(key=lambda x: x['x0'])
+            r[3] = min(x['top'] for x in r[4])
+            out.append(tuple(r))
+        out.sort(key=lambda r: (r[0], r[1], r[3]))
+        return out
+
+
+def dedupe_chars(chars, x='x0', y='top', t='text'):
+    """drop a character drawn a second time on top of itself: Dorico exports bold lyrics and marks as faux bold,
+    every letter struck twice at the same place ("lloonnee", "rriitt..")"""
+    seen, out = set(), []
+    for c in chars:
+        k = (c[t], round(c[x], 1), round(c[y], 1))
+        if k in seen: continue
+        seen.add(k); out.append(c)
+    return out
+
+
+def syllables(chars):
+    chars = sorted(dedupe_chars(chars, t='t'), key=lambda c: c['x0'])
+    toks = []
+    for c in chars:
+        if toks and c['x0'] - toks[-1]['x1'] < 0.25 and c['t'] != '-' and not toks[-1]['t'].endswith('-'):
+            toks[-1]['t'] += c['t']; toks[-1]['x1'] = c['x1']
+        else:
+            toks.append({'t': c['t'], 'x0': c['x0'], 'x1': c['x1']})
+    out = []
+    for t in toks:
+        if not t['t'].strip(): continue
+        if t['t'] == '-':
+            if out: out[-1]['hyph'] = True       # the page prints a hyphen after it
+            continue
+        t['t'] = LIGATURES.get(t['t'], t['t'])
+        for a, b in LIGATURES.items(): t['t'] = t['t'].replace(a, b)
+        out.append(t)
+    return out
+
+
+# ligatures some text fonts carry with no Unicode mapping; pdfplumber reports them as (cid:N). Academico (Dorico's
+# default text font) puts them wherever its subset in that PDF does, so the code changes from export to export; read
+# the word list (check 9) of every new score for a "(cid:" left over and add it here. dorico_reader uses this table.
+LIGATURES = {
+    '(cid:33)': 'fl',      # Dorico 4.2 ("floating", "fly")
+    '(cid:51)': 'fi',      # 4.2, 6.2
+    '(cid:57)': 'fi',      # 6.0
+    '(cid:58)': 'fi',      # 6.1 ("final")
+    '(cid:59)': 'fi',      # 6.0 ("fire")
+    '(cid:64)': 'fi',      # 5.0 ("fills", "fireplace")
+    '(cid:65)': 'fi',      # 6.2
+    '(cid:66)': 'fi',      # 6.1 ("first", "finished")
+    '(cid:38)': 'fi',      # 5.0, the singers' parts pages of a score-and-parts PDF
+    '(cid:39)': 'fi',      # 6.2.40 ("fire", the Dorico 6.2.40 SATB)
+    '(cid:61)': 'fl',      # 6.2.40 ("flow'rs", the Dorico 6.2.40 SATB)
+}
+
+
+def check_instructions(pdf):
+    if not pdf:
+        return report(6, 'Performer instructions', 'NOT RUN', 'needs --pdf')
+    r = subprocess.run([sys.executable, os.path.join(HERE, 'find_performer_instructions.py'), pdf], capture_output=True, text=True)
+    hits = [l.strip() for l in r.stdout.splitlines()[1:] if l.strip().startswith('p')]
+    if not hits:
+        return report(6, 'Performer instructions', 'PASS', 'none found (italic scan); rerun find_performer_instructions.py --all-text if the engraving sets them upright')
+    report(6, 'Performer instructions', 'MANUAL', f'{len(hits)} found: each needs a rule and a stated scope', hits)
+
+
+def check_extender_lines(root, names, E, lanes):
+    """10: every printed extension line is consumed by exactly one syllable, and every <extend/>
+    on a syllable the PDF prints for that part has a printed line behind it.
+
+    A line that runs to the right margin carries on at the start of the next system. Where that
+    leading segment is drawn vertically varies by engraver (Finale puts it just above the staff
+    whichever lyric line it continues), so leading segments are paired with the lines that ran
+    off the previous system by count and vertical order, not by lane."""
+    rows = E.lyric_rows()
+    unknown = sorted({r[2] for r in rows if r[2] not in lanes})
+    rows = [r for r in rows if lanes.get(r[2]) != '-']
+    size = E.lyric_size
+    printed = defaultdict(list)       # part name -> [[text, has_line, where]]
+    consumed = set()
+    runs = defaultdict(list)          # (page, system) -> [(y, entry, needs_continuation)]
+    for pi, si, lane, top, syls in rows:
+        if lane not in lanes: continue
+        page = E.pages[pi]; sp = page['sp']
+        right = page['systems'][si][0]['x1']
+        for k, s in enumerate(syls):
+            band = [ln for ln in page['hlines'] if s['top'] + 0.35 * size <= ln[2] <= s['top'] + 1.5 * size and ln[1] - ln[0] > 1.0 * sp]
+            hit = [ln for ln in band if s['x1'] - 1 <= ln[0] <= s['x1'] + 2.5 * sp]
+            # a line is the syllable's immediately left of it: in "And I___" the line starts within reach of "And"
+            # too, but "I" stands between
+            hit = [ln for ln in hit if not any(u is not s and u['x0'] >= s['x1'] - 0.1 and u['x1'] <= ln[0] + 1 for u in syls)]
+            for ln in hit: consumed.add((pi, tuple(ln)))
+            entry = [s['t'], bool(hit), f"p{page['n']} system {si + 1}", bool(s.get('hyph'))]
+            printed[lanes[lane]].append(entry)
+            if any(ln[1] > right - 2 * sp for ln in hit):
+                runs[(pi, si)].append((s['top'], entry, False, lane))
+            elif not hit and k == len(syls) - 1 and s['x1'] > right - 12 * sp:
+                runs[(pi, si)].append((s['top'], entry, True, lane))    # its whole line may be on the next system
+    bad = []
+    for pi, page in enumerate(E.pages):
+        sp = page['sp']
+        tops = sorted({x['top'] for r in rows if r[0] == pi for x in r[4]})
+        for si, sy in enumerate(page['systems']):
+            left = sy[0]['x0']
+            lead = sorted((ln for ln in page['hlines'] if ln[1] - ln[0] > 1.0 * sp and ln[0] < left + 15 * sp
+                           and E.home(page, ln[2])[0] == si and (pi, tuple(ln)) not in consumed), key=lambda ln: ln[2])
+            prev = [k for k in runs if next_system(E, *k) == (pi, si)]
+            ran = sorted(runs[prev[0]], key=lambda r: r[0]) if prev else []
+            must = [r for r in ran if not r[2]]
+            maybe = [r for r in ran if r[2]]
+            if len(lead) < len(must):
+                pass                                  # a line may end exactly at the margin
+            extra = len(lead) - len(must)
+            # Dorico draws the leading segment on its own lyric line: match by lane where the lanes say so
+            lead_lanes = [E.home(page, ln[2] - 0.75 * E.lyric_size)[1] for ln in lead]
+            by_lane = [r for r in maybe if r[3] in lead_lanes and r[3] not in [m[3] for m in must]]
+            pick = by_lane if by_lane else maybe[:max(extra, 0)]
+            for r in pick[:max(extra, 0)]:
+                r[1][1] = True                        # its line is the leading segment here
+            for ln in lead[:len(must) + len(maybe)]:
+                consumed.add((pi, tuple(ln)))
+        for ln in page['hlines']:
+            if ln[1] - ln[0] <= 1.0 * sp or (pi, tuple(ln)) in consumed: continue
+            si, lane = E.home(page, ln[2])
+            in_band = any(t + 0.35 * size <= ln[2] <= t + 1.5 * size for t in tops)
+            at_left = si is not None and lane is not None and ln[0] < page['systems'][si][0]['x0'] + 15 * sp
+            if in_band or at_left:
+                bad.append(f"p{page['n']}: printed line x{ln[0]:.0f}-{ln[1]:.0f} y{ln[2]:.0f} belongs to no syllable")
+    # compare with the MusicXML, part by part, by aligning the syllable texts
+    matched = skipped = 0
+    pairs = []                        # (part, printed entry, file syllable), aligned
+    for part in root.findall('part'):
+        nm = names[part.get('id')]
+        if nm not in printed: continue
+        xs = []
+        nts = notes_of(part)
+        for i, (mn, n, v, _) in enumerate(nts):
+            fig = None
+            if any(x.get('type') == 'start' for x in n.findall('tie')):
+                held = int(n.findtext('duration') or 0)
+                for mn2, n2, v2, _ in nts[i + 1:]:
+                    if v2 != v or n2.find('chord') is not None: continue
+                    if not any(x.get('type') == 'stop' for x in n2.findall('tie')) or n2.find('lyric') is not None: break
+                    held += int(n2.findtext('duration') or 0)
+                    if not any(x.get('type') == 'start' for x in n2.findall('tie')): break
+                fig = (n.findtext('type'), held)
+            for l in n.findall('lyric'):
+                e = l.find('extend')
+                slurred = any(x.get('type') == 'start' for x in n.iter('slur'))
+                mid = (l.findtext('syllabic') or 'single') in ('begin', 'middle')
+                xs.append((l.findtext('text') or '', e is not None and e.get('type') != 'stop', mn, slurred or mid,
+                           None if mid else fig))
+        ps = printed[nm]
+        sm = difflib.SequenceMatcher(a=[t.strip() for t, *_ in ps], b=[x[0].strip() for x in xs], autojunk=False)
+        blocks = sm.get_matching_blocks()
+        for a0, b0, n in blocks:
+            for k in range(n):
+                pairs.append((nm, ps[a0 + k], xs[b0 + k]))
+        skipped += len(xs) - sum(b[2] for b in blocks)
+        lost = len(ps) - sum(b[2] for b in blocks)
+        if lost:
+            bad.append(f"{nm}: {lost} printed syllable(s) could not be matched to the file's lyrics - a missing or misspelt syllable?")
+    # a word-end held only by a tie whose line the engraver dropped: most of the same words on the same figure
+    # (note value, length tied through) print one, so the file gives it one too (SKILL.md 2.5)
+    fig_lined = defaultdict(list)
+    for nm, (t, has, *_), (xt, ext, mn, slurred, fig) in pairs:
+        if fig: fig_lined[(xt.strip(), fig)].append(has)
+    for nm, (t, has, where, hyph), (xt, ext, mn, slurred, fig) in pairs:
+        matched += 1
+        if ext and not has and (slurred or hyph):
+            continue          # a slurred or mid-word melisma keeps its line even where none is printed, or only a hyphen is (SKILL.md 2.5)
+        if ext and not has and fig:
+            lined = fig_lined[(xt.strip(), fig)]
+            if sum(lined) / len(lined) > 0.5:
+                continue
+        if has != ext:
+            bad.append(f"{nm} bar {mn} {xt!r}: PDF {'prints' if has else 'has no'} extension line, "
+                       f"file {'has' if ext else 'has no'} <extend/>")
+    if unknown:
+        bad.append(f"lyric lines in lanes {unknown} have no part: add them to --lanes")
+    summary = (f'{matched} printed syllables compared, {len(bad)} disagreement(s)'
+               + (f'; {skipped} syllable(s) in the file are not printed for that part (copied from another line), not compared' if skipped else ''))
+    report(10, 'Extension lines match the PDF', 'FAIL' if bad else 'PASS', summary, bad)
+
+
+def next_system(E, pi, si):
+    if si + 1 < len(E.pages[pi]['systems']): return pi, si + 1
+    for q in range(pi + 1, len(E.pages)):
+        if E.pages[q]['systems']: return q, 0
+    return None
+
+
+HEADS = {0xF0CF, 0xF0FA, 0xF077, 0x153, 0x2D9, 0xE0A2, 0xE0A3, 0xE0A4,
+         0xF4BC, 0xF4BD, 0xF4BE, 0xE0A9}   # Dorico's Bravura writes its noteheads at the optional code points F4BC-F4BE
+
+
+def head_staff(page, c, st):
+    """the staff a notehead belongs to: the nearest one, unless the head sits outside it on a stem whose far end
+    is inside another staff (the low notes of a piano RH chord hanging on ledger lines nearer the LH staff)"""
+    mid = lambda s: (s['lines'][0] + s['lines'][4]) / 2
+    s = min(st, key=lambda s: abs(mid(s) - c['y']))
+    if s['lines'][0] <= c['y'] <= s['lines'][4]: return s
+    sp = (s['lines'][4] - s['lines'][0]) / 4
+    for x, t, b in page['vlines']:
+        if b - t < 1.5 * sp or not (abs(x - c['x0']) < 0.9 or abs(x - c['x1']) < 0.9): continue
+        if not (t - 0.7 * sp <= c['y'] <= b + 0.7 * sp): continue
+        far = t if abs(t - c['y']) > abs(b - c['y']) else b
+        s2 = next((o for o in st if o['lines'][0] - 0.1 <= far <= o['lines'][4] + 0.1), None)
+        if s2 is None or s2 is s: continue
+        if min(s['lines'][0], s2['lines'][0]) < c['y'] < max(s['lines'][4], s2['lines'][4]): return s2
+    return s
+
+
+def check_grid(E):
+    """12: every notehead sits a whole number of half staff spaces from its staff's top line."""
+    offs = []
+    for page in E.pages:
+        sp = page['sp']
+        st = [s for sy in page['systems'] for s in sy]
+        for c in page['chars']:
+            if not any(f in c['font'] for f in MUSIC_FONTS): continue
+            code = ord(c['t'][0])
+            if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
+            s = head_staff(page, c, st)
+            # each staff's own space: a score can set the piano smaller than the voices
+            d = (c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8)
+            offs.append((d, page['n'], c['x0']))
+    if not offs:
+        return report(12, 'Noteheads on the grid', 'NOT RUN', 'no noteheads recognised (music font not in the list)')
+    base = statistics.median([d - round(d) for d, _, _ in offs])      # font baseline offset, if any
+    E.grid_base = base
+    bad = [f'p{pn} x{x:.0f}: {d - base:.2f} half-spaces' for d, pn, x in offs if abs((d - base) - round(d - base)) > 0.15]
+    report(12, 'Noteheads on the grid', 'FAIL' if bad else 'PASS',
+           f'{len(offs)} noteheads, {len(bad)} off the grid' + (f' (font offset {base:+.2f})' if abs(base) > 0.05 else ''), bad[:20])
+
+
+def pdf_bars(E):
+    """[(page, system, x from, x to)] for every bar the engraving prints, in reading order.
+    A bar is a stretch between two vertical lines that cross every staff of the system; a
+    stretch with no note or rest in it is a courtesy key or time at a system's end, and is dropped."""
+    out = []
+    for page in E.pages:
+        sp = page['sp']
+        for sy in page['systems']:
+            top, bot = sy[0]['lines'][0], sy[-1]['lines'][4]
+            cover = defaultdict(set)
+            for x, t, b in page['vlines']:
+                for k, s in enumerate(sy):
+                    if t <= s['lines'][0] + 0.6 and b >= s['lines'][4] - 0.6: cover[round(x)].add(k)
+            bars = []
+            for x in sorted(x for x, ks in cover.items() if len(ks) == len(sy)):
+                if bars and x - bars[-1] < 4: bars[-1] = x; continue
+                bars.append(x)
+            glyphs = sorted(c['x0'] for c in page['chars'] if any(f in c['font'] for f in MUSIC_FONTS)
+                            and top - 6 * sp < c['y'] < bot + 6 * sp
+                            and (ord(c['t'][0]) in HEADS | {0xF0E4, 0xF0CE, 0xF0EE, 0xF0C5, 0x2030, 0x152, 0xD3, 0xE4E3, 0xE4E4, 0xE4E5, 0xE4E6, 0xE4E7}
+                                 or (c['t'] == 'w' and 'Helsinki' in c['font'])))
+            for a, b in zip(bars, bars[1:]):
+                g = [x for x in glyphs if a + 1 < x < b - 1]
+                c = []
+                for x in g:
+                    if c and x - c[-1][0] < 1.9 * sp: c[-1].append(x)   # a second prints its heads one head-width apart
+                    else: c.append([x])
+                if c:
+                    out.append((page, sy, a, b, len(c)))
+    return out
+
+
+def check_onsets(root, E):
+    """11: notes that start together in the file start at one x in the PDF.
+    Compares, bar by bar, the number of distinct onsets across all parts with the number of
+    distinct note/rest columns the engraving prints."""
+    ons = defaultdict(set)
+    for part in root.findall('part'):
+        for mn, n, v, t in notes_of(part):
+            r = n.find('rest')
+            if r is not None and r.get('measure') == 'yes': continue
+            if n.findtext('type') is None and r is not None: continue
+            ons[mn].add(t)
+    order = [m.get('number') for m in root.find('part').findall('measure')]
+    cols = [c for *_, c in pdf_bars(E)]
+    if len(cols) != len(order):
+        return report(11, 'Cross-staff onset alignment', 'NOT RUN',
+                      f'PDF bar count {len(cols)} does not match the file ({len(order)}); first-bar or pickup layout not understood')
+    bad = [f'bar {mn}: {len(ons[mn])} onset(s) in the file, {c} column(s) in the PDF'
+           for mn, c in zip(order, cols) if c and len(ons[mn]) != c]
+    report(11, 'Cross-staff onset alignment', 'WARN' if bad else 'PASS',
+           f'{len(bad)} bar(s) where the file and the engraving disagree on how many attack points there are' if bad
+           else 'every bar has as many attack points as the engraving has columns', bad)
+
+
+CLEF_REF = {'G': 4 * 7 + 4, 'F': 3 * 7 + 3, 'C': 4 * 7 + 0}     # the note on the clef's line: G4, F3, C4 (diatonic)
+
+
+def file_positions(root):
+    """{(bar index, staff index in the system): {half-spaces below the top line}} for every notehead
+    the file would print, each read with the clef in force at its onset. Staves are counted over the
+    parts in file order (a part with <staves>2</staves> takes two)."""
+    pos = defaultdict(set)
+    base = 0
+    for part in root.findall('part'):
+        nst, div = 1, 1
+        clefs = {}                      # staff number -> [(bar index, onset, top-line diatonic)]
+        for bi, m in enumerate(part.findall('measure')):
+            t = F(0)
+            last = F(0)
+            for e in m:
+                if e.tag == 'attributes':
+                    if e.find('divisions') is not None: div = int(e.findtext('divisions'))
+                    if e.find('staves') is not None: nst = int(e.findtext('staves'))
+                    for c in e.findall('clef'):
+                        k = int(c.get('number', '1'))
+                        line = int(c.findtext('line') or {'G': 2, 'F': 4, 'C': 3}.get(c.findtext('sign'), 2))
+                        ref = CLEF_REF.get(c.findtext('sign'))
+                        if ref is None: continue
+                        ref += 7 * int(c.findtext('clef-octave-change') or 0)
+                        clefs.setdefault(k, []).append((bi, t, ref + 2 * (5 - line)))
+                elif e.tag == 'backup':
+                    t -= F(int(e.findtext('duration')), div)
+                elif e.tag == 'forward':
+                    t += F(int(e.findtext('duration')), div)
+                elif e.tag == 'note':
+                    on = last if e.find('chord') is not None else t
+                    if e.find('chord') is None:
+                        last = t
+                        if e.find('grace') is None: t += F(int(e.findtext('duration') or 0), div)
+                    p = e.find('pitch')
+                    if p is None: continue
+                    k = int(e.findtext('staff') or 1)
+                    cl = [c for c in clefs.get(k, []) if (c[0], c[1]) <= (bi, on)]
+                    if not cl: continue
+                    d = 7 * int(p.findtext('octave')) + STEPS.index(p.findtext('step'))
+                    pos[(bi, base + k - 1)].add(cl[-1][2] - d)
+        base += nst
+    return pos, base
+
+
+def check_pitches(root, E):
+    """17: the staff positions of the noteheads printed in each bar of each staff are the ones
+    the file's pitches would print at. Reads the page with this script's own staff finder, so a
+    staff misread by the extractor (ledger lines taken for staff lines: every note a line off)
+    cannot pass by agreeing with itself."""
+    fpos, nst = file_positions(root)
+    order = [m.get('number') for m in root.find('part').findall('measure')]
+    bars = pdf_bars(E)
+    if len(bars) != len(order):
+        return report(17, 'Noteheads match the pitches', 'NOT RUN',
+                      f'PDF bar count {len(bars)} does not match the file ({len(order)})')
+    bad, skipped, seen = [], 0, 0
+    runs = defaultdict(list)
+    for bi, (page, sy, a, b, _) in enumerate(bars):
+        if len(sy) != nst: skipped += 1; continue
+        sp = page['sp']
+        allst = [s for y in page['systems'] for s in y]
+        got = defaultdict(set)
+        for c in page['chars']:
+            if not any(f in c['font'] for f in MUSIC_FONTS) or not (a + 1 < c['x0'] < b - 1): continue
+            code = ord(c['t'][0])
+            if code not in HEADS and not (c['t'] == 'w' and 'Helsinki' in c['font']): continue
+            s = head_staff(page, c, allst)
+            if not any(s is x for x in sy): continue
+            k = next(i for i, x in enumerate(sy) if x is s)
+            got[k].add(round((c['y'] - s['lines'][0]) / ((s['lines'][4] - s['lines'][0]) / 8) - E.grid_base))
+        for k in range(nst):
+            seen += 1
+            want = fpos.get((bi, k), set())
+            if got[k] != want:
+                sh = {dd for dd in range(-9, 10) if dd and {w + dd for w in want} == got[k] and want}
+                what = (f'every head {min(sh, key=abs):+d} half-space(s) from the file' if sh else
+                        f'PDF only {sorted(got[k] - want)}, file only {sorted(want - got[k])}')
+                bad.append(f'bar {order[bi]}, staff {k + 1} of the system: {what}')
+                runs[k].append(bi)
+    if not seen:
+        return report(17, 'Noteheads match the pitches', 'NOT RUN',
+                      f'no system has as many staves as the file ({nst}): hidden staves, not understood')
+    note = f'; {skipped} bar(s) on systems with a different staff count not compared' if skipped else ''
+    report(17, 'Noteheads match the pitches', 'FAIL' if bad else 'PASS',
+           (f'{len(bad)} bar-staff(s) of {seen} where the printed heads and the file disagree' if bad
+            else f'{seen} bar-staves compared, printed heads and file pitches agree') + note, bad)
+
+
+# ----------------------------------------------------------------- main
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument('score')
+    ap.add_argument('--pdf')
+    ap.add_argument('--lanes', help='"0a=Tenor,0b=Lead,1a=Baritone,1b=Bass"')
+    ap.add_argument('--original')
+    ap.add_argument('--render')
+    ap.add_argument('--xsd')
+    ap.add_argument('--lyric-font'); ap.add_argument('--lyric-size', type=float)
+    a = ap.parse_args()
+    root, names = load(a.score)
+    out_dir = os.path.dirname(os.path.abspath(a.score))
+
+    check_xsd(a.score, a.xsd)
+    check_bars(root, names)
+    check_ranges(root, names)
+    check_qc(a.score)
+    check_render(a.score, a.render)
+    check_instructions(a.pdf)
+    report(7, 'Judgment calls handed back', 'MANUAL', 'list every divisi bar, duplicated lyric, literal-rest reading and fixed typo in the handback')
+    check_ties(root, names)
+    check_words(root, names, out_dir)
+    if a.pdf:
+        try:
+            E = Engraving(a.pdf, a.lyric_font, a.lyric_size)
+        except Exception as ex:
+            E = None
+            for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid'), (17, 'Noteheads match the pitches')):
+                report(n, nm, 'NOT RUN', f'could not read the PDF: {ex}')
+        if E:
+            if a.lanes:
+                lanes = dict(kv.split('=', 1) for kv in a.lanes.split(','))
+            else:
+                per_sys = {len(sy) for p in E.pages for sy in p['systems']}
+                pn = [names[p.get('id')] for p in root.findall('part')]
+                lanes = {f'{k}b': pn[k] for k in range(len(pn))} if per_sys == {len(pn)} else None
+            if lanes:
+                missing = [v for v in lanes.values() if v not in names.values() and v != '-']
+                if missing:
+                    report(10, 'Extension lines match the PDF', 'NOT RUN', f'--lanes names parts the file does not have: {missing}')
+                else:
+                    check_extender_lines(root, names, E, lanes)
+            else:
+                report(10, 'Extension lines match the PDF', 'NOT RUN',
+                       'the PDF has fewer staves than the file has parts (a closed score): pass --lanes')
+            check_onsets(root, E)
+            check_grid(E)
+            if hasattr(E, 'grid_base'): check_pitches(root, E)
+            else: report(17, 'Noteheads match the pitches', 'NOT RUN', 'no noteheads recognised (see check 12)')
+    else:
+        for n, nm in ((10, 'Extension lines match the PDF'), (11, 'Cross-staff onset alignment'), (12, 'Noteheads on the grid'), (17, 'Noteheads match the pitches')):
+            report(n, nm, 'NOT RUN', 'needs --pdf')
+    check_shared_staff(root)
+    check_extend_runs(root, names, a.original)
+    check_layout(a.score, root)
+    check_original(root, names, a.original)
+
+    results.sort()
+    w = max(len(r[1]) for r in results)
+    print(f'Step 5 checks for {os.path.basename(a.score)}' + (f' against {os.path.basename(a.pdf)}' if a.pdf else ''))
+    for n, name, status, summary in results:
+        print(f'{n:>3}  {name:<{w}}  {status:<8} {summary}')
+    for n, name, status, summary in results:
+        if details[n] and status in ('FAIL', 'WARN', 'MANUAL'):
+            print(f'\n{n}. {name}')
+            for l in details[n][:40]: print(f'    {l}')
+            if len(details[n]) > 40: print(f'    ... and {len(details[n]) - 40} more')
+    sys.exit(1 if any(r[2] == 'FAIL' for r in results) else 0)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### rehearsal_mix.py
+
+```python
+#!/usr/bin/env python3
+"""Mix a full set of rehearsal tracks from per-staff stems (SKILL.md Step 9.4).
+
+    python3 rehearsal_mix.py TITLE OUT_DIR "Bass=bass.wav" "Baritone=bari.wav" "Tenor 2=t2.wav" "Tenor 1=t1.wav"
+                             [--accomp "Piano=piano.wav"] [--trim "Bass=-9"] [--place "Solo=0"]
+                             [--only 3d] [--featured 3] [--others -21] [--accomp-as-exported]
+
+List the voices from the LOWEST to the HIGHEST: the order sets the stereo and 3D
+layouts. An accompaniment stem (--accomp, repeatable) is never featured, and is set to
+the level it would have had if every stem were normalized to equal loudness before mixing
+(Accompaniment level, below); every track uses that level.
+
+Writes, for every voice V (the section on the chorus's posting site in parentheses, see Sections below;
+a voice named Solo... gets none):
+    TITLE - (V) predominant-left.mp3    V +3 dB hard left; other voices -21 dB and accompaniment
+                                        at its level, both as exported (unpanned); summed to mono
+                                        it is exactly the predominant mix (Predominant-left, below)
+and once:
+    TITLE - Balanced.mp3                every voice at 0 dB as exported, accompaniment at its level
+    TITLE - Balanced panned.mp3         voices spread across the stereo field, lowest on the left
+    TITLE - Balanced 3D, use headphones.mp3
+                                        voices placed around the listener with a dummy-head HRTF
+
+Layouts, the ones settled on by ear for a TTBB set (Bass, Baritone, Tenor 2, Tenor 1):
+  panned  lowest to highest evenly from 45% left to 45% right (four voices: -45, -15, +15, +45),
+          constant-power pan scaled so a centred voice keeps its level; accompaniment centred.
+  3D      listener facing north; lowest voice rear-left (135 deg), highest rear-right (225 deg),
+          the rest evenly across the front between 10 deg left and 10 deg right (four voices:
+          Bass 135, Baritone 10 left, Tenor 2 10 right, Tenor 1 225); accompaniment straight
+          ahead (0 deg). Ear height. MIT KEMAR dummy head, measured at 1.4 m, from the `slab`
+          package (pip install slab). Loudness matched to the panned Balanced track.
+
+Soloists: the layouts are for the choral parts. Put a solo where it belongs with --place
+("Solo=0" straight ahead; "Solo 1=5R", "Solo 2=5L"); the choral parts keep the standard
+layout, and in the panned track a placed voice sits proportionally (135 deg = 45%).
+Chosen for a TTBB piece with one solo (Solo ahead) and one with two soloists (Solo 2 5 deg left,
+Solo 1 5 deg right), without listening; the user may move them.
+
+Sections: the chorus's posting site files a track under the section named in parentheses, and shows
+a track whose parenthesised name is not one of the chorus's sections to EVERYONE. A voice
+that is a division of a section goes in as the section plus a suffix after the parentheses:
+"Tenor 2a" -> "(Tenor 2) a", "Bass b" -> "(Bass) b". That is the default for a name ending in
+a lone lower-case letter; everything else is used as it is. Override per voice with
+--section "Voice=Section|suffix" ("Tenor 2a=Tenor 2|a", "Bari=Baritone|", or "Descant=|" for
+no parentheses at all). The mapping is printed; confirm it with the user before handing over
+the tracks, since each chorus names its sections its own way.
+
+Accompaniment level: the accompaniment comes out as loud, against the choir, as it would if
+every stem (voices and accompaniment alike) had been normalized to the same integrated loudness
+(EBU R128) before mixing. Normalized, the voices summed come out some LU above any one stem;
+the accompaniment is put that far below the voices as they are (after --trim). The voices are
+not changed. First used on a TTBB whose piano stem was 17 LU under the low voices and 10 LU
+under the tenors: +14.89 dB, approved by ear; matching the average voice instead would have
+given +13.25 dB. A --trim on an accompaniment stem replaces this; --accomp-as-exported leaves
+every accompaniment stem at 0 dB.
+
+Predominant-left: one track per part does what a predominant track and a part-left track did.
+Phones and Bluetooth speakers play mono, so the mono sum must be the predominant balance: V +3 dB,
+the others -21 dB, the accompaniment at its level. Earbuds or a balance knob still separate the
+part: V is folded to mono and put in the left channel only, at twice its predominant gain
+(+6.02 dB), so the mono sum (L+R)/2 gives it back at exactly that gain. The other voices and the
+accompaniment are not steered: each stem stays as exported, stereo if it is stereo, at its
+predominant gain, so the right channel is everything but V. Made this way, as a set of tracks from
+a human singer is: it halves the files a singer sifts through on the chorus's posting site. The
+separate predominant and part-left tracks are no longer made.
+
+Stem levels: every stem's median level while sounding is printed. A stem several dB off
+the others (one set's Bass came out 9 dB hot) gets --trim, applied before every mix gain.
+
+Peaks: every mix is measured before encoding. Only if one goes over 0 dBFS are ALL of them
+turned down by the same amount (the loudest lands at -1 dBFS), so the tracks keep their
+loudness relative to one another. The 3D track, a headphone extra, is loudness-matched to
+the panned Balanced track and then turned down on its own if it would clip.
+
+Needs numpy and ffmpeg (with libmp3lame); slab for the 3D track (without it the 3D track is
+not made, the script says so and exits 1).
+"""
+import re, sys, os, types, argparse, subprocess
+import numpy as np
+
+SR = 44100
+
+
+def load(path):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-ar', str(SR), '-ac', '2', '-f', 'f64le', '-'],
+                         capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.float64).reshape(-1, 2).copy()
+
+
+def sounding_level(x):
+    m = x.mean(1); w = SR // 10; n = len(m) // w
+    r = 20 * np.log10(np.sqrt((m[:n * w].reshape(n, w) ** 2).mean(1)) + 1e-12)
+    s = r[r > -45]
+    return float(np.median(s)) if len(s) else float('-inf'), len(s) / 10
+
+
+def loudness(x):
+    """Integrated loudness (EBU R128) in LUFS, from ffmpeg's loudnorm."""
+    e = subprocess.run(['ffmpeg', '-hide_banner', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                        '-af', 'loudnorm=print_format=json', '-f', 'null', '-'],
+                       input=np.ascontiguousarray(x, np.float32).tobytes(), capture_output=True).stderr.decode()
+    return float(re.search(r'"input_i"\s*:\s*"([^"]+)"', e).group(1))
+
+
+def pad(x, n):
+    return np.vstack([x, np.zeros((n - len(x), 2))]) if len(x) < n else x[:n]
+
+
+def db(g):
+    return 10 ** (g / 20)
+
+
+def mono(x):
+    return x.mean(1)
+
+
+def pan_positions(k):
+    return [0.0] if k == 1 else list(np.linspace(-0.45, 0.45, k))
+
+
+def azimuths(k):
+    """degrees counterclockwise from straight ahead (90 = left), lowest voice first"""
+    if k == 1: return [0.0]
+    if k == 2: return [135.0, 225.0]
+    front = [0.0] if k == 3 else list(np.linspace(10, -10, k - 2))
+    return [135.0] + [a % 360 for a in front] + [225.0]
+
+
+def hrir_bank():
+    sys.modules.setdefault('sounddevice', types.ModuleType('sounddevice'))   # slab imports it; playback unused
+    import slab
+    h = slab.HRTF.kemar()
+    src = np.asarray(h.sources.vertical_polar, float)
+
+    def left_side(az):                       # 0..180, measured every 5 deg at ear height
+        near = sorted(range(len(src)), key=lambda i: abs(src[i, 0] - az) + 1000 * abs(src[i, 1]))[:2]
+        a, b = near
+        if abs(src[a, 0] - az) < 0.01: return np.asarray(h.data[a].data, float)
+        wa = abs(src[b, 0] - az) / abs(src[b, 0] - src[a, 0])       # blend the two measured neighbours
+        return wa * np.asarray(h.data[a].data, float) + (1 - wa) * np.asarray(h.data[b].data, float)
+
+    def hrir(az):
+        az = az % 360
+        if az <= 180: return left_side(az)
+        return left_side(360 - az)[:, ::-1]  # the set is left/right symmetric: mirror the left side
+    return hrir
+
+
+def parse_az(txt):
+    """'0', '5L', '10R', '135L' -> degrees counterclockwise from ahead (90 = left)"""
+    t = txt.strip().upper()
+    if t in ('0', 'AHEAD', 'C'): return 0.0
+    if t[-1] in 'LR': return float(t[:-1]) % 360 if t[-1] == 'L' else (-float(t[:-1])) % 360
+    return float(t) % 360
+
+
+def fftconv(x, h):
+    n = len(x) + len(h) - 1
+    size = 1 << (n - 1).bit_length()
+    return np.fft.irfft(np.fft.rfft(x, size) * np.fft.rfft(h, size), size)[:n]
+
+
+def section_of(n, sections):
+    """(section, suffix) for a voice: --section if given; a Solo... voice has no section; a name
+    ending in a lone lower-case letter ("Tenor 2a", "Bass b") is that section divided."""
+    if n in sections:
+        return sections[n]
+    if n.lower().startswith('solo'):
+        return '', ''
+    m = re.fullmatch(r'(.*\d)([a-z])', n) or re.fullmatch(r'(.*\S) ([a-z])', n)
+    return (m.group(1), m.group(2)) if m else (n, '')
+
+
+def label(n, sections):
+    sec, suf = section_of(n, sections)
+    if not sec:
+        return n
+    return f'({sec})' + (f' {suf}' if suf else '')
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('title'); ap.add_argument('out')
+    ap.add_argument('voices', nargs='+', help='"Name=stem.wav", lowest voice first')
+    ap.add_argument('--accomp', action='append', default=[])
+    ap.add_argument('--trim', action='append', default=[], help='"Name=-9": dB applied to that stem first')
+    ap.add_argument('--place', action='append', default=[],
+                    help='"Solo=0", "Solo 1=5R", "Solo 2=5L": put a voice (or accompaniment) at a fixed '
+                         'direction instead of the automatic layout; the other voices keep theirs')
+    ap.add_argument('--section', action='append', default=[],
+                    help='"Voice=Section|suffix": the section on the posting site (in parentheses) and the '
+                         'suffix after it, e.g. "Tenor 2a=Tenor 2|a"; "Voice=|" for no section')
+    ap.add_argument('--only', choices=['all', '3d'], default='all', help='write every track, or only the 3D one')
+    ap.add_argument('--featured', type=float, default=3.0)
+    ap.add_argument('--others', type=float, default=-21.0)
+    ap.add_argument('--accomp-as-exported', action='store_true',
+                    help='leave the accompaniment at 0 dB instead of its equal-loudness level')
+    a = ap.parse_args()
+    os.makedirs(a.out, exist_ok=True)
+    trims = {k: float(v) for k, v in (t.split('=', 1) for t in a.trim)}
+    placed = {k: parse_az(v) for k, v in (t.split('=', 1) for t in a.place)}
+    V = [tuple(s.split('=', 1)) for s in a.voices]
+    A = [tuple(s.split('=', 1)) for s in a.accomp]
+    sections = {}
+    for t in a.section:
+        k, v = t.split('=', 1)
+        if '|' not in v: v += '|'
+        sections[k] = tuple(x.strip() for x in v.split('|', 1))
+    for n in list(trims) + list(placed) + list(sections):
+        if n not in {x for x, _ in V + A}: sys.exit(f'{n!r} is not a stem')
+    st = {n: load(p).astype(np.float32) for n, p in V + A}
+    N = max(len(x) for x in st.values())
+    st = {n: (pad(x, N) * db(trims.get(n, 0.0))).astype(np.float32) for n, x in st.items()}
+    names = [n for n, _ in V]; acc = [n for n, _ in A]
+
+    # Accompaniment level: as far below the choir as it would sit had every stem been normalized
+    # to the same integrated loudness before mixing (every voice at 0 LUFS here); the voices stay.
+    levelled = [n for n in acc if n not in trims and not a.accomp_as_exported]
+    if levelled:
+        L = {n: loudness(st[n]) for n in names + levelled}
+        choir = loudness(sum(st[n] for n in names))
+        normed = loudness(sum(st[n] * np.float32(db(-L[n])) for n in names))
+        print(f'integrated loudness: ' + ', '.join(f'{n} {L[n]:.2f}' for n in names) + f' LUFS; choir {choir:.2f}, '
+              f'normalized choir {normed:+.2f} LU over each stem')
+        for n in levelled:
+            g = choir - normed - L[n]
+            st[n] = (st[n] * np.float32(db(g))).astype(np.float32)
+            print(f'   {n} {L[n]:.2f} LUFS -> {g:+.2f} dB (as if every stem were normalized; --accomp-as-exported to skip)')
+        print()
+
+    print('stem levels while sounding (after --trim and the accompaniment level):')
+    lv = {n: sounding_level(st[n]) for n in names + acc}
+    ref = np.median([lv[n][0] for n in names])
+    for n in names + acc:
+        l, secs = lv[n]
+        flag = f'   <- {l - ref:+.1f} dB from the other voices: consider --trim "{n}={-(l - ref):.0f}"' \
+            if n in names and abs(l - ref) >= 4 else ''
+        print(f'   {n:12s} {l:6.1f} dBFS over {secs:5.1f} s{flag}')
+
+    # layouts: placed voices where they were put; the rest spread as usual, lowest first
+    auto = [n for n in names if n not in placed]
+    az = dict(zip(auto, azimuths(len(auto)))); az.update({n: placed.get(n, 0.0) for n in acc}); az.update(placed)
+    signed = lambda d: d if d <= 180 else d - 360                    # + left, - right
+    pan = dict(zip(auto, pan_positions(len(auto))))
+    pan.update({n: float(np.clip(-signed(placed[n]) / 135 * 0.45, -0.45, 0.45)) for n in placed})
+    pan.update({n: pan.get(n, 0.0) if n in placed else 0.0 for n in acc})
+    side = lambda d: 'ahead' if d == 0 else (f'{d:g} deg left' if d <= 180 else f'{360 - d:g} deg right')
+    print('\npanned: ' + ', '.join(f'{n} ' + ('centre' if abs(pan[n]) < 1e-9 else
+                                   f'{round(abs(pan[n])*100, 1):g}% {"left" if pan[n] < 0 else "right"}') for n in names + acc))
+    print('3D: ' + ', '.join(f'{n} {side(az[n])}' for n in names + acc))
+
+    print('\nfile names (posting-site section in parentheses):')
+    for v in names:
+        print(f'   {v:12} -> {label(v, sections)}')
+    accsum = sum((st[n] for n in acc), np.zeros((N, 2), np.float32))
+    mono_ = {n: mono(st[n]) for n in names + acc}
+
+    def predominant_left(v):
+        # V alone in the left at twice its predominant gain, so (L+R)/2 is the predominant mix
+        # exactly; the other voices and the accompaniment as exported, not steered
+        out = accsum + sum((st[n] * np.float32(db(a.others)) for n in names if n != v), np.zeros((N, 2), np.float32))
+        out[:, 0] += mono_[v] * np.float32(2 * db(a.featured))
+        return out
+
+    def balanced():
+        return accsum + sum(st[n] for n in names)
+
+    def panned():
+        out = np.zeros((N, 2), np.float32)
+        for n in names + acc:
+            if n in acc and n not in placed:
+                out += st[n]; continue                                  # accompaniment as exported
+            th = (pan[n] + 1) * np.pi / 4
+            out += np.outer(mono_[n], np.float32([np.sqrt(2) * np.cos(th), np.sqrt(2) * np.sin(th)]))
+        return out
+
+    missing3d = None
+    try:
+        hrir = hrir_bank()
+    except Exception as ex:
+        missing3d = f'{ex.__class__.__name__}: {ex}'
+    rms = lambda x: float(np.sqrt((x.astype(np.float64) ** 2).mean()))
+    pan_rms = rms(panned())
+
+    def three_d():
+        out = np.zeros((N, 2))
+        for n in names + acc:
+            f = hrir(az[n])
+            for ch in (0, 1):
+                out[:, ch] += fftconv(mono_[n].astype(np.float64), f[:, ch])[:N]
+        return (out * (pan_rms / rms(out))).astype(np.float32)
+
+    builders = {}
+    for v in names:
+        builders[f'{a.title} - {label(v, sections)} predominant-left'] = (lambda v=v: predominant_left(v))
+    builders[f'{a.title} - Balanced'] = balanced
+    builders[f'{a.title} - Balanced panned'] = panned
+    three = f'{a.title} - Balanced 3D, use headphones'
+    if missing3d is None:
+        builders[three] = three_d
+
+    # Peaks. The tracks singers switch between keep their loudness relative to one another: only if
+    # one of them goes over 0 dBFS are all of them turned down, by the same amount. The 3D track is
+    # a headphone extra: loudness-matched to the panned Balanced track, then turned down on its
+    # own if it would clip (one set: +1.1 dBFS, taken to -1). Two passes: measure every mix, then
+    # write, building one mix at a time so long pieces fit in memory.
+    peaks = {k: 20 * np.log10(float(np.abs(f()).max()) + 1e-12) for k, f in builders.items()}
+    worst = max(v for k, v in peaks.items() if k != three)
+    gains = {k: (-(worst + 1.0) if worst > 0 else 0.0) for k in builders}
+    if three in builders and peaks[three] + gains[three] > 0:
+        gains[three] = -(peaks[three] + 1.0)
+    write = [k for k in builders if a.only == 'all' or k == three]
+    print('\npeaks before encoding, and the gain applied:')
+    for k in builders:
+        print(f'   {peaks[k]:+6.2f} dBFS  {gains[k]:+5.2f} dB  {k}' + ('' if k in write else '   (not written: --only 3d)'))
+    for k in write:
+        y = (builders[k]() * np.float32(db(gains[k]))).astype(np.float32)
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'f32le', '-ar', str(SR), '-ac', '2', '-i', '-',
+                        '-c:a', 'libmp3lame', '-b:a', '192k', '-joint_stereo', '1', os.path.join(a.out, k + '.mp3')],
+                       input=y.tobytes(), check=True)
+    print(f'\n{len(write)} track(s) written to {a.out}')
+    if missing3d:
+        print(f'3D track NOT made: the HRTF set could not be loaded ({missing3d}); pip install slab')
+        sys.exit(1)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### score_video.py
+
+```python
+#!/usr/bin/env python3
+"""Follow-along score videos from a MusicXML and the rehearsal mp3s made from it (SKILL.md Step 10).
+
+    python3 score_video.py score.musicxml "Shenandoah - Balanced.mp3" \
+        "Shenandoah - (Tenor 1) predominant.mp3" "Shenandoah - (Tenor 2) predominant.mp3" ...
+        [--display print.musicxml] [-o OUT_DIR] [--part "Tenor 1=Tenor"]
+        [--staves "Tenor 1+Tenor 2,Baritone+Bass" | --open] [--pulse 8] [--dark]
+        [--clip START,SECONDS] [--stills T1,T2,...] [--staff-px 44] [--jobs N] [--proof DIR]
+        [--lyrics print.musicxml] [--lyric-plan PLAN.json | --no-lyrics | --lyrics-only]
+
+The MusicXML is the one the audio was rendered from (one part per staff, as Sibelius and
+Cantai sing it). When that is a Cantai learning file, give the print-faithful file as
+--display: it is shown instead (normal words, slurs and ties), after a check that it has
+the same parts, bars, notes and tempo marks. --display can also be the closed score the
+singers hold (two parts to a staff, fewer parts than the open file): then it is shown as it
+is, and whose each notehead, rest and syllable is comes from the open file (the parts
+singing that pitch, resting, or starting a syllable at that moment; a second lyric line
+goes to the lower part), with voice 1 / voice 2 as the fallback. Repeat signs and first
+and second endings are unrolled: the lights follow the bars in the order they are played,
+turning back a screen for a repeat. Each mp3 gives one mp4 of the same name beside it (or
+in OUT_DIR), and everything the run prints, every check included, also goes to
+"<title> - video checks.txt" there; --proof DIR writes one unlit PNG per screen, for the
+comparison with the print PDF that SKILL.md Step 10 asks for:
+
+  a Balanced mp3          -> every sung part lights up in its own colour
+  "(Part) predominant-left", "(Part) predominant", "(Part) part-left", "(Section) a predominant", "Solo ... " mp3s
+                          -> only that part lights up; every other part, piano too, is grey,
+                             and that part's staff is never hidden, so its rests stay on screen
+
+A note lights (its colour, and a soft halo) while it sounds; its syllable stays lit from its
+note until the next syllable or rest, so a melisma or a tie keeps its word lit. A note or
+word two parts share gets its halo and ink in stacked bands, the higher part's colour on
+top (side by side would read as one part singing the first half, the other the second).
+A tie lights while either of its notes sounds; in a part's own video the other parts' ties
+and slurs are grey with their notes, and so are the words, dynamics and hairpins of a staff
+it does not sing on (tempo marks stay black). A rest lights the same way, and a
+bar under it (above the staff for the upper of two voices) runs from where the rest starts
+to where it ends as the other staves print that time, filling in jumps of one pulse: each
+part's pulse is the coarsest note value that 95% of the bars it sings keep to (eighths in a
+piece of eighths with one bar of sixteenths; --pulse sets it). Each jump lands where the
+other staves print that time, so the fill meets the piano's notes as they sound and a
+singer who cannot count rests sees the beats go by. Pages turn up to a second before the
+next page's first note, never before the last note on the old page has begun. Staves empty
+for a whole system are hidden, as in a printed score. Black on white by default; --dark for
+light notation on a dark screen.
+
+Closed score by default: the sung parts are paired two to a staff, as the singers hold
+them (consecutive sung parts in score order, soloists left on their own staff; --staves
+names the pairs, --open keeps one part per staff). A bar where the two parts share rhythm,
+ties and words becomes chords with one lyric line; elsewhere the upper part is voice 1
+(stems up), the lower voice 2 (stems down), and the lower part gets its own lyric line
+only where its words differ (SKILL.md 7.2 and 7.4). A tie never changes voice: a merged
+bar tied to a divided one is divided too. Crossed parts are never chorded (7.6).
+Accompaniment staves are shown as written.
+
+Timing, as stem_vs_score.py does it: beats become seconds with the score's tempo marks,
+and the line-up is anchored where the audio first sounds against where the score first
+has a note; only the tempo is refined, on note onsets found in the audio. Then it is
+re-anchored after every fermata (on a note, a rest or a barline): playback holds a
+fermata longer than written, by an amount the file does not say, and everything after
+it runs that much late. Each hold is
+measured by aligning the score's pitch content with the audio's (chroma, dynamic time
+warping) and refined on the onsets that follow; the report gives each fermata's hold and
+checks every 15 s of the lights against the pitch alignment, naming the bar of any stretch
+more than 100 ms out. (Matching each light to the nearest onset in the audio cannot catch
+this: with a piano in sixteenths there is always an onset near enough, and a 0.75 s lag
+measured as -2 ms.) Each finished mp4 is checked too: its audio against the mp3, and its
+frames against the times they were meant for.
+The video has a variable frame rate: one frame per change of lights or page,
+each shown from the exact millisecond of the change, so nothing is rounded to a frame grid
+and nothing is encoded twice. With several mp3s, each renders in its own process, one per
+CPU core (--jobs).
+
+The lyric sheet comes with them (lyric_sheet.py, SKILL.md 10.1): "<title> - lyric sheet.pdf", every
+part's words on one printable page (and, as its second page, the 16:9 video's page), and beside each
+video "<mp3 name>, lyrics.mp4" (16:9) and "<mp3 name>, lyrics, iPad.mp4" (3:4 portrait, the printed
+page), each syllable lit in the colours of the parts singing it, timed exactly as the score video is. Its
+plan, "<title> - lyric sheet plan.json" (--lyric-plan), says how the words fall into sections and
+rows and which word in each row is bold, with an emoji. With no plan the script writes a draft from
+the words (--lyrics, else --display when it has one part per staff, else the score) and stops
+before rendering anything; it refuses a plan that is not finished. --no-lyrics makes the score
+videos alone; --lyrics-only the lyric sheet and its videos alone.
+
+Needs verovio, cairosvg, lxml, numpy, pillow, fonttools and brotli (the Leipzig font fix,
+8.4) and ffmpeg with libx264; stem_vs_score.py and verify.py beside it. D.C., D.S. and codas are not
+followed (repeat signs and endings are). Seven videos of a 4:48 piece took 9 minutes on 2
+cores.
+"""
+import sys, os, io, re, copy, math, argparse, subprocess, zipfile, tempfile, shutil, bisect
+from concurrent.futures import ThreadPoolExecutor
+from fractions import Fraction as Fr
+import numpy as np
+from lxml import etree
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from stem_vs_score import load_score, beats_to_sec, envelope, runs  # noqa: E402
+from verify import lyric_line_runs, sung_positions, parts_on  # noqa: E402
+import mp4out  # noqa: E402
+
+# Okabe-Ito, colour-blind safe; neighbours on a shared staff get well-separated hues
+PALETTE = ['#0072B2', '#D55E00', '#009E73', '#CC79A7', '#B07A00', '#7F3C8D', '#00798C', '#8C510A']
+GREY = '#B4B4B4'
+# dark mode, the default: for backlit screens, not paper. Bright hues that keep apart on a dark
+# ground; the same order (the four parts sharing staves first)
+PALETTE_DARK = ['#56B4E9', '#FF9F43', '#4CD98A', '#F48FD0', '#F0E442', '#B39DFF', '#45D6D0', '#E8B070']
+THEME = {}
+
+
+def set_theme(dark):
+    """Light (black on white, like the printed page) by default; --dark for a backlit screen."""
+    if dark:
+        THEME.update(dark=True, bg=np.array([28, 28, 30], np.float32), ink=np.array([225, 225, 225], np.float32),
+                     grey='#8C8C8C', tint=0.5, lift=0.35)
+    else:
+        THEME.update(dark=False, bg=np.array([255, 255, 255], np.float32),
+                     ink=np.array([0, 0, 0], np.float32), grey=GREY, tint=0.30, lift=0.0)
+
+
+set_theme(False)
+STEP = {'C': 0, 'D': 2, 'E': 4, 'F': 5, 'G': 7, 'A': 9, 'B': 11}
+NOTE_ORDER = ['grace', 'cue', 'chord', 'pitch', 'unpitched', 'rest', 'duration', 'tie', 'instrument',
+              'footnote', 'level', 'voice', 'type', 'dot', 'accidental', 'time-modification', 'stem',
+              'notehead', 'notehead-text', 'staff', 'beam', 'notations', 'lyric', 'play', 'listen']
+
+
+# ----------------------------------------------------------------------------- reading the score
+
+def read_xml(path):
+    if path.lower().endswith('.mxl'):
+        z = zipfile.ZipFile(path)
+        cont = etree.fromstring(z.read('META-INF/container.xml'))
+        full = cont.find('.//{*}rootfile').get('full-path')
+        return etree.fromstring(z.read(full))
+    return etree.parse(path, etree.XMLParser(remove_blank_text=True, recover=True)).getroot()
+
+
+def hexrgb(h):
+    return np.array([int(h[i:i + 2], 16) for i in (1, 3, 5)], np.float32)
+
+
+def midi(note):
+    p = note.find('pitch')
+    if p is None:
+        return None
+    return 12 * (int(p.findtext('octave')) + 1) + STEP[p.findtext('step')] + int(float(p.findtext('alter') or 0))
+
+
+def _base(key):
+    """A syllable key's note id: "id@n" is line n of a note printing its word on two lines."""
+    return key.split('@')[0]
+
+
+def _letters(t):
+    return re.sub(r'[^a-z]', '', (t or '').lower())
+
+
+def lyric1(note):
+    """The first lyric line's (syllabic, text), or None."""
+    ls = note.findall('lyric')
+    if not ls:
+        return None
+    ls.sort(key=lambda l: int(re.sub(r'\D', '', l.get('number') or '1') or 1))
+    t = ''.join(x.text or '' for x in ls[0].findall('text'))
+    return (ls[0].findtext('syllabic') or 'single', t) if t.strip() else None
+
+
+def ties(note):
+    ts = [t.get('type') for t in note.findall('tie')] + [t.get('type') for t in note.iter('tied')]
+    return 'start' in ts, 'stop' in ts
+
+
+def scan_part(pi, part, prefix='n'):
+    """Assign an id to every note and return (notes, measure starts) in quarters."""
+    div, pos, notes, starts, k = 1, Fr(0), [], [], 0
+    for mi, m in enumerate(part.findall('measure')):
+        starts.append(pos)
+        t, mx, last_on = pos, pos, pos
+        for e in m:
+            if e.tag == 'attributes' and e.find('divisions') is not None:
+                div = int(e.findtext('divisions'))
+            elif e.tag == 'backup':
+                t -= Fr(int(e.findtext('duration')), div)
+            elif e.tag == 'forward':
+                t += Fr(int(e.findtext('duration')), div)
+            elif e.tag == 'note':
+                nid = f'{prefix}{pi}x{k}'
+                k += 1
+                e.set('id', nid)
+                grace = e.find('grace') is not None
+                chord = e.find('chord') is not None
+                d = Fr(0) if grace else Fr(int(e.findtext('duration') or 0), div)
+                on = last_on if chord else t
+                ts, tp = ties(e)
+                notes.append(dict(id=nid, part=pi, mi=mi, el=e, on=on, dur=d, rel=on - pos,
+                                  voice=e.findtext('voice') or '1', rest=e.find('rest') is not None,
+                                  chord=chord, grace=grace, midi=midi(e), tie_start=ts, tie_stop=tp,
+                                  lyric=lyric1(e), type=e.findtext('type'), dots=len(e.findall('dot')),
+                                  tmod=e.find('time-modification') is not None))
+                if not chord:
+                    last_on = t
+                    t += d
+            mx = max(mx, t)
+        pos = mx
+    return notes, starts
+
+
+def syllable_windows(notes):
+    """Per sung note with a syllable: (start, end) in quarters, the end running on through the
+    following syllable-less notes (a melisma or a tie) and stopping at a rest or the next syllable."""
+    seq = [n for n in notes if not n['chord'] and not n['grace'] and n['voice'] == '1']
+    out, cur = {}, None
+    for n in seq:
+        if n['rest']:
+            cur = None
+        elif n['lyric']:
+            cur = n['id']
+            out[cur] = [n['on'], n['on'] + n['dur']]
+        elif cur:
+            out[cur][1] = n['on'] + n['dur']
+    return out
+
+
+# ----------------------------------------------------------------------------- closed score
+
+def lcm(a, b):
+    return a * b // math.gcd(a, b)
+
+
+def normalise_divisions(part, D):
+    div = 1
+    for m in part.findall('measure'):
+        for e in m:
+            if e.tag == 'attributes' and e.find('divisions') is not None:
+                div = int(e.findtext('divisions'))
+                e.find('divisions').text = str(D)
+            for d in ([e.find('duration')] if e.tag in ('note', 'backup', 'forward') else []) + \
+                     ([e.find('offset')] if e.tag in ('direction', 'harmony') else []):
+                if d is not None and d.text:
+                    d.text = str(int(Fr(int(float(d.text)) * D, div)))
+
+
+def set_child(note, tag, text):
+    old = note.find(tag)
+    if old is not None:
+        old.text = text
+        return
+    new = etree.Element(tag)
+    new.text = text
+    idx = NOTE_ORDER.index(tag)
+    at = len(note)
+    for i, c in enumerate(note):
+        if c.tag in NOTE_ORDER and NOTE_ORDER.index(c.tag) > idx:
+            at = i
+            break
+    note.insert(at, new)
+
+
+def strip(note, *tags):
+    for t in tags:
+        for c in note.findall(t):
+            note.remove(c)
+
+
+def bar_events(notes, mi):
+    return [n for n in notes if n['mi'] == mi]
+
+
+def mergeable(eu, el):
+    if len(eu) != len(el) or not eu:
+        return False
+    for a, b in zip(eu, el):
+        if a['chord'] or b['chord'] or a['grace'] or b['grace'] or a['voice'] != '1' or b['voice'] != '1':
+            return False
+        for k in ('rel', 'dur', 'rest', 'type', 'dots', 'tie_start', 'tie_stop', 'lyric', 'tmod'):
+            if a[k] != b[k]:
+                return False
+        if not a['rest'] and (a['midi'] is None or b['midi'] is None or b['midi'] > a['midi']):
+            return False          # crossed parts are never chorded (SKILL.md 7.6)
+    return True
+
+
+def build_pair(up, lo, nu, nl, pid, name, abbr, owners, syl_holder):
+    """Write parts `up` and `lo` onto one staff; return the new <part>.
+    owners[note id] -> set of part indices sounding that notehead;
+    syl_holder[(part, note id)] -> note id whose printed syllable that part reads."""
+    D = 1
+    for p in (up, lo):
+        for d in p.iter('divisions'):
+            D = lcm(D, int(d.text))
+    normalise_divisions(up, D)
+    normalise_divisions(lo, D)
+    mu, ml = up.findall('measure'), lo.findall('measure')
+    lo_el = {e.get('id'): e for e in lo.iter('note')}
+    if len(mu) != len(ml):
+        sys.exit(f'{name}: the two parts have {len(mu)} and {len(ml)} bars; cannot share a staff')
+    pu, pl = nu[0]['part'] if nu else None, nl[0]['part'] if nl else None
+    ev = [(bar_events(nu, i), bar_events(nl, i)) for i in range(len(mu))]
+    merged = [mergeable(a, b) for a, b in ev]
+    changed = True
+    while changed:                            # a tie never changes voice
+        changed = False
+        for i, (a, b) in enumerate(ev):
+            if not merged[i]:
+                continue
+            firsts = [x[0] for x in (a, b) if x]
+            lasts = [x[-1] for x in (a, b) if x]
+            if (i > 0 and not merged[i - 1] and any(n['tie_stop'] for n in firsts)) or \
+               (i + 1 < len(ev) and not merged[i + 1] and any(n['tie_start'] for n in lasts)):
+                merged[i] = False
+                changed = True
+    part = etree.Element('part', id=pid)
+    lo_clef = None
+    # a lower-voice extender runs on to the next syllable-less note in its voice, and 7.4 moves the
+    # lower part's words to line 1 where both sing them: end it on its last held note (SKILL.md 7.6,
+    # Verovio only)
+    line2 = {'open': False, 'last': None, 'num': '2'}
+    up_el = {e.get('id'): e for e in up.iter('note')}
+
+    def extends(el):
+        return any(ly.find('extend') is not None and ly.find('extend').get('type') != 'stop'
+                   for ly in el.findall('lyric'))
+
+    def close_line2():
+        if line2['open'] and line2['last'] is not None:
+            ly = etree.SubElement(line2['last'], 'lyric', number=line2['num'])
+            etree.SubElement(ly, 'extend', type='stop')
+        line2['open'], line2['last'] = False, None
+    for i, (mU, mL) in enumerate(zip(mu, ml)):
+        a, b = ev[i]
+        m = etree.SubElement(part, 'measure', {k: v for k, v in mU.attrib.items() if k != 'width'})
+        la = mL.find('attributes')
+        if la is not None and la.find('clef') is not None:
+            lo_clef = copy.deepcopy(la.find('clef'))
+            lo_clef.attrib.pop('number', None)
+        clef_due = la is not None and la.find('clef') is not None
+        # one line only for the same words at the same moments: a staggered entrance needs its own
+        # copy under its own note (SKILL.md 7.4)
+        sa = [(n['rel'], n['lyric']) for n in a if n['lyric']]
+        sb = [(n['rel'], n['lyric']) for n in b if n['lyric']]
+        same_words = sa == sb
+        # which printed syllable each part reads in this bar
+        ha = [n['id'] for n in a if n['lyric']]
+        hb = [n['id'] for n in b if n['lyric']]
+        for h in ha:
+            syl_holder[(pu, h)] = h
+        # one line for both, but where only the lower part holds a syllable over more notes, print
+        # its copy, with the extender (SKILL.md 7.4): the upper part reads it from there
+        take = set()
+        if same_words and not merged[i]:
+            take = {y for x, y in zip(ha, hb) if extends(lo_el[y]) and not extends(up_el[x])}
+        if merged[i] or same_words:
+            for x, y in zip(ha, hb):
+                if y in take:
+                    syl_holder[(pu, x)] = y
+                    syl_holder[(pl, y)] = y
+                else:
+                    syl_holder[(pl, y)] = x
+        else:
+            for y in hb:
+                syl_holder[(pl, y)] = y
+        taken_up = {x for x, y in zip(ha, hb) if y in take}
+        partner = {x['id']: y for x, y in zip(a, b)} if merged[i] else {}
+        t = Fr(0)
+        placed_clef = False
+        for e in mU:
+            if e.tag == 'print':
+                continue
+            c = copy.deepcopy(e)
+            if e.tag == 'attributes':
+                for cl in c.findall('clef'):
+                    c.remove(cl)
+                if clef_due and lo_clef is not None and not placed_clef:
+                    idx = len(c)
+                    for j, ch in enumerate(c):
+                        if ch.tag in ('staff-details', 'transpose', 'directive', 'measure-style', 'for-part'):
+                            idx = j
+                            break
+                    c.insert(idx, copy.deepcopy(lo_clef))
+                    placed_clef = True
+                m.append(c)
+                continue
+            if e.tag != 'note':
+                if e.tag in ('backup', 'forward'):
+                    q = int(e.findtext('duration'))
+                    t += q if e.tag == 'forward' else -q
+                m.append(c)
+                continue
+            if c.find('chord') is None and c.find('grace') is None:
+                t += int(c.findtext('duration') or 0)
+            n_id = c.get('id')
+            owners.setdefault(n_id, set()).add(pu)
+            if n_id in taken_up:
+                strip(c, 'lyric')
+            if merged[i]:
+                set_child(c, 'voice', '1')
+                m.append(c)
+                y = partner.get(n_id)
+                if y is not None and not y['rest']:
+                    if y['midi'] == midi(e):
+                        owners[n_id].add(pl)                    # unison: one notehead, both parts
+                    else:
+                        lc = copy.deepcopy(lo_el[y['id']])
+                        strip(lc, 'lyric', 'beam', 'stem')
+                        nots = lc.find('notations')
+                        if nots is not None:
+                            for ch in list(nots):
+                                if ch.tag != 'tied':
+                                    nots.remove(ch)
+                        lc.insert(0, etree.Element('chord'))
+                        set_child(lc, 'voice', '1')
+                        m.append(lc)
+                        owners.setdefault(lc.get('id'), set()).add(pl)
+                elif y is not None:
+                    owners[n_id].add(pl)                        # the shared rest
+            else:
+                set_child(c, 'voice', str(2 * int(c.findtext('voice') or 1) - 1))
+                if c.find('rest') is None:
+                    set_child(c, 'stem', 'up')
+                m.append(c)
+        if clef_due and lo_clef is not None and not placed_clef:
+            at = etree.Element('attributes')
+            at.append(copy.deepcopy(lo_clef))
+            m.insert(0, at)
+        if merged[i]:
+            if hb:
+                close_line2()
+            continue
+        if t:
+            bk = etree.SubElement(m, 'backup')
+            etree.SubElement(bk, 'duration').text = str(t)
+        # where both voices rest at the same moment for the same time, one rest is printed, lit
+        # for both parts: two stacked copies of every rest read as clutter
+        up_rests = {(x['rel'], x['dur']): x['id'] for x in a if x['rest'] and not x['chord']}
+        for e in mL:
+            if e.tag not in ('note', 'backup', 'forward'):
+                continue
+            c = copy.deepcopy(e)
+            if e.tag == 'note':
+                owners.setdefault(c.get('id'), set()).add(pl)
+                me = next((x for x in b if x['id'] == c.get('id')), None)
+                if me is not None and me['rest'] and (me['rel'], me['dur']) in up_rests:
+                    c.set('print-object', 'no')
+                    owners.setdefault(up_rests[(me['rel'], me['dur'])], set()).add(pl)
+                set_child(c, 'voice', str(2 * int(c.findtext('voice') or 1)))
+                if c.find('rest') is None:
+                    set_child(c, 'stem', 'down')
+                lys = c.findall('lyric')
+                num = '1' if c.get('id') in take else '2'
+                if lys and ((same_words and num == '2') or line2['num'] != num):
+                    close_line2()                   # its words are printed on the other line from here
+                for j, ly in enumerate(sorted(lys, key=lambda l: int(re.sub(r'\D', '', l.get('number') or '1') or 1))):
+                    if (same_words and num == '2') or j > 0:
+                        c.remove(ly)
+                    else:
+                        ly.set('number', num)
+                        ly.attrib.pop('placement', None)
+                        ly.attrib.pop('default-y', None)
+                        ext = ly.find('extend')
+                        line2['open'] = ext is not None and ext.get('type') != 'stop'
+                        line2['last'], line2['num'] = None, num
+                if not lys and c.find('rest') is None and c.find('chord') is None and line2['open']:
+                    line2['last'] = c
+            m.append(c)
+    return part, sum(merged), len(merged)
+
+
+ACC = {-2: 'flat-flat', -1: 'flat', 0: 'natural', 1: 'sharp', 2: 'double-sharp'}
+ACC_AFTER = ('type', 'dot', 'voice', 'instrument', 'footnote', 'level', 'unpitched', 'pitch', 'rest', 'chord',
+             'grace', 'cue', 'duration', 'tie')
+
+
+def mark_accidentals(root):
+    """Verovio prints only the accidentals a MusicXML writes as <accidental>; it does not work them
+    out from <alter>, and a file that leaves them to the reader (Sibelius does) shows B-flat for
+    B-natural (SKILL.md 8.1). Write the ones the score needs: per staff, both voices together,
+    against the key signature and what earlier notes in the bar have already altered; a note tied
+    over from the last bar shows none. Returns how many were added."""
+    added = 0
+    for part in root.findall('part'):
+        fifths, div = 0, 1
+        for m in part.findall('measure'):
+            key = {}
+            for e in m:
+                if e.tag == 'attributes':
+                    if e.find('key/fifths') is not None:
+                        fifths = int(e.findtext('key/fifths'))
+                    if e.find('divisions') is not None:
+                        div = int(e.findtext('divisions'))
+            order = 'FCGDAEB' if fifths >= 0 else 'BEADGCF'
+            key = {st: (1 if fifths > 0 else -1) for st in order[:abs(fifths)]}
+            evs, t, k = [], Fr(0), 0
+            for e in m:
+                if e.tag == 'backup':
+                    t -= Fr(int(e.findtext('duration')), div)
+                elif e.tag == 'forward':
+                    t += Fr(int(e.findtext('duration')), div)
+                elif e.tag == 'note':
+                    on = evs[-1][0] if (e.find('chord') is not None and evs) else t
+                    evs.append((on, k, e))
+                    k += 1
+                    if e.find('chord') is None and e.find('grace') is None:
+                        t += Fr(int(e.findtext('duration') or 0), div)
+            state = {}
+            for _, _, n in sorted(evs, key=lambda x: (x[0], x[1])):
+                p = n.find('pitch')
+                if p is None:
+                    continue
+                st, octv = p.findtext('step'), p.findtext('octave')
+                alt = int(float(p.findtext('alter') or 0))
+                held = any(x.get('type') == 'stop' for x in n.findall('tie'))
+                have = n.find('accidental')
+                now = state.get((st, octv), key.get(st, 0))
+                if have is not None:
+                    state[(st, octv)] = alt
+                    continue
+                if held or alt == now or alt not in ACC:
+                    if not held:
+                        state[(st, octv)] = alt
+                    continue
+                acc = etree.Element('accidental')
+                acc.text = ACC[alt]
+                at = 0
+                for j, ch in enumerate(n):
+                    if ch.tag in ACC_AFTER:
+                        at = j + 1
+                n.insert(at, acc)
+                state[(st, octv)] = alt
+                added += 1
+    return added
+
+
+MEI_ACC = {'s': 1, 'f': -1, 'n': 0, 'x': 2, 'ss': 2, 'ff': -2, 'ns': 1, 'nf': -1}
+
+
+def pitch_readback(tk):
+    """Every note as a singer would read it off the page Verovio draws, against the pitch it
+    plays: written accidentals, else the key signature and what earlier notes in the bar on that
+    staff have altered. Returns [(bar, staff, note name, reads, sounds)] where they differ."""
+    M = '{http://www.music-encoding.org/ns/mei}'
+    X = '{http://www.w3.org/XML/1998/namespace}id'
+    root = etree.fromstring(tk.getMEI().encode())
+    q = {}
+    for ev in tk.renderToTimemap():
+        for i in ev.get('on', []):
+            q.setdefault(i, ev['qstamp'])
+    key, bad = {}, []
+    held = {t.get('endid', '').lstrip('#') for t in root.iter(M + 'tie')}   # tied over: reads as its first note
+
+    def setkey(el, n=None):
+        sig = el.get('keysig') or next((k.get('sig') for k in el.iter(M + 'keySig')), None)
+        if sig is None:
+            return
+        d = {}
+        if sig not in ('0', 'mixed'):
+            k, a = int(sig[:-1]), (1 if sig[-1] == 's' else -1)
+            d = {st: a for st in ('fcgdaeb' if a > 0 else 'beadgcf')[:k]}
+        if n is None:
+            for s_ in list(key) or ['*']:
+                key[s_] = d
+            key['*'] = d
+        else:
+            key[n] = d
+    for el in root.iter(M + 'scoreDef', M + 'staffDef', M + 'measure'):
+        if el.tag == M + 'scoreDef':
+            setkey(el)
+        elif el.tag == M + 'staffDef':
+            setkey(el, el.get('n'))
+        else:
+            for st in el.findall(M + 'staff'):
+                n = st.get('n')
+                kd = key.get(n, key.get('*', {}))
+                notes = [(q.get(nt.get(X)), k, nt) for k, nt in enumerate(st.iter(M + 'note'))
+                         if nt.get(X) not in held and nt.get('tie') not in ('m', 't')]
+                state = {}
+                for qs, _, nt in sorted((x for x in notes if x[0] is not None), key=lambda x: (x[0], x[1])):
+                    pn, oc = nt.get('pname'), nt.get('oct')
+                    w = nt.get('accid') or next((a.get('accid') for a in nt.findall(M + 'accid') if a.get('accid')), None)
+                    g = nt.get('accid.ges') or next((a.get('accid.ges') for a in nt.findall(M + 'accid') if a.get('accid.ges')), None)
+                    sounds = MEI_ACC.get(g, MEI_ACC.get(w, 0)) if (g or w) else 0
+                    reads = MEI_ACC[w] if w in MEI_ACC else state.get((pn, oc), kd.get(pn, 0))
+                    state[(pn, oc)] = reads
+                    if reads != sounds:
+                        nm = lambda a: pn.upper() + {-2: 'bb', -1: 'b', 0: '', 1: '#', 2: '##'}[a] + oc
+                        bad.append((el.get('n'), n, nm(sounds), nm(reads), nm(sounds)))
+    return bad
+
+
+def mark_tuplets(root):
+    """Notes timed as tuplets (<time-modification>) but with no <tuplet> marking print with no
+    bracket or number, so a triplet looks like a misprint. Group each voice's run of them into
+    tuplets (a group is complete when it fills its normal notes' worth) and mark the ends.
+    Returns how many groups were marked."""
+    count = 0
+    for part in root.findall('part'):
+        for m in part.findall('measure'):
+            notes = [e for e in m if e.tag == 'note' and e.find('chord') is None and e.find('grace') is None]
+            if any(e.find('.//tuplet') is not None for e in notes):
+                continue
+            by_voice = {}
+            for e in notes:
+                by_voice.setdefault((e.findtext('voice') or '1', e.findtext('staff') or '1'), []).append(e)
+            for vs in by_voice.values():
+                group, total, need = [], 0, None
+                for e in vs + [None]:
+                    tm = e.find('time-modification') if e is not None else None
+                    if tm is None:
+                        group, total, need = [], 0, None
+                        continue
+                    act, nor = int(tm.findtext('actual-notes') or 3), int(tm.findtext('normal-notes') or 2)
+                    d = int(e.findtext('duration') or 0)
+                    if not group:
+                        need = Fr(nor) * Fr(d * act, nor)       # the group's length: nor normal notes
+                    group.append(e)
+                    total += d
+                    if total >= need:
+                        if total == need and len(group) > 1:
+                            for el, kind in ((group[0], 'start'), (group[-1], 'stop')):
+                                nots = el.find('notations')
+                                if nots is None:
+                                    nots = etree.Element('notations')
+                                    at = len(el)
+                                    for i2, ch in enumerate(el):
+                                        if ch.tag in ('lyric', 'play', 'listen'):
+                                            at = i2
+                                            break
+                                    el.insert(at, nots)
+                                t = etree.SubElement(nots, 'tuplet', type=kind)
+                                if kind == 'start':
+                                    t.set('bracket', 'yes')
+                            count += 1
+                        group, total, need = [], 0, None
+    return count
+
+
+def default_pairs(names, sung):
+    order = [i for i in range(len(names)) if i in sung and not names[i].lower().startswith('solo')]
+    return [tuple(order[k:k + 2]) for k in range(0, len(order) - 1, 2)]
+
+
+def display_score(root, parts, notes_by_part, pairs, sung):
+    """Return (display root, owners, syl_holder, staff names)."""
+    owners, syl_holder = {}, {}
+    pl = root.find('part-list')
+    sps = {sp.get('id'): sp for sp in pl.findall('score-part')}
+    names = [(sps[p.get('id')].findtext('part-name') or p.get('id')).strip() for p in parts]
+    abbrs = [(sps[p.get('id')].findtext('part-abbreviation') or '').strip() for p in parts]
+    pair_of = {}
+    for a, b in pairs:
+        pair_of[a] = (a, b)
+        pair_of[b] = None
+    out = etree.Element('score-partwise', version='4.0')
+    new_pl = etree.SubElement(out, 'part-list')
+    for i, p in enumerate(parts):
+        if i in pair_of and pair_of[i] is None:
+            continue
+        if i in pair_of:
+            a, b = pair_of[i]
+            pid = f'PX{a}'
+            nm = f'{names[a]}\n{names[b]}'
+            ab = f'{abbrs[a] or names[a]}\n{abbrs[b] or names[b]}'
+            newp, nmerged, nbars = build_pair(copy.deepcopy(parts[a]), copy.deepcopy(parts[b]),
+                                              notes_by_part[a], notes_by_part[b], pid, nm, ab, owners, syl_holder)
+            # the copies carry the ids given by scan_part, and the notes' 'el' point at the originals;
+            # re-link merged chord partners' ids is not needed: ids are attributes, copied verbatim
+            print(f'   staff "{names[a]} + {names[b]}": {nmerged} of {nbars} bars as chords, the rest divided')
+            sp = etree.SubElement(new_pl, 'score-part', id=pid)
+            etree.SubElement(sp, 'part-name').text = nm
+            etree.SubElement(sp, 'part-abbreviation').text = ab
+            out.append(newp)
+        else:
+            sp = copy.deepcopy(sps[p.get('id')])
+            new_pl.append(sp)
+            c = copy.deepcopy(p)
+            for pr in c.iter('print'):
+                pr.getparent().remove(pr)
+            out.append(c)
+            if i in sung:
+                for n in notes_by_part[i]:
+                    owners.setdefault(n['id'], set()).add(i)
+                    if n['lyric']:
+                        syl_holder[(i, n['id'])] = n['id']
+    return out, owners, syl_holder
+
+
+# ----------------------------------------------------------------------------- audio and timing
+
+def decode(path, sr=22050):
+    raw = subprocess.run(['ffmpeg', '-loglevel', 'error', '-i', path, '-ac', '1', '-ar', str(sr),
+                          '-f', 'f32le', '-'], capture_output=True, check=True).stdout
+    return np.frombuffer(raw, np.float32)
+
+
+def audio_onsets(x, sr=22050, n=1024, hop=128):
+    """Spectral-flux onsets (seconds)."""
+    win = np.hanning(n).astype(np.float32)
+    nfr = 1 + max(0, (len(x) - n) // hop)
+    prev, flux = None, np.zeros(nfr, np.float32)
+    for c0 in range(0, nfr, 4096):
+        c1 = min(nfr, c0 + 4096)
+        idx = np.arange(c0, c1)[:, None] * hop + np.arange(n)[None, :]
+        L = np.log1p(100 * np.abs(np.fft.rfft(x[idx] * win, axis=1))).astype(np.float32)
+        if prev is not None:
+            L = np.vstack([prev[None], L])
+            d = np.maximum(0, np.diff(L, axis=0)).sum(1)
+            flux[c0:c1] = d
+        else:
+            d = np.maximum(0, np.diff(L, axis=0)).sum(1)
+            flux[c0 + 1:c1] = d
+        prev = L[-1]
+    k = int(0.4 * sr / hop)
+    pad = np.pad(flux, k, mode='edge')
+    from numpy.lib.stride_tricks import sliding_window_view
+    med = np.median(sliding_window_view(pad, 2 * k + 1), axis=1)[:nfr]
+    thr = med + 0.25 * np.percentile(flux, 95)
+    w = 4
+    padm = np.pad(flux, w, mode='constant')
+    mx = sliding_window_view(padm, 2 * w + 1).max(1)[:nfr]
+    peaks = np.flatnonzero((flux >= mx) & (flux > thr))
+    t = (peaks * hop + n / 2) / sr
+    keep, last = [], -1
+    for v in t:
+        if v - last > 0.05:
+            keep.append(v)
+            last = v
+    return np.array(keep)
+
+
+HOP_C = 0.05          # seconds per chroma frame
+
+
+def chroma_audio(x, sr=22050):
+    """Pitch-class profile of the audio every HOP_C s (55 Hz - 2 kHz, log magnitude)."""
+    n, h = 4096, int(sr * HOP_C)
+    nfr = max(0, (len(x) - n) // h)
+    f = np.fft.rfftfreq(n, 1 / sr)
+    sel = (f > 55) & (f < 2000)
+    pc = ((np.round(12 * np.log2(f[sel] / 440)) + 9) % 12).astype(int)
+    M = np.zeros((12, sel.sum()), np.float32)
+    M[pc, np.arange(sel.sum())] = 1
+    win = np.hanning(n).astype(np.float32)
+    A = np.zeros((nfr, 12), np.float32)
+    for c0 in range(0, nfr, 1000):
+        idx = np.arange(c0, min(nfr, c0 + 1000))[:, None] * h + np.arange(n)[None, :]
+        A[c0:c0 + len(idx)] = np.log1p(1000 * np.abs(np.fft.rfft(x[idx] * win, axis=1))[:, sel]) @ M.T
+    return A / (np.linalg.norm(A, axis=1, keepdims=True) + 1e-9)
+
+
+def chroma_score(notes, to_audio, nfr):
+    """The same profile built from the score's notes (with a little of each note's fifth and third,
+    as a voice's overtones put there), placed on the audio timeline by `to_audio`."""
+    S = np.zeros((nfr, 12), np.float32)
+    for a, b, m in notes:
+        i0 = int(to_audio(a) / HOP_C)
+        i1 = max(i0 + 1, int(to_audio(b) / HOP_C))
+        for hh, w in ((0, 1.0), (7, 0.35), (4, 0.15)):
+            S[max(i0, 0):min(i1, nfr), (m + hh) % 12] += w
+    return S / (np.linalg.norm(S, axis=1, keepdims=True) + 1e-9)
+
+
+def dtw_offset(A, S, band):
+    """Dynamic time warping of the score's profile S against the audio's A, within +-band frames of
+    the straight line. Returns, per frame of S, how far (s) the audio has it from the straight line."""
+    n = min(len(A), len(S))
+    W = 2 * band + 1
+    D = np.full(W, np.inf)
+    P = np.zeros((n, W), np.int8)
+    ks = np.arange(W)
+    for i in range(n):
+        c = 1.0 - A[np.clip(i + ks - band, 0, len(A) - 1)] @ S[i]
+        if i == 0:
+            row = c.copy()
+        else:
+            up = np.append(D[1:], np.inf)        # the audio holds while the score moves on
+            best = np.minimum(D, up)
+            P[i] = np.where(D <= up, 0, 1)
+            row = c + best
+        for k in range(1, W):                    # the audio moves on while the score holds
+            v = row[k - 1] + c[k]
+            if v < row[k]:
+                row[k] = v
+                P[i, k] = 2
+        D = row
+    k, i, off = int(np.argmin(D)), n - 1, np.zeros(n)
+    seen = np.zeros(n, bool)
+    while i > 0:
+        if not seen[i]:
+            off[i], seen[i] = (k - band) * HOP_C, True
+        p = P[i, k]
+        if p == 0:
+            i -= 1
+        elif p == 1:
+            i, k = i - 1, k + 1
+        else:
+            k -= 1
+    return off
+
+
+class Timing:
+    """Score seconds -> audio seconds.
+
+    Anchored as stem_vs_score.py does it: the offset from where the audio first sounds against the
+    score's first note, only the tempo refined on onsets. Then re-anchored after every fermata:
+    playback holds a fermata longer than written, by an amount the file does not say (Sibelius
+    held the two-soloist TTBB's by 0.25 s and 0.45 s), and everything after it runs that much
+    late. The hold is measured by aligning the score's pitch content with the audio's (chroma,
+    dynamic time warping), which a steady groove cannot fool, and refined to the millisecond on
+    the onsets of the stretch that follows."""
+
+    def __init__(self, mp3, notes, first_score, breaks):
+        self.x = decode(mp3)
+        self.dur = len(self.x) / 22050
+        env = envelope(mp3, -50.0)
+        sounding = [r for r in runs(env) if r[1] - r[0] >= 0.3]
+        if not sounding:
+            sys.exit(f'{mp3}: no sound above -50 dBFS')
+        self.first_audio = sounding[0][0]
+        self.last_audio = sounding[-1][1]
+        self.off = self.first_audio - first_score           # anchored at the first entrance
+        self.aon = audio_onsets(self.x)
+        so = np.array(sorted(set(round(a, 3) for a, _, _ in notes)))
+        self.so = so
+        self.fit_tempo(so)
+        self.breaks = np.array(sorted(breaks))
+        self.hand = set()                                   # stretch starts set by --anchor, not fermatas
+        self.cum = np.zeros(len(self.breaks) + 1)
+        A = chroma_audio(self.x)
+        self.A, self.notes = A, notes
+        self.fit_holds(A, notes, so)
+        # the first entrance can be too quiet to trip the level threshold (a predominant mix with
+        # the entering voice 21 dB down started 0.1 s late): the pitch alignment of the first
+        # stretch overrules the anchor when they disagree by a frame or more
+        self.moved = 0.0
+        if abs(self.base) >= 0.03:
+            self.moved, self.off = self.base, self.off + self.base
+            self.fit_tempo(so)
+            self.fit_holds(A, notes, so)
+        # then the tempo and every hold together, by least squares on the onsets each lands near:
+        # fitted one after the other, a hold left in the tempo spreads over the whole piece (a
+        # 0.6 s hold measured 0.49 s), and the tempo refitted round the holds overshoots
+        if len(self.breaks):
+            for win in (0.15, 0.1, 0.06):
+                H = (so[:, None] >= self.breaks[None, :]).astype(float)
+                g = self(so)
+                ok, near = self.nearest(g, win)
+                if ok.sum() < len(self.breaks) + 8:
+                    break
+                X = np.column_stack([so, H])[ok]
+                sol = np.linalg.lstsq(X, near[ok] - self.off, rcond=None)[0]
+                self.scale = float(np.clip(sol[0], 0.9, 1.1))
+                self.steps = [float(v) for v in sol[1:]]     # one column per fermata: its hold
+                self.cum = np.concatenate([[0.0], np.cumsum(self.steps)])
+            # the check in the report is against a pitch alignment on the final straight line
+            self.dtw = dtw_offset(A, chroma_score(notes, self.straight, len(A)), band=int(3.0 / HOP_C))
+
+    def fit_tempo(self, so):
+        scale = 1.0
+        for win in (0.5, 0.3, 0.15):                         # refine the tempo only; the anchor stays put
+            g = self.off + scale * so
+            ok, near = self.nearest(g, win)
+            if ok.sum() >= 8:
+                X, Y = so[ok], near[ok] - self.off
+                scale = float(np.clip(np.dot(X, Y) / max(np.dot(X, X), 1e-9), 0.9, 1.1))
+        self.scale = scale
+
+    def fit_holds(self, A, notes, so):
+        """One offset per stretch between fermatas: coarse from the pitch alignment, fine from onsets."""
+        S = chroma_score(notes, self.straight, len(A))
+        self.dtw = dtw_offset(A, S, band=int(3.0 / HOP_C))
+        edges = [-1e9] + list(self.breaks) + [1e9]
+        # the alignment's own ends are loose: judge from 5 s in to 5 s before the last written note
+        self.lo = 5.0
+        self.hi = min(self.dur, float(self.straight(max(b for _, b, _ in notes)))) - 5.0
+        lo, hi = self.lo, self.hi
+        seg = []
+        for a, b in zip(edges[:-1], edges[1:]):
+            t0, t1 = max(float(self.straight(a)) + 1.0, lo), min(float(self.straight(b)) - 1.0, hi)
+            if t1 - t0 < 2.0:
+                seg.append(None)
+                continue
+            coarse = float(np.median(self.dtw[int(t0 / HOP_C):int(t1 / HOP_C)]))
+            inside = so[(so >= a) & (so < b)]
+            g = self.straight(inside) + coarse
+            g = g[(g > t0) & (g < t1)]
+            ok, near = self.nearest(g, 0.1)
+            if ok.sum() >= 6:
+                seg.append(coarse + float(np.median(near[ok] - g[ok])))
+            elif len(inside) and seg and a > -1e8:
+                # too few onsets to refine, and held chords leave the pitch alignment free to slide
+                # (a ballad's last three bars, one chord: -1.1 s where playback held +0.75 s): after
+                # a fermata the sound comes back with the next note, so take the first onset after it
+                # (a hold is never negative: an onset before the written end is the held note's own)
+                prev = seg[-1] if seg[-1] is not None else 0.0
+                g0 = float(self.straight(inside.min()))
+                later = self.aon[(self.aon > g0 + prev - 0.03) & (self.aon < g0 + prev + 3.0)]
+                seg.append(float(later[0]) - g0 if len(later) else coarse)
+            else:
+                seg.append(coarse)
+        base = seg[0] if seg[0] is not None else 0.0
+        self.base = base
+        self.steps, prev = [], base
+        for v in seg[1:]:
+            v = prev if v is None else v
+            self.steps.append(v - prev)
+            prev = v
+        self.cum = np.concatenate([[0.0], np.cumsum(self.steps)])
+
+    def nearest(self, g, win):
+        g = np.asarray(g, float)
+        if not len(g) or len(self.aon) < 2:
+            return np.zeros(len(g), bool), g
+        k = np.clip(np.searchsorted(self.aon, g), 1, len(self.aon) - 1)
+        near = np.where(np.abs(self.aon[k - 1] - g) < np.abs(self.aon[k] - g), self.aon[k - 1], self.aon[k])
+        return np.abs(near - g) < win, near
+
+    def straight(self, s):
+        return self.off + self.scale * np.asarray(s, float)
+
+    def __call__(self, s):
+        s = np.asarray(s, float)
+        return self.straight(s) + self.cum[np.searchsorted(self.breaks, s, side='right')]
+
+    def report(self, bar_at, label, seg=15.0):
+        fmt = lambda t: (lambda r: f'{int(r // 60)}:{r % 60:04.1f}')(round(t, 1))
+        print(f'\n{label}')
+        print(f'   anchor: audio first sounds at {fmt(self.first_audio)}; audio = {self.off:+.3f} s + '
+              f'{self.scale:.4f} x score time')
+        if self.moved:
+            print(f'   (moved {1000 * self.moved:+.0f} ms from where the audio first sounds, to agree with the '
+                  f'pitch alignment of the opening)')
+        for b, d in zip(self.breaks, self.steps):
+            if float(b) in self.hand:
+                print(f'   bar {bar_at(float(self(b)))} at {fmt(float(self(b)))}: anchored by hand, {1000 * d:+.0f} ms '
+                      f'against the stretch before it (no fermata there)')
+                continue
+            if b >= self.so.max() - 1e-6:
+                print(f'   fermata ending at {fmt(float(self.straight(b)))}: the last; nothing after it to re-anchor, '
+                      f'and the last notes stay lit until the sound stops at {fmt(self.last_audio)}')
+                continue
+            print(f'   fermata ending at {fmt(float(self.straight(b)))} (bar {bar_at(float(self(b)))}): playback '
+                  f'holds it {1000 * d:+.0f} ms beyond the written length; the lights after it follow')
+            if d < -0.1:
+                print(f'   <- a hold cannot be negative: the fit is wrong here; check the lights after bar '
+                      f'{bar_at(float(self(b)))} by eye')
+        # the check: the pitch alignment against the lights, per stretch. Aligned around the lights
+        # themselves, not around the straight line: the alignment only looks +-3 s either side, and
+        # after a few long holds the lights can be further than that from the straight line (a TTBB
+        # with piano: 3.5 s by bar 52), where it locks on to the wrong bar of a repeated figure
+        err = dtw_offset(self.A, chroma_score(self.notes, self, len(self.A)), band=int(3.0 / HOP_C))
+        t = np.arange(len(err)) * HOP_C
+        rows = []
+        for a in np.arange(self.lo, self.hi, seg):
+            sel = (t >= a) & (t < min(a + seg, self.hi))
+            if sel.sum() > 20:
+                rows.append((a, float(np.median(err[sel]))))
+        g = self(self.so)
+        ok, near = self.nearest(g, 0.1)
+        r = (near - g)[ok]
+        print(f'   check against the pitch alignment, per {seg:.0f} s (to its {1000 * HOP_C:.0f} ms step): ' +
+              '  '.join(f'{fmt(a)} {1000 * m:+.0f}' for a, m in rows))
+        bad = [(a, m) for a, m in rows if abs(m) >= 0.1]
+        for a, m in bad:
+            print(f'   <- the lights are {1000 * abs(m):.0f} ms {"ahead of" if m > 0 else "behind"} the audio around '
+                  f'{fmt(a)} (bar {bar_at(a)}), with no fermata to explain it')
+        if not bad:
+            print('   every stretch within 100 ms of the pitch alignment')
+        if len(r):
+            print(f'   onsets within 100 ms of a light: {len(r)} of {len(g)}; median {1000 * np.median(r):+.0f} ms '
+                  f'(positive = the sound comes after the light)')
+
+
+# ----------------------------------------------------------------------------- rendering
+
+def install_smufl_font():
+    """cairosvg ignores @font-face, so Verovio's text glyphs (the note in a metronome mark,
+    chord-symbol accidentals) print as boxes unless Leipzig is installed for fontconfig
+    (SKILL.md 8.4). Needs fonttools and brotli; without them the boxes stay."""
+    import verovio, base64
+    # fontconfig reads ~/.fonts; cairo on a Mac finds fonts through the system, in ~/Library/Fonts
+    dest = os.path.expanduser('~/Library/Fonts/Leipzig.ttf' if sys.platform == 'darwin' else '~/.fonts/Leipzig.ttf')
+    if os.path.exists(dest):
+        return
+    try:
+        from fontTools.ttLib import TTFont
+        css = open(os.path.join(os.path.dirname(verovio.__file__), 'data', 'Leipzig.css')).read()
+        f = TTFont(io.BytesIO(base64.b64decode(re.search(r'base64,([A-Za-z0-9+/=]+)', css).group(1))))
+        f.flavor = None
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        f.save(dest)
+        subprocess.run(['fc-cache', '-f'], check=False, capture_output=True)
+    except Exception as e:                                   # a box in a tempo mark is not fatal
+        print(f'note: could not install the Leipzig font ({e}); metronome marks may show a box')
+
+
+def render_png(svg_bytes, W, H):
+    import cairosvg
+    from PIL import Image
+    png = cairosvg.svg2png(bytestring=svg_bytes, output_width=W, output_height=H, background_color='white')
+    return np.asarray(Image.open(io.BytesIO(png)).convert('RGB'))
+
+
+_LYRIC_FONT = []
+
+
+def _lyric_width(text, size):
+    """The printed width of a syllable, in the SVG's units: measured in the serif font cairo
+    draws Verovio's "Times, serif" with, or estimated when that cannot be found."""
+    if not _LYRIC_FONT:
+        try:
+            from PIL import ImageFont
+            path = subprocess.run(['fc-match', '-f', '%{file}', 'Times'], capture_output=True,
+                                  text=True).stdout.strip()
+            _LYRIC_FONT.append(ImageFont.truetype(path, 400) if path else None)
+        except Exception:
+            _LYRIC_FONT.append(None)
+    f = _LYRIC_FONT[0]
+    if f is None:
+        return sum(size * (0.30 if c in "ijltfr.,'’ " else 0.56) for c in text)
+    return f.getlength(text) * size / 400
+
+
+def nudge_syllables(syls, ns):
+    """Verovio spaces a line's syllables apart only within one layer, so where the words on one
+    line come from two voices (the upper part's chord, then the lower part's own note) the next
+    bar's first syllable can print over the last one. Move each such syllable right until it
+    clears its neighbour by a space's width, as an engraver would, and shorten its line to match."""
+    rows = {}
+    for g in syls:
+        if 'spanning' in (g.get('class') or ''):
+            continue
+        t = g.find(ns + 'text')
+        inner = [x for x in g.iter(ns + 'tspan') if x.get('font-size')]
+        if t is None or not inner or t.get('x') is None:
+            continue
+        txt = ''.join(t.itertext()).strip()
+        if not txt:
+            continue
+        size = float(inner[-1].get('font-size').rstrip('px'))
+        rows.setdefault(t.get('y'), []).append([float(t.get('x')), txt, size, g, t])
+    moved = 0
+    for row in rows.values():
+        row.sort(key=lambda r: r[0])
+        for prev, cur in zip(row, row[1:]):
+            need = prev[0] + _lyric_width(prev[1], prev[2]) + 0.15 * prev[2]
+            if cur[0] < need:
+                dx = need - cur[0]
+                cur[0] = need
+                cur[4].set('x', f'{need:.0f}')
+                for r_ in cur[3].findall(ns + 'rect'):          # its own line or hyphen moves with it
+                    x0, w0 = float(r_.get('x')), float(r_.get('width'))
+                    r_.set('x', f'{x0 + dx:.0f}')
+                    if w0 - dx > 0.5 * cur[2]:            # a line ends where it did; a hyphen keeps its length
+                        r_.set('width', f'{w0 - dx:.0f}')
+                moved += 1
+    return moved
+
+
+class Page:
+    """One rendered page: base images per view, and every lightable element's pixels."""
+
+    def __init__(self, svg, W, H, owners, syl_holder, colours, views, names, label_px, times, bar_end, ctrl):
+        self.W, self.H, self.names, self.label_px = W, H, names, label_px
+        root = etree.fromstring(svg.encode())
+        ns = '{http://www.w3.org/2000/svg}'
+        self.root = root
+        cls = lambda e: (e.get('class') or '').split()
+        # SVG drawing units -> pixels, for noteheads placed straight from the SVG
+        inner = root.find(ns + 'svg')
+        vb = [float(v) for v in inner.get('viewBox').split()]
+        kx, ky = W / vb[2], H / vb[3]
+        pm = next(g for g in inner.iter(ns + 'g') if 'page-margin' in cls(g))
+        mx, my = (float(v) for v in re.findall(r'-?[\d.]+', pm.get('transform'))[:2])
+        notes, syls, rests = [], [], []
+        self.ctrl, self.ctrl_g = ctrl, []
+        for g in root.iter(ns + 'g'):
+            c = cls(g)
+            if 'note' in c and g.get('id') in owners:
+                notes.append(g)
+            elif ('rest' in c or 'mRest' in c) and g.get('id') in owners:
+                rests.append(g)
+            elif 'syl' in c:
+                syls.append(g)
+            elif {'tie', 'slur', 'fermata', 'dir', 'dynam', 'hairpin'} & set(c):
+                # a tie or slur carried over a system break is drawn again at the next system's
+                # start with no id, naming the original in a class "id-<its id>"
+                cid = g.get('id') or next((x[3:] for x in c if x.startswith('id-')), None)
+                if cid in ctrl:
+                    self.ctrl_g.append((cid, g))
+        # elements: (kind, key, g); heads get their own entry for the halo
+        self.elems = []
+        self.heads = {}
+        space = 180.0                     # a staff space in drawing units (Verovio's unit 9, x10)
+        self.space_px = space * ky
+        widths = {'E0A0': 2.0, 'E0A2': 1.69, 'E0A3': 1.18, 'E0A4': 1.18}
+        for g in notes:
+            head = next((h for h in g if 'notehead' in cls(h)), None)
+            self.elems.append(('body', g.get('id'), g))
+            if head is not None:
+                self.elems.append(('head', g.get('id'), head))
+                use = head.find(ns + 'use')
+                if use is not None and use.get('transform'):
+                    tx, ty = (float(v) for v in re.findall(r'-?[\d.]+', use.get('transform'))[:2])
+                    href = use.get('{http://www.w3.org/1999/xlink}href') or ''
+                    sc = float((re.findall(r'scale\(([\d.]+)', use.get('transform')) or ['0.72'])[0]) / 0.72
+                    w = widths.get(href[1:5], 1.18) * space * sc
+                    self.heads[g.get('id')] = ((tx + mx + w / 2) * kx, (ty + my) * ky,
+                                               w / 2 * kx, space * sc / 2 * ky)
+        for g in rests:
+            self.elems.append(('rest', g.get('id'), g))
+        for cid, g in self.ctrl_g:                     # a tie lights while either of its notes sounds
+            if ctrl[cid][0] == 'tie':
+                self.elems.append(('tie', f'{cid}#{len(self.elems)}', g))
+        self.nudged = nudge_syllables(syls, ns)
+        for s in syls:
+            # an extender squeezed to a stub (the next note sits right under the word's end) would
+            # read as a full stop after the word; a print has room for the line, this has not
+            for r_ in s.findall(ns + 'rect'):
+                if float(r_.get('width') or 0) < 0.6 * space:
+                    s.remove(r_)
+            if 'spanning' in cls(s):
+                # an extender carried over a system break: Verovio draws the rest of the line at
+                # the start of the next system, outside any note, naming its syllable only in a
+                # class "id-<syllable's svg id>". It lights with that syllable, with a halo of its own
+                ref = next((c[3:] for c in cls(s) if c.startswith('id-')), None)
+                holder = _SYL_SVG.get(ref)
+                if holder is not None:
+                    self.elems.append(('sylx', f'{holder}#{len(self.elems)}', s))
+                continue
+            a = s.getparent()
+            while a is not None and not ({'note', 'chord'} & set(cls(a))):
+                a = a.getparent()
+            if a is None:
+                continue
+            ids = [a.get('id')] if 'note' in cls(a) else [n.get('id') for n in a.iter(ns + 'g') if 'note' in cls(n)]
+            vg = s.getparent()
+            vn = next((c[2:] for c in cls(vg) if c.startswith('vn')), None) if vg is not None else None
+            holder = next((k for i in ids for k in (f'{i}@{vn}', i) if k in _SYL_INDEX), None)
+            if holder is None:
+                continue
+            self.elems.append(('syl', holder, s))
+            _SYL_SVG[s.get('id')] = holder
+        self.ids_on_page = {g.get('id') for g in root.iter(ns + 'g')
+                            if {'note', 'rest', 'mRest'} & set(cls(g)) and g.get('id')}
+        # score time -> x on each system, from every note and rest printed on it (any staff) and
+        # its barlines: a rest's progress bar runs across what the other staves play meanwhile
+        first_x = lambda e: next((float(re.findall(r'-?[\d.]+', u.get('transform'))[0])
+                                  for u in e.iter(ns + 'use') if u.get('transform')), None)
+        self.timemap, self.rest_bar = [], {}
+        for si, sysg in enumerate(g for g in root.iter(ns + 'g') if 'system' in cls(g)):
+            pts = []
+            for m in (g for g in sysg.iter(ns + 'g') if 'measure' in cls(g)):
+                mend = None
+                for e in m.iter(ns + 'g'):
+                    c, i = set(cls(e)), e.get('id')
+                    if i not in bar_end or not ({'note', 'rest', 'mRest'} & c):
+                        continue
+                    mend = bar_end.get(i, mend)
+                    if c & {'note', 'rest'} and i in times:
+                        x = first_x(e)
+                        if x is not None:
+                            pts.append((times[i], (x + mx) * kx))
+                # the bar's right barline: a bar opening with a repeat sign has its left one too
+                bl = next((b for b in reversed(list(m)) if 'barLine' in cls(b)), None)
+                d = bl.find(ns + 'path') if bl is not None else None
+                if mend is not None and d is not None:
+                    pts.append((mend, (float(re.findall(r'-?[\d.]+', d.get('d'))[0]) + mx) * kx))
+            first = {}
+            for t_, x_ in pts:                   # one x per time: the leftmost (a barline before
+                first[round(t_, 4)] = min(x_, first.get(round(t_, 4), x_))   # the next bar's downbeat)
+            ts = np.array(sorted(first)) if first else np.zeros(1)
+            xs = np.maximum.accumulate(np.array([first[t_] for t_ in sorted(first)])) if first else np.zeros(1)
+            self.timemap.append((ts, xs))
+            # where each rest's bar goes: under its staff, or above it for the upper of two voices
+            for st in (g for g in sysg.iter(ns + 'g') if 'staff' in cls(g)):
+                ys = [float(v) for pth in st.findall(ns + 'path') for v in re.findall(r'-?[\d.]+', pth.get('d'))[1::2]]
+                if not ys:
+                    continue
+                top, bot = (min(ys) + my) * ky, (max(ys) + my) * ky
+                # a layer that draws nothing (the invisible note keeping a part's staff) is no voice
+                layers = [l for l in st if 'layer' in cls(l) and any(e.get('id') in owners for e in l.iter(ns + 'g'))]
+                for li, l in enumerate(layers):
+                    for e in l.iter(ns + 'g'):
+                        if e.get('id') in owners and {'rest', 'mRest'} & set(cls(e)):
+                            above = len(layers) > 1 and li == 0
+                            self.rest_bar[e.get('id')] = (si, above, top, bot)
+        # noteheads drawn on the same spot are one lit note: its ink is whatever is drawn
+        # inside the notehead, and it lights in every colour singing it
+        spots = {}
+        for nid, (cx, cy, rx, ry) in self.heads.items():
+            spots.setdefault((round(cx), round(cy)), []).append(nid)
+        self.alias = {}
+        self.spots = [ids for ids in spots.values() if len(ids) > 1]
+        for ids in self.spots:
+            for i in ids:
+                self.alias[i] = ids[0]
+        self.args = (owners, syl_holder, colours, views)
+        self.ready = False
+
+    def raster(self):
+        """Render the ownership planes and the base images (slow; done only for screens shown)."""
+        if self.ready:
+            return
+        owners, syl_holder, colours, views = self.args
+        W, H, root = self.W, self.H, self.root
+        # ownership planes
+        n = len(self.elems)
+        K = max(1, int(math.ceil(math.log2(n + 2))))
+        top = root
+        def plane(group):
+            """group None: every piece black (the ink). Otherwise every piece drawn in a colour that
+            spells three bits of its index (red, green, blue = bits 3g, 3g+1, 3g+2): where pieces
+            overlap the one on top wins, as on the screen, so no bits mix."""
+            top.set('visibility', 'hidden')
+            for j, (_, _, g) in enumerate(self.elems):
+                g.set('visibility', 'visible')
+                if group is None:
+                    col = '#000000'
+                else:
+                    b = ((j + 1) >> (3 * group)) & 7
+                    col = '#' + ''.join('00' if b >> c & 1 else 'ff' for c in range(3))
+                g.set('fill', col)
+                g.set('color', col)
+            img = render_png(etree.tostring(root), W, H)
+            for _, _, g in self.elems:
+                for a in ('visibility', 'fill', 'color'):
+                    g.attrib.pop(a, None)
+            top.attrib.pop('visibility', None)
+            return img
+        # coverage per channel: cairosvg antialiases text with colour fringes, so a letter's edge
+        # covers red, green and blue by different amounts
+        au3 = 1.0 - plane(None).astype(np.float32) / 255.0
+        au = au3.max(2)
+        self.alpha_mean = au3.mean(2)
+        owner = np.zeros(au.shape, np.int32)
+        unsure = au <= 0.06
+        cov = np.maximum(au3, 1e-6)
+        for grp in range((K + 2) // 3):
+            # a channel at 255 is a 0 bit; one darkened by the ink's own coverage is a 1 bit;
+            # anything in between is an edge where two pieces blend: it belongs to neither
+            r = (1.0 - plane(grp).astype(np.float32) / 255.0) / cov
+            bits = r > 0.5
+            unsure |= (((r > 0.25) & (r < 0.75)) | (au3 < 0.03) & (au[..., None] > 0.06)).any(2)
+            for c in range(3):
+                owner |= bits[..., c].astype(np.int32) << (3 * grp + c)
+        owner[unsure] = 0
+        owner[owner > n] = 0
+        flat = owner.ravel()
+        order = np.argsort(flat, kind='stable')
+        sorted_ids = flat[order]
+        bounds = np.searchsorted(sorted_ids, np.arange(n + 2))
+        self.alpha = self.alpha_mean.ravel()      # how much ink, for blending a lit piece's colour
+        self.free_ink = ((flat == 0) & (au.ravel() > 0.06)).reshape(H, W)   # lightable ink no piece claimed
+        self.pix = [order[bounds[j + 1]:bounds[j + 2]] for j in range(n)]
+        self.shared_ink = {}
+        for ids in self.spots:
+            cx, cy, rx, ry = self.heads[ids[0]]
+            y0, y1 = int(max(0, cy - ry)), int(min(H - 1, cy + ry))
+            x0, x1 = int(max(0, cx - rx)), int(min(W - 1, cx + rx))
+            yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+            inside = ((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2 <= 1.1
+            cand = (yy[inside] * W + xx[inside]).ravel()
+            self.shared_ink[ids[0]] = cand[self.alpha[cand] > 0.06]
+        # base images per view
+        self.base = {}
+        for v in views:
+            self.base[v] = self.render_base(v, owners, syl_holder, colours)
+
+        for v in views:
+            items = [(self.names[i], colours[i]) for i in sorted(colours)] if v == 'all' \
+                else [(self.names[v], colours[v])]
+            self.base[v] = label_band(self.base[v], items, self.label_px)
+        self.lights = Lights(self)
+        self.ready = True
+
+    def render_base(self, view, owners, syl_holder, colours):
+        ns = '{http://www.w3.org/2000/svg}'
+        cls = lambda e: (e.get('class') or '').split()
+        touched = []
+        def paint(g, col):
+            g.set('fill', col)
+            g.set('color', col)
+            touched.append(g)
+        if view != 'all':
+            for g in self.root.iter(ns + 'g'):
+                c = cls(g)
+                if 'layer' in c:
+                    paint(g, THEME['grey'])
+            for g in self.root.iter(ns + 'g'):
+                c = cls(g)
+                if 'chord' in c or 'beam' in c:
+                    ids = [n.get('id') for n in g.iter(ns + 'g') if 'note' in cls(n)]
+                    if any(view in owners.get(i, ()) for i in ids):
+                        paint(g, '#000000')
+                elif ({'note', 'rest', 'mRest'} & set(c)) and g.get('id'):
+                    paint(g, '#000000' if view in owners.get(g.get('id'), ()) else THEME['grey'])
+            for cid, g in self.ctrl_g:
+                paint(g, '#000000' if view in self.ctrl[cid][3] else THEME['grey'])
+            for kind, key, g in self.elems:
+                if kind in ('syl', 'sylx'):
+                    k0 = key.split('#')[0]
+                    paint(g, '#000000' if (view, k0) in syl_readers(syl_holder, k0) else THEME['grey'])
+        img = render_png(etree.tostring(self.root), self.W, self.H).copy()
+        # the engraving is black, grey and white: drop cairosvg's coloured subpixel text fringes,
+        # which a lit syllable's unclaimed edge pixels would otherwise show as blue and orange
+        img[:] = img.mean(2, keepdims=True).astype(np.uint8)
+        if THEME['dark']:                 # engraved black on white; ink becomes light on dark
+            a = 1.0 - img.min(2, keepdims=True).astype(np.float32) / 255.0
+            img = (THEME['bg'] + (THEME['ink'] - THEME['bg']) * a).astype(np.uint8)
+        for g in touched:
+            g.attrib.pop('fill', None)
+            g.attrib.pop('color', None)
+        return img
+
+
+_SYL_INDEX = {}
+_SYL_SVG = {}          # a syllable's svg id -> the note holding it, for extenders over a system break
+
+
+def index_syl_holder(syl_holder):
+    _SYL_INDEX.clear()
+    for (part, nid), holder in syl_holder.items():
+        _SYL_INDEX.setdefault(holder, []).append((part, nid))
+
+
+def syl_readers(syl_holder, holder):
+    return {(p, holder) for p, _ in _SYL_INDEX.get(holder, [])}
+
+
+class Lights:
+    """Precomputed pixels and halos for each element, per colour."""
+
+    def __init__(self, page):
+        self.page, self.tint = page, THEME['tint']
+        self.cache = {}
+        W = page.W
+        self.groups = {}                      # (kind, key) -> indices of elems
+        for j, (kind, key, _) in enumerate(page.elems):
+            k2 = self.key(kind, key)
+            self.groups.setdefault(k2, []).append(j)
+        self.geom = {}
+        for gk, js in self.groups.items():
+            pix = np.concatenate([page.pix[j] for j in js] + [page.shared_ink.get(gk[1], np.zeros(0, int))
+                                                             if gk[0] == 'note' else np.zeros(0, int)])
+            pix = np.unique(pix)
+            if not len(pix):
+                continue
+            # the edge pixels no piece could be sure of (antialiasing, overlaps) inside this piece's
+            # outline are its own: a lit word or note has no grey rim
+            ys, xs = pix // W, pix % W
+            y0, y1, x0, x1 = max(ys.min() - 1, 0), ys.max() + 2, max(xs.min() - 1, 0), xs.max() + 2
+            fy, fx = np.nonzero(page.free_ink[y0:y1, x0:x1])
+            if len(fy):
+                pix = np.unique(np.concatenate([pix, (fy + y0) * W + fx + x0]))
+            if gk[0] == 'note' and gk[1] in page.heads:
+                cx, cy, rx, ry = page.heads[gk[1]]
+                pad = max(5.0, 1.4 * ry)
+                ry, rx = ry + pad, rx + pad
+                y0, y1 = int(max(0, cy - ry)), int(min(page.H - 1, cy + ry))
+                x0, x1 = int(max(0, cx - rx)), int(min(W - 1, cx + rx))
+                yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+                inside = ((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2 <= 1
+                halo = (yy[inside] * W + xx[inside]).ravel()
+            elif gk[0] == 'note':
+                continue                  # a note whose head was not found in the SVG
+            elif gk[0] == 'rest':
+                ys, xs = pix // W, pix % W
+                (ya, yb), (xa, xb) = np.percentile(ys, [1, 99]), np.percentile(xs, [1, 99])
+                cy, cx = (ya + yb) / 2, (xa + xb) / 2
+                ry, rx = (yb - ya) / 2 + 1, (xb - xa) / 2 + 1
+                # a whole-bar rest is a small glyph: size its halo by the staff, not the glyph
+                sp = page.space_px
+                ry, rx = max(ry + 0.6 * sp, 1.5 * sp), max(rx + 0.6 * sp, 1.8 * sp)
+                y0, y1 = int(max(0, cy - ry)), int(min(page.H - 1, cy + ry))
+                x0, x1 = int(max(0, cx - rx)), int(min(W - 1, cx + rx))
+                yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+                inside = ((yy - cy) / ry) ** 2 + ((xx - cx) / rx) ** 2 <= 1
+                halo = (yy[inside] * W + xx[inside]).ravel()
+            else:
+                ys, xs = pix // W, pix % W
+                (ya, yb), (xa, xb) = np.percentile(ys, [1, 99]).astype(int), np.percentile(xs, [1, 99]).astype(int)
+                h = yb - ya + 1
+                pad = max(3, int(0.25 * h))
+                if gk[0] == 'sylx':        # a bare extender line: a halo as tall as a word's
+                    pad = max(pad, int(0.6 * page.space_px))
+                y0, y1 = max(0, ya - pad), min(page.H - 1, yb + pad)
+                x0, x1 = max(0, xa - pad), min(W - 1, xb + pad)
+                yy, xx = np.mgrid[y0:y1 + 1, x0:x1 + 1]
+                halo = (yy * W + xx).ravel()
+            in_halo = np.isin(pix, halo)
+            hy, hx = halo // W, halo % W
+            self.geom[gk] = (pix, self.page.alpha[pix][:, None], in_halo[:, None], halo,
+                             (int(hx.min()), int(hx.max()), int(hy.max())), (int(hy.min()), int(hy.max())))
+
+    def key(self, kind, nid):
+        if kind in ('body', 'head', 'note'):
+            return ('note', self.page.alias.get(nid, nid))
+        return (kind, nid)
+
+    def band(self, gk, ys, n):
+        """Which of n stacked bands each row is in, over the height of the halo."""
+        y0, y1 = self.geom[gk][5]
+        return np.clip(((ys - y0) * n) // max(y1 - y0 + 1, 1), 0, n - 1)
+
+    def tints(self, gk, cols):
+        """Halo pixel values; a note or word two parts share gets a halo split in their colours."""
+        key = ('halo', gk, cols)
+        v = self.cache.get(key)
+        if v is None:
+            halo = self.geom[gk][3]
+            ts = np.array([THEME['bg'] * (1 - self.tint) + hexrgb(c) * self.tint for c in cols]).astype(np.uint8)
+            if len(cols) == 1:
+                v = np.broadcast_to(ts[0], (len(halo), 3))
+            else:
+                # stacked, not side by side: side by side would read as one part singing the
+                # first half of the note and the other the second. Top to bottom in part order,
+                # which on a shared staff is high to low
+                v = ts[self.band(gk, halo // self.page.W, len(cols))]
+            self.cache[key] = v
+        return v
+
+    def apply(self, frame_flat, lit):
+        """lit: list of (group key, tuple of colour hexes in part order, fraction of a rest gone)."""
+        W = self.page.W
+        for gk, cols, prog in lit:
+            if prog is None:
+                continue
+            # a lit rest gets a bar that fills while the rest lasts, running from where the rest
+            # starts to where it ends as the other staves lay out that time: the fill reaches each
+            # note they print as it sounds, so nobody has to count
+            _, above, top, bot = self.page.rest_bar[gk[1]]
+            x0, x1, xe = prog
+            sp = self.page.space_px
+            th = max(4, int(round(0.4 * sp)))
+            y0 = int(round(top - 0.45 * sp - th)) if above else int(round(bot + 0.45 * sp))
+            y0 = min(max(0, y0), self.page.H - th)
+            f = frame_flat.reshape(self.page.H, W, 3)
+            for k, col in enumerate(cols):       # a rest two parts share: one stripe each
+                c = hexrgb(col)
+                ya, yb = y0 + k * th // len(cols), y0 + (k + 1) * th // len(cols)
+                f[ya:yb, x0:x1 + 1] = (THEME['bg'] * 0.65 + c * 0.35).astype(np.uint8)
+                if xe > x0:
+                    f[ya:yb, x0:xe] = c.astype(np.uint8)
+        lit = [(gk, cols) for gk, cols, _ in lit]
+        for gk, cols in lit:
+            if gk in self.geom:
+                h = self.geom[gk][3]
+                frame_flat[h] = (np.maximum if THEME['dark'] else np.minimum)(frame_flat[h], self.tints(gk, cols))
+        for gk, cols in lit:
+            g = self.geom.get(gk)
+            if g is None:
+                continue
+            key = (gk, cols)
+            v = self.cache.get(key)
+            if v is None:
+                cs = np.array([hexrgb(col) for col in cols])
+                cs = cs + (255 - cs) * THEME['lift']      # lit ink a shade lighter than its halo
+                c = cs[self.band(gk, g[0] // W, len(cols))]   # ink banded like its halo
+                t = self.tints(gk, cols).astype(np.float32)
+                bg = np.tile(THEME['bg'], (len(g[0]), 1))
+                inside = g[2][:, 0]
+                if inside.any():
+                    pos = np.searchsorted(g[3], g[0][inside]) if np.all(np.diff(g[3]) > 0) else None
+                    bg[inside] = t[pos] if pos is not None else t[0]
+                v = (bg * (1 - g[1]) + c * g[1]).astype(np.uint8)
+                self.cache[key] = v
+            frame_flat[g[0]] = v
+
+
+def label_band(img, items, px):
+    from PIL import Image, ImageDraw, ImageFont
+    im = Image.fromarray(img)
+    d = ImageDraw.Draw(im)
+    try:
+        font = ImageFont.truetype('DejaVuSans-Bold.ttf', px)
+    except OSError:
+        try:
+            font = ImageFont.load_default(size=px)
+        except TypeError:
+            font = ImageFont.load_default()
+    x = int(px * 0.8)
+    for text, col in items:
+        d.text((x, int(px * 0.4)), text, fill=col, font=font)
+        x += int(d.textlength(text, font=font)) + int(px * 1.2)
+    return np.asarray(im).copy()
+
+
+def vfr_flag(passthrough=False):
+    """ffmpeg 5 renamed -vsync to -fps_mode."""
+    v = subprocess.run(['ffmpeg', '-version'], capture_output=True, text=True).stdout
+    m = re.search(r'version n?(\d+)', v)
+    new = not m or int(m.group(1)) >= 5
+    mode = 'passthrough' if passthrough else 'vfr'
+    return ['-fps_mode', mode] if new else ['-vsync', mode]
+
+
+def check_frames(mp4, planned_ms):
+    """Each frame of the finished file against the moment it was meant to appear."""
+    pts = [float(v) for v in subprocess.run(
+        ['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0',
+         mp4], capture_output=True, text=True).stdout.replace(',', '').split()]
+    if len(pts) != len(planned_ms):
+        print(f'   frames: {len(pts)} in the file, {len(planned_ms)} planned')
+        return
+    err = np.abs(np.array(pts) * 1000 - np.array(planned_ms))
+    print(f'   frames: all {len(pts)} where planned, to within {err.max():.0f} ms')
+
+
+# ----------------------------------------------------------------------------- main
+
+def featured_of(mp3, names, part_map):
+    b = os.path.basename(mp3)
+    # "(Tenor 2) predominant", or a division of a section: "(Tenor 2) a predominant" (rehearsal_mix.py)
+    m = re.search(r' - \((.+?)\) (?:(\S+) )?(?:predominant-left|predominant|part-left)', b) \
+        or re.search(r' - (Solo[^-]*?) (?:predominant-left|predominant|part-left)', b)
+    if not m:
+        return None
+    sec = m.group(1).strip()
+    suf = (m.group(2) or '') if m.re.groups > 1 else ''
+    tries = [f'{sec} {suf}', f'{sec}{suf}'] if suf else [sec]
+    for t in tries:
+        t = part_map.get(t, t)
+        for i, n in enumerate(names):
+            if n.lower() == t.lower():
+                return i
+    if suf:
+        sys.exit(f'{b}: no part named {tries[0]!r} or {tries[1]!r} in the score (parts: {names}); '
+                 f'map it with --part "{tries[0]}=<part name>"')
+    sec = part_map.get(sec, sec)
+    # "Solo 1" in the mp3 name for a part called "Solo 1 (tenor)"
+    near = [i for i, n in enumerate(names)
+            if n.lower().startswith(sec.lower()) and not n[len(sec):len(sec) + 1].isalnum()]
+    if len(near) == 1:
+        return near[0]
+    sys.exit(f'{b}: no part named {sec!r} in the score (parts: {names}); map it with --part "{sec}=<part name>"')
+
+
+def use_display(path, root, parts, names, notes_by_part, tempos):
+    """Show `path` instead of the file the audio was rendered from, after checking that it
+    has the same parts, bars, notes and tempo marks (words, slurs and ties may differ: the
+    Cantai learning file re-sings tied notes that the print file ties)."""
+    droot = read_xml(path)
+    dparts = droot.findall('part')
+    dsps = {sp.get('id'): sp for sp in droot.find('part-list').findall('score-part')}
+    dnames = [(dsps[p.get('id')].findtext('part-name') or p.get('id')).strip() for p in dparts]
+    if len(dparts) != len(parts):
+        sys.exit(f'--display: {len(dparts)} parts against {len(parts)} in the file the audio came from')
+    tmp = tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False)
+    tmp.write(etree.tostring(droot))
+    tmp.close()
+    _p, _b, dtempos = load_score(tmp.name)
+    os.unlink(tmp.name)
+    if [(round(b, 3), q) for b, q in dtempos] != [(round(b, 3), q) for b, q in tempos]:
+        sys.exit(f'--display: tempo marks differ ({dtempos} against {tempos}); the lights would not follow the audio')
+    dnotes, dstarts = [], None
+    for i, p in enumerate(dparts):
+        ns_, st = scan_part(i, p)
+        dnotes.append(ns_)
+        dstarts = dstarts or st
+    sig = lambda ns_: {} if not ns_ else {mi: sorted((n['rel'], n['dur'], n['midi']) for n in ns_
+                                                     if n['mi'] == mi and not n['rest'] and not n['grace'])
+                                          for mi in range(max(n['mi'] for n in ns_) + 1)}
+    bad = 0
+    for i in range(len(parts)):
+        if dnames[i] != names[i]:
+            print(f'   --display: part {i + 1} is "{dnames[i]}" there and "{names[i]}" here')
+        a, b = sig(notes_by_part[i]), sig(dnotes[i])
+        diff = [mi + 1 for mi in sorted(set(a) | set(b)) if a.get(mi) != b.get(mi)]
+        if diff:
+            bad += 1
+            print(f'   --display: {names[i]} has different notes in bars {diff[:12]}{" ..." if len(diff) > 12 else ""}')
+    print(f'display: {os.path.basename(path)}; ' +
+          ('same bars, notes and tempo marks as the file the audio came from' if not bad
+           else 'the lights in the bars above follow the display file, not the audio'))
+    sung = {i for i, ns_ in enumerate(dnotes) if any(n['lyric'] for n in ns_)}
+    return droot, dparts, dnames, dnotes, dstarts, sung
+
+
+
+# ----------------------------------------------------------------------------- repeats
+
+def play_order(part):
+    """The bars in the order they are played: repeat signs (with times="n") and first/second
+    endings unrolled. D.C., D.S. and codas are not followed (a warning says so)."""
+    ms = part.findall('measure')
+    n = len(ms)
+    fwd, bwd, times, end_nums, end_stop = [False] * n, [False] * n, [2] * n, [None] * n, [False] * n
+    for i, m in enumerate(ms):
+        for bl in m.findall('barline'):
+            rp, en = bl.find('repeat'), bl.find('ending')
+            if rp is not None and rp.get('direction') == 'forward':
+                fwd[i] = True
+            if rp is not None and rp.get('direction') == 'backward':
+                bwd[i] = True
+                times[i] = int(rp.get('times') or 2)
+            if en is not None:
+                if en.get('type') == 'start':
+                    end_nums[i] = [int(x) for x in re.findall(r'\d+', en.get('number') or '1')]
+                if en.get('type') in ('stop', 'discontinue'):
+                    end_stop[i] = True
+    if any(s_.get('dacapo') or s_.get('dalsegno') or s_.get('tocoda') for s_ in part.iter('sound')):
+        print('warning: D.C., D.S. or a coda in the score is not followed; only repeat signs are')
+    order, i, start, passno, done = [], 0, 0, 1, {}
+    while i < n and len(order) < 20 * n:
+        if fwd[i] and start != i:
+            start, passno = i, 1
+        if end_nums[i] is not None and passno not in end_nums[i]:
+            j = i
+            while j < n - 1 and not end_stop[j]:
+                j += 1
+            i = j + 1
+            continue
+        order.append(i)
+        if bwd[i]:
+            k = done.get(i, 1)
+            if k < times[i]:
+                done[i] = k + 1
+                passno = k + 1
+                i = start
+                continue
+        i += 1
+    return order
+
+
+# ----------------------------------------------------------------------------- a closed score to show
+
+def repair_forwards(droot, src_notes, sung):
+    """A second voice written after a <backup> to the start of the bar but missing the <forward>
+    over the beats where it has no notes of its own starts too early: its notes land where
+    another part's are, and the lights would come a beat early. Where the open score has every
+    note of that voice exactly one gap later (the gap being what the voice is short of a full
+    bar), put the <forward> in. Returns the bars mended, by staff."""
+    at = {(n['mi'], n['rel'], n['midi']) for i, ns_ in enumerate(src_notes) if i in sung
+          for n in ns_ if not n['rest'] and not n['grace']}
+    mended = []
+    for j, part in enumerate(droot.findall('part')):
+        div = 1
+        for mi, m in enumerate(part.findall('measure')):
+            kids = list(m)
+            for e in kids:
+                if e.tag == 'attributes' and e.find('divisions') is not None:
+                    div = int(e.findtext('divisions'))
+            full = sum(int(e.findtext('duration') or 0) for e in kids
+                       if e.tag == 'note' and e.findtext('voice', '1') == '1' and e.find('chord') is None
+                       and e.find('grace') is None)
+            for e in kids:
+                if e.tag != 'backup' or int(e.findtext('duration') or 0) != full:
+                    continue
+                voice, t, notes = None, 0, []
+                for f in kids[kids.index(e) + 1:]:
+                    if f.tag in ('backup', 'forward'):
+                        break
+                    if f.tag != 'note' or f.find('grace') is not None:
+                        continue
+                    voice = voice or f.findtext('voice')
+                    if f.findtext('voice') != voice:
+                        break
+                    if f.find('chord') is None:
+                        notes.append((t, f))
+                        t += int(f.findtext('duration') or 0)
+                    else:
+                        notes.append((notes[-1][0] if notes else 0, f))
+                gap = full - t
+                pitched = [(tt, f) for tt, f in notes if f.find('rest') is None]
+                if gap <= 0 or not pitched:
+                    continue
+                if all((mi, Fr(tt + gap, div), midi(f)) in at for tt, f in pitched) and \
+                        not all((mi, Fr(tt, div), midi(f)) in at for tt, f in pitched):
+                    fw = etree.Element('forward')
+                    etree.SubElement(fw, 'duration').text = str(gap)
+                    m.insert(list(m).index(e) + 1, fw)
+                    mended.append((j, m.get('number'), Fr(gap, div)))
+    return mended
+
+
+def closed_display(droot, src_names, src_notes, sung):
+    """Use a closed score (two parts to a staff, as printed) as the display. Whose each notehead,
+    rest and syllable is comes from the open score the audio was rendered from: a notehead is
+    the parts that sing that pitch at that moment, a rest the parts resting there, a syllable
+    the parts starting a syllable there (a second lyric line going to the lower part). What
+    the open score cannot settle falls back to the voices: voice 1 and the top of a chord to
+    the upper part, voice 2 and the bottom to the lower."""
+    for j, num, g in repair_forwards(droot, src_notes, sung):
+        print(f'   display bar {num}, staff {j + 1}: its second voice had no <forward> over its first '
+              f'{g} beat(s) and began too early; mended to match the open score (fix the file too)')
+    dparts = droot.findall('part')
+    dsps = {sp.get('id'): sp for sp in droot.find('part-list').findall('score-part')}
+    dnames = [(dsps[p.get('id')].findtext('part-name') or p.get('id')) for p in dparts]
+    scans = [scan_part(j, p, prefix='d') for j, p in enumerate(dparts)]
+    dnotes, dstarts = [sc[0] for sc in scans], scans[0][1]
+    staff_parts = {}
+    for j, nm in enumerate(dnames):
+        flat = ' '.join(nm.lower().split())
+        hit = [i for i, sn in enumerate(src_names) if ' '.join(sn.lower().split()) in flat]
+        # a name found inside a longer one ("Tenor 1" in "Tenor 1 Tenor 2") is not also its own
+        hit = [i for i in hit if not any(i != k and src_names[i].lower() in src_names[k].lower()
+                                         and k in hit for k in hit)] or hit
+        staff_parts[j] = sorted(hit)
+    at, rests, syls = set(), set(), set()
+    at_dur = {}
+    syl_text = {}
+    count = {}
+    for i, ns_ in enumerate(src_notes):
+        for n in ns_:
+            if n['grace']:
+                continue
+            if n['rest']:
+                rests.add((i, n['mi'], n['rel'], n['dur']))
+            else:
+                at.add((i, n['mi'], n['rel'], n['midi']))
+                at_dur[(i, n['mi'], n['rel'], n['midi'])] = n['dur']
+                count[i] = count.get(i, 0) + 1
+                if n['lyric']:
+                    syls.add((i, n['mi'], n['rel']))
+                    syl_text[(i, n['mi'], n['rel'])] = _letters(n['lyric'][1])
+    # staves with no part names (or names that match nothing): each sung part goes to the staff
+    # holding most of its notes, if that is most of them
+    if not any(set(staff_parts[j]) & sung for j in staff_parts):
+        staff_parts = {j: [] for j in range(len(dparts))}
+        for i in sorted(sung):
+            hits = [sum(1 for n in ns_ if not n['rest'] and not n['grace'] and (i, n['mi'], n['rel'], n['midi']) in at)
+                    for ns_ in dnotes]
+            j = int(np.argmax(hits))
+            if hits[j] >= 0.5 * count.get(i, 1):
+                staff_parts[j].append(i)
+        for j, sp in staff_parts.items():             # label a nameless staff with its parts
+            spp = dsps.get(dparts[j].get('id'))
+            if sp and spp is not None and not (spp.findtext('part-name') or '').strip():
+                for tag, val in (('part-name', '\n'.join(src_names[i] for i in sp)),
+                                 ('part-abbreviation', '\n'.join(src_names[i] for i in sp))):
+                    el = spp.find(tag)
+                    if el is None:
+                        el = etree.SubElement(spp, tag)
+                    el.text = val
+                dnames[j] = ' '.join(src_names[i] for i in sp)
+    owners, fall, split = {}, 0, 0
+    for j, ns_ in enumerate(dnotes):
+        sp = [i for i in staff_parts[j] if i in sung]
+        if not sp:
+            continue
+        voices = {}
+        lens = {}                     # (bar, moment, pitch) -> lengths of the noteheads printed there
+        for n in ns_:
+            voices.setdefault(n['mi'], set()).add(n['voice'])
+            if not n['rest'] and not n['grace']:
+                lens.setdefault((n['mi'], n['rel'], n['midi']), set()).add(n['dur'])
+        for n in ns_:
+            if n['grace']:
+                continue
+            if n['rest']:
+                c = {i for i in sp if (i, n['mi'], n['rel'], n['dur']) in rests}
+            else:
+                c = {i for i in sp if (i, n['mi'], n['rel'], n['midi']) in at}
+                # a unison the print splits by voice because the parts hold it for different
+                # lengths (one part's eighth inside the other's dotted quarter): two noteheads at
+                # one moment and pitch, and pitch alone gave each to both parts, so a part lit the
+                # other's note for the other's length and kept its syllable lit to that end too.
+                # Each part takes the notehead as long as its own note. Only where the part's own
+                # length is printed there: a closed score that ties a note differently from the
+                # open score keeps the match on pitch.
+                key = (n['mi'], n['rel'], n['midi'])
+                if len(c) > 1 and len(lens.get(key, ())) > 1:
+                    own = {i for i in c if at_dur[(i,) + key] == n['dur']}
+                    if own and all(at_dur[(i,) + key] in lens[key] for i in c - own):
+                        split += len(c - own)
+                        c = own
+            if not c:
+                fall += 1
+                vs = sorted(voices[n['mi']], key=lambda v: int(v) if v.isdigit() else 0)
+                if n['rest'] and len(vs) == 1:
+                    c = set(sp)
+                else:
+                    c = {sp[0] if vs.index(n['voice']) == 0 else sp[-1]}
+            owners[n['id']] = c
+    print('check, unisons split by voice: ' + (
+        f'{split} notehead-part pair(s) where a part holds the pitch for another length; each part '
+        'lights only the notehead as long as its own note' if split else
+        'none (no two noteheads at one moment and pitch with different lengths)'))
+    # syllables: grouped by staff and moment; with two lines at one moment, line k is the
+    # k-th part (top down) that starts a syllable there in the open score
+    groups = {}
+    el_of = {n['id']: n['el'] for ns_ in dnotes for n in ns_}
+
+    def placed_above(h):
+        return any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
+                   and str(h[0]) == (re.sub(r'\D', '', ly.get('number') or '1') or '1')
+                   for ly in el_of[_base(h[1])].findall('lyric'))
+
+    def text_of_el(nid):
+        return next((''.join(x.text or '' for x in ly.findall('text')) for ly in el_of[nid].findall('lyric')
+                     if ly.get('print-object') != 'no'), '')
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') == 'no':
+                    continue                  # sung here, printed for another part (read below)
+                if ''.join(x.text or '' for x in ly.findall('text')).strip():
+                    num = int(re.sub(r'\D', '', ly.get('number') or '1') or 1)
+                    # a note printing its word on two lines (a chord both parts sing, the print
+                    # giving each its own row) has one key per line, "id@n", so each part lights
+                    # only the row it reads
+                    two = sum(1 for x in n['el'].findall('lyric') if x.get('print-object') != 'no'
+                              and ''.join(t.text or '' for t in x.findall('text')).strip()) > 1
+                    groups.setdefault((j, n['mi'], n['rel']), []).append(
+                        (num, f"{n['id']}@{num}" if two else n['id']))
+    readers = {}
+    for (j, mi, rel), lst in groups.items():
+        sp = [i for i in staff_parts[j] if i in sung]
+        cand = [i for i in sp if (i, mi, rel) in syls]
+        lst.sort()
+        if len(lst) == 1 and len(cand) > 1:
+            # two parts start a syllable here but one word is printed: it is the parts whose word
+            # it is (a Cantai file restarts a held vowel as a new syllable under another part's new word)
+            pt = _letters(text_of_el(_base(lst[0][1])))
+            same = [i for i in cand if syl_text[(i, mi, rel)] and pt
+                    and (pt.startswith(syl_text[(i, mi, rel)]) or syl_text[(i, mi, rel)].startswith(pt))]
+            cand = same or cand
+        if len(lst) == 1:
+            readers.setdefault(lst[0][1], set()).update(cand or owners.get(_base(lst[0][1]), set()))
+        else:
+            # lines top down: those above the staff first. A part reads the line on its own note
+            # (the upper part's words above, the lower's below, as printed); where that does not
+            # tell them apart, line k is the k-th part down
+            lst.sort(key=lambda h: (0 if placed_above(h) else 1, h[0]))
+            holders = list(dict.fromkeys(hid for _, hid in lst))
+            if len(holders) == 1:                 # one note's word printed on two lines
+                readers.setdefault(holders[0], set()).update(cand or owners.get(_base(holders[0]), set()))
+            else:
+                for k, i in enumerate(cand):
+                    mine = [hid for hid in holders if i in owners.get(_base(hid), set())]
+                    readers.setdefault(mine[0] if len(mine) == 1 else holders[min(k, len(holders) - 1)],
+                                       set()).add(i)
+                for hid in holders:
+                    if not readers.get(hid):
+                        readers.setdefault(hid, set()).update(owners.get(_base(hid), set()))
+    # words printed once for parts on two staves, as a closed score prints them between the staves
+    # where both sing them: a part whose own staff prints no syllable at a moment it starts one reads
+    # the one printed on another staff there with the same text (a hidden, print-object="no" copy on
+    # its own staff says so, and gives the text)
+    hidden = {}
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') == 'no':
+                    hidden[(j, n['mi'], n['rel'])] = ''.join(x.text or '' for x in ly.findall('text')).strip()
+    text_of = {}
+    for j, ns_ in enumerate(dnotes):
+        for n in ns_:
+            for ly in n['el'].findall('lyric'):
+                if ly.get('print-object') != 'no':
+                    text_of.setdefault(n['id'], ''.join(x.text or '' for x in ly.findall('text')).strip())
+    for (j, mi, rel), txt in hidden.items():
+        # a word this staff prints at that moment is the other part's (the basses' "doo" below the
+        # staff while the baritones' words are printed between the staves): the parts that read
+        # none of this staff's words there still read theirs on another staff
+        covered = set()
+        for _, hid in groups.get((j, mi, rel), []):
+            covered |= readers.get(hid, set())
+        sp = [i for i in staff_parts[j] if i in sung and (i, mi, rel) in syls and i not in covered]
+        if not sp:
+            continue
+        # the nearest staff first: the print sets the shared words beside this staff, and a soloist
+        # two staves up singing the same word at that moment is not where the part reads it
+        for (j2, mi2, rel2), lst in sorted(groups.items(), key=lambda g: abs(g[0][0] - j)):
+            if j2 != j and mi2 == mi and rel2 == rel:
+                hit = [(num, hid) for num, hid in lst if text_of.get(_base(hid)) == txt]
+                if hit:
+                    # the same word on two lines of that staff: the one on the side facing this staff
+                    def facing(h, j2=j2):
+                        ab = any(ly.get('placement') == 'above' and ly.get('print-object') != 'no'
+                                 and str(h[0]) == re.sub(r'\D', '', ly.get('number') or '1')
+                                 for ly in el_of[_base(h[1])].findall('lyric'))
+                        return ab == (j < j2)
+                    pick = [h for h in hit if facing(h)] or hit
+                    readers.setdefault(pick[-1][1], set()).update(sp)
+                    break
+    # every syllable a part starts in the open score has a printed word it reads
+    at_of = {n['id']: (n['mi'], n['rel']) for ns_ in dnotes for n in ns_}
+    read = {(i,) + at_of[_base(hid)] for hid, ps in readers.items() for i in ps}
+    nums = [m.get('number') for m in dparts[0].findall('measure')]
+    lost = sorted(k for k in syls if k[0] in sung and any(k[0] in staff_parts[j] for j in staff_parts) and k not in read)
+    print('check, words read: ' + ('every syllable a part sings lights a printed word' if not lost else
+          f'{len(lost)} syllable(s) a part sings light no printed word: ' +
+          ', '.join(f'{src_names[i]} bar {nums[mi]} beat {float(rel) + 1:g} "{syl_text[(i, mi, rel)]}"'
+                    for i, mi, rel in lost[:20])))
+    return dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts
+
+
+def part_windows(dnotes, owners, readers, part):
+    """One part's notes, rests and syllables in a closed display, in written quarters: a
+    syllable lit from its note through the part's following notes until its next syllable or
+    rest."""
+    evs = {}
+    for ns_ in dnotes:
+        for n in ns_:
+            if not n['grace'] and n['dur'] > 0 and part in owners.get(n['id'], ()):
+                evs.setdefault(n['on'], []).append(n)
+    syl_at = {}
+    on_of = {n['id']: n['on'] for ns_ in dnotes for n in ns_}
+    for k, ps in readers.items():
+        if part in ps and _base(k) in on_of:
+            syl_at[on_of[_base(k)]] = k
+    out, cur = {}, None
+    for on in sorted(evs):
+        ns_ = evs[on]
+        end = max(n['on'] + n['dur'] for n in ns_)
+        if all(n['rest'] for n in ns_):
+            cur = None
+        elif on in syl_at:
+            cur = syl_at[on]
+            out[cur] = [ns_[0]['mi'], on, end]
+        elif cur:
+            out[cur][2] = max(out[cur][2], end)
+    return out
+
+
+def timing_source(mp3):
+    """The mp3 to time this one by. A set made by rehearsal_mix.py is sample-aligned, and its
+    Balanced track, every voice at the same level, times best: in a predominant mix a voice 21 dB
+    down can enter too quietly to trip the level threshold (one set's Baritone and Tenor mixes
+    anchored 0.04-0.1 s late), and its onsets are mostly the featured voice's consonants. Used
+    only when the Balanced track sits beside this one, is the same length and lines up with it."""
+    m = re.match(r'(.*?) - (\(.+?\)(?: \S+)?|Solo.*) (predominant-left|predominant|part-left)\.mp3$', os.path.basename(mp3))
+    if not m:
+        return mp3, ''
+    ref = os.path.join(os.path.dirname(mp3), m.group(1) + ' - Balanced.mp3')
+    if not os.path.exists(ref):
+        return mp3, ''
+    x, y = decode(ref), decode(mp3)
+    if abs(len(x) - len(y)) > 0.03 * 22050:
+        return mp3, ''
+    h = 220                                              # 10 ms envelopes, compared over +-0.3 s
+    n = min(len(x), len(y)) // h
+    ex = np.sqrt((x[:n * h].reshape(n, h) ** 2).mean(1))
+    ey = np.sqrt((y[:n * h].reshape(n, h) ** 2).mean(1))
+    ex, ey = ex - ex.mean(), ey - ey.mean()
+    lags = range(-30, 31)
+    cc = [float(np.dot(ex[max(0, k):n + min(0, k)], ey[max(0, -k):n - max(0, k)])) for k in lags]
+    k = lags[int(np.argmax(cc))]
+    if k != 0:
+        return mp3, ''
+    return ref, f'timed by {os.path.basename(ref)}, which it lines up with (same length, 0 ms apart)'
+
+
+class Tee:
+    """Everything the run prints also goes to the checks file beside the videos, so what every
+    check found, including nothing, is on record song by song (SKILL.md Step 10)."""
+    def __init__(self, path, out):
+        os.makedirs(os.path.dirname(path) or '.', exist_ok=True)
+        self.f, self.out = open(path, 'w'), out
+
+    def write(self, s):
+        self.out.write(s)
+        self.f.write(s)
+
+    def flush(self):
+        self.out.flush()
+        self.f.flush()
+
+
+def title_of(a):
+    """What the mp3 names share before their ' - ', and the output folder."""
+    names = [os.path.basename(m) for m in a.mp3s]
+    title = os.path.commonprefix(names).split(' - ')[0].strip() or os.path.splitext(os.path.basename(a.score))[0]
+    return title, a.out or os.path.dirname(os.path.abspath(a.mp3s[0]))
+
+
+def lyric_gate(a):
+    """The lyric sheet's plan, finished, before anything renders (SKILL.md 10.1). With none, write a
+    draft and stop; with an unfinished one, say what is missing and stop. The parent process also
+    makes the PDF. Returns the plan's path."""
+    import lyric_sheet
+    title, out_dir = title_of(a)
+    path = a.lyric_plan or os.path.join(out_dir, f'{title} - lyric sheet plan.json')
+    if not os.path.exists(path):
+        src = a.lyrics
+        if not src and a.display and \
+                len(read_xml(a.display).findall('part')) == len(read_xml(a.score).findall('part')):
+            src = a.display
+        src = src or a.score
+        lyric_sheet.draft(src, path, title=title)
+        sys.exit(f'\nlyric sheet: no plan, so a draft is written: {path}\n'
+                 f'   Finish it (SKILL.md 10.1): name the sections from the musical structure, check the rows '
+                 f'break only where the music rests, give every row a bold key word and its emoji, set '
+                 f'"reviewed": true. Then run this again. (--no-lyrics: the score videos alone.)')
+    S = lyric_sheet.Sheet(path)
+    if S.problems:
+        sys.exit('\nlyric sheet plan not finished, ' + path + ':\n   ' + '\n   '.join(S.problems) +
+                 '\n   (--no-lyrics: the score videos alone)')
+    if not a.child:
+        print(f'lyric sheet plan: {os.path.basename(path)}, words from {S.plan["lyrics"]}')
+        lyric_sheet.pdf(S, os.path.join(out_dir, f'{title} - lyric sheet.pdf'))
+    return path
+
+
+def checks_file(a):
+    """<title> - video checks.txt in the output folder, the title being what the mp3 names share."""
+    import datetime, hashlib
+    names = [os.path.basename(m) for m in a.mp3s]
+    title, out_dir = title_of(a)
+    path = os.path.join(out_dir, f'{title} - video checks.txt')
+    sys.stdout = Tee(path, sys.stdout)
+    ver = hashlib.md5(open(os.path.abspath(__file__), 'rb').read()).hexdigest()[:8]
+    print(f'Video checks for {title}, {datetime.datetime.now():%Y-%m-%d %H:%M}, score_video.py {ver}')
+    print(f'score: {os.path.basename(a.score)}' + (f'; shown: {os.path.basename(a.display)}' if a.display else ''))
+    print('mp3s: ' + '; '.join(names) + '\n')
+    return path
+
+
+def proof_note(a):
+    print('\ncheck, proof against the print PDF: ' + (
+        'screens written; Claude compares each with the PDF and records what differs, or that nothing '
+        'does, below (SKILL.md Step 10)' if a.proof else 'NOT RUN (no --proof)'))
+
+
+def run_parallel(a):
+    """One process per mp3, as many at a time as there are cores: each renders its own
+    screens and encodes its own video. Each process's report is printed whole, in the order given."""
+    import time
+    rest = [x for x in sys.argv[1:] if x not in a.mp3s]
+    n = a.jobs or os.cpu_count() or 2
+    todo = list(enumerate(a.mp3s))
+    running, done, nxt, failed, t0 = {}, {}, 0, 0, time.time()
+    while todo or running:
+        while todo and len(running) < n:
+            k, mp3 = todo.pop(0)
+            cmd = [sys.executable, os.path.abspath(__file__), *rest, mp3, '--jobs', '1', '--child']
+            log = tempfile.TemporaryFile('w+')      # a pipe could fill and stall the process
+            running[k] = (subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, text=True), log)
+        for k, (pr, log) in list(running.items()):
+            if pr.poll() is not None:
+                log.seek(0)
+                out = log.read()
+                log.close()
+                done[k] = (pr.returncode, '\n'.join(l for l in out.splitlines() if not l.startswith('[Warning]')))
+                del running[k]
+        while nxt in done:
+            code, text = done.pop(nxt)
+            print(text if nxt == 0 else text.split('\n\n', 1)[-1], flush=True)   # parts and staves once
+            if code:
+                print(f'   ^ failed: {a.mp3s[nxt]}', flush=True)
+                failed += 1
+            nxt += 1
+        time.sleep(0.5)
+    print(f'{len(a.mp3s) - failed} of {len(a.mp3s)} videos in {time.time() - t0:.0f} s')
+    proof_note(a)
+    return 1 if failed else 0
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('score')
+    ap.add_argument('mp3s', nargs='+')
+    ap.add_argument('-o', '--out', help='folder for the mp4s (default: beside each mp3)')
+    ap.add_argument('--part', action='append', default=[], help='"Section in the mp3 name=part name in the score"')
+    ap.add_argument('--staves', help='pairs sharing a staff, e.g. "Tenor 1+Tenor 2,Baritone+Bass"')
+    ap.add_argument('--open', action='store_true', help='one part per staff (open score)')
+    ap.add_argument('--clip', help='START,SECONDS: render only this stretch (for a test)')
+    ap.add_argument('--stills', help='comma-separated times (s): write PNG frames instead of a video')
+    ap.add_argument('--size', default='1920x1080')
+    ap.add_argument('--staff-px', type=float, default=44.0, help='staff height in pixels')
+    ap.add_argument('--jobs', type=int, default=0,
+                    help='mp3s rendered at once, each in its own process (default: one per CPU core)')
+    ap.add_argument('--lead', type=float, default=1.0, help='turn the page up to this many s early')
+    ap.add_argument('--anchor', action='append', default=[],
+                    help='BAR=M:SS.ss: the audio time of that bar\'s downbeat, measured by hand (from a stem\'s '
+                         'first onset after a fermata, say); overrules the fitted hold of the stretch it falls in, '
+                         'or, away from a fermata, starts a new stretch at that bar')
+    ap.add_argument('--crf', type=int, default=20)
+    ap.add_argument('--swing', type=float, default=0.0,
+                    help='swung eighths: where an offbeat eighth sounds, as a fraction of the beat '
+                         '(0.667 = triplet swing; measure it on the recording; 0 = straight)')
+    ap.add_argument('--no-condense', action='store_true', help='keep empty staves on every system')
+    ap.add_argument('--display', help='a print-faithful MusicXML with the same bars, notes and tempo marks '
+                    '(normal slurs, ties and words) to show instead of the file the audio came from')
+    ap.add_argument('--closed', action='store_true', help='--display is a closed score even though it has as many parts as the '
+                    'open file (three solo staves against one solo part)')
+    ap.add_argument('--pulse', type=int, help='rest bars jump in these notes (8 = eighths, 16 = sixteenths); '
+                    'default: per part, the coarsest value 95%% of its sung bars keep to')
+    ap.add_argument('--dark', action='store_true', help='light notation on a dark screen instead of black on white')
+    ap.add_argument('--proof', help='folder for one unlit PNG per screen of the all-parts view, to compare '
+                    'with the print PDF (SKILL.md Step 10)')
+    ap.add_argument('--lyrics', help='the print-faithful MusicXML, one part per sung part, that the lyric sheet '
+                    'takes its words from (default: --display when it is open, else the score)')
+    ap.add_argument('--lyric-plan', help='the lyric sheet plan (default: "<title> - lyric sheet plan.json" '
+                    'beside the videos)')
+    ap.add_argument('--no-lyrics', action='store_true', help='the score videos only: no lyric sheet')
+    ap.add_argument('--lyrics-only', action='store_true', help='the lyric sheet and its videos only (after the '
+                    'plan changes): the timing is fitted as usual, the score videos are not remade')
+    ap.add_argument('--child', action='store_true', help=argparse.SUPPRESS)
+    a = ap.parse_args()
+    if not (a.child or a.stills or a.clip):
+        checks_file(a)
+    lyric_plan = None if (a.no_lyrics or a.stills or a.clip) else lyric_gate(a)
+    if len(a.mp3s) > 1 and a.jobs != 1 and not a.stills:
+        sys.exit(run_parallel(a))
+    set_theme(a.dark)
+    palette = PALETTE_DARK if a.dark else PALETTE
+    W, H = (int(v) for v in a.size.lower().split('x'))
+    part_map = dict(p.split('=', 1) for p in a.part)
+
+    root = read_xml(a.score)
+    parts = root.findall('part')
+    sps = {sp.get('id'): sp for sp in root.find('part-list').findall('score-part')}
+    names = [(sps[p.get('id')].findtext('part-name') or p.get('id')).strip() for p in parts]
+    notes_by_part, starts = [], None
+    for i, p in enumerate(parts):
+        ns_, st = scan_part(i, p)
+        notes_by_part.append(ns_)
+        starts = starts or st
+    sung = {i for i, ns_ in enumerate(notes_by_part) if any(n['lyric'] for n in ns_)}
+    if not sung:
+        sys.exit('no part has lyrics; nothing to follow')
+
+    # tempo map, as stem_vs_score.py reads it
+    tmp = tempfile.NamedTemporaryFile(suffix='.musicxml', delete=False)
+    tmp.write(etree.tostring(root))
+    tmp.close()
+    _phr, bars, tempos = load_score(tmp.name)
+    os.unlink(tmp.name)
+    src_parts, src_notes, src_starts = parts, notes_by_part, starts
+    k = mark_tuplets(root)
+    if k:
+        print(f'{k} tuplet group(s) had no bracket or number in the file; marked for the video')
+
+    droot = read_xml(a.display) if a.display else None
+    closed = droot is not None and (a.closed or len(droot.findall('part')) != len(parts))
+    if droot is not None:
+        k = mark_tuplets(droot)
+        if k:
+            print(f'{k} tuplet group(s) in the display file had no bracket or number; marked for the video')
+    if a.display and not closed:
+        root, parts, names, notes_by_part, starts, sung = use_display(
+            a.display, root, parts, names, notes_by_part, tempos)
+
+    # ---- the order the music is played in: repeats unrolled. Every lit thing is placed by bar
+    # and position in the bar, then at each moment that bar is played
+    order = play_order(src_parts[0])
+    piece_q = max(n['on'] + n['dur'] for ns_ in src_notes for n in ns_)
+    blen = [b - a_ for a_, b in zip(src_starts, list(src_starts[1:]) + [piece_q])]
+    ubars, u = [], Fr(0)
+    for mi in order:
+        ubars.append((mi, u))
+        u += blen[mi]
+    occ = {}
+    for mi, us in ubars:
+        occ.setdefault(mi, []).append(us)
+    if len(order) != len(src_starts):
+        print(f'repeats: {len(order)} bars played from {len(src_starts)} written')
+
+    def bpm_at(q):
+        v = tempos[0][1]
+        for b, t in tempos:
+            if b <= q + 1e-9:
+                v = t
+        return v
+    utempos = []
+    for mi, us in ubars:
+        a0, a1 = src_starts[mi], src_starts[mi] + blen[mi]
+        utempos.append((float(us), bpm_at(float(a0))))
+        utempos += [(float(us) + b - float(a0), t) for b, t in tempos if float(a0) < b < float(a1)]
+    def usec(uq):
+        # --swing: a point exactly halfway through a quarter (an offbeat eighth, the end of an
+        # on-beat eighth) sounds at that fraction of the beat instead; nothing else moves, so
+        # written triplets keep their places
+        if a.swing and uq - (uq // 1) == Fr(1, 2):
+            return beats_to_sec(float(uq) + a.swing - 0.5, utempos)
+        return beats_to_sec(float(uq), utempos)
+
+    def times_of(mi, q0, q1):
+        """Score seconds (s0, s1) of written quarters q0..q1 in bar mi, each time the bar is played."""
+        return [(usec(us + q0 - src_starts[mi]), usec(us + q1 - src_starts[mi])) for us in occ.get(mi, [])]
+
+    # ---- the timing's own material, from the file the audio came from: every sounding note with
+    # its pitch, and where each fermata ends (on a note or a rest where it does; over a barline, at
+    # that barline)
+    pitched, all_onsets, fermata_at = [], [], []
+    for ns_ in src_notes:
+        for n in ns_:
+            if n['grace'] or n['dur'] == 0:
+                continue
+            spans = times_of(n['mi'], n['on'], n['on'] + n['dur'])
+            if not n['rest']:
+                all_onsets += [s0 for s0, _ in spans]
+                if n['midi'] is not None:
+                    pitched += [(s0, s1, n['midi']) for s0, s1 in spans]
+            if n['el'].find('.//fermata') is not None:
+                fermata_at += [s1 for _, s1 in spans]
+    for mi, m in enumerate(src_parts[0].findall('measure')):
+        for bl in m.findall('barline'):
+            if bl.find('fermata') is not None:
+                q = src_starts[mi] + (0 if bl.get('location') == 'left' else blen[mi])
+                fermata_at += [s0 for s0, _ in times_of(mi, q, q)]
+    # fermatas a moment apart are one hold for the fit, taken after the last of them: two
+    # fermata eighths 0.4 s apart and a caesura (a ballad TTBB's last line) left too little
+    # between them to measure, and the fit put -1.1 s on the second where playback held +0.75 s
+    breaks = []
+    for b in sorted(fermata_at):
+        if breaks and b - breaks[-1] < 1.5:
+            breaks[-1] = b
+        else:
+            breaks.append(b)
+    first_score = min(all_onsets)
+
+    # ---- what is shown, and whose each thing on it is; windows in written quarters by bar
+    note_q, rest_q, syl_q = {}, {}, {}
+    if closed:
+        dparts, dnames, dnotes, staff_parts, owners, readers, fall, dstarts = closed_display(
+            droot, names, notes_by_part, sung)
+        if len(dstarts) != len(src_starts) or any(x != y for x, y in zip(dstarts, src_starts)):
+            sys.exit('--display: the closed score\'s bars do not line up with the open score\'s')
+        disp, d_all = droot, [n for ns_ in dnotes for n in ns_]
+        pid_of = {n['id']: dparts[j].get('id') for j, ns_ in enumerate(dnotes) for n in ns_}
+        pairs = [tuple(i for i in sp if i in sung) for sp in staff_parts.values()
+                 if len([i for i in sp if i in sung]) == 2]
+        staff_pid = {i: dparts[j].get('id') for j, sp in staff_parts.items() for i in sp}
+        print(f'display: {os.path.basename(a.display)}, a closed score: ' + ', '.join(
+            f'"{" ".join(dnames[j].split())}" = {" + ".join(names[i] for i in sp) or "?"}'
+            for j, sp in staff_parts.items()) +
+            f'; {fall} of {sum(1 for n in d_all if n["id"] in owners)} notes and rests placed by voice, the '
+            'rest matched to the open score')
+        for n in d_all:
+            for i in owners.get(n['id'], ()):
+                (rest_q if n['rest'] else note_q).setdefault(n['id'], []).append(
+                    (i, n['mi'], n['on'], n['on'] + n['dur']))
+        for i in sung:
+            for hid, (mi, q0, q1) in part_windows(dnotes, owners, readers, i).items():
+                syl_q.setdefault(hid, []).append((i, mi, q0, q1))
+        syl_holder = {(i, hid): hid for hid, ps in readers.items() for i in ps}
+        centre = dnotes
+    else:
+        if a.open:
+            pairs = []
+        elif a.staves:
+            idx = {n.lower(): i for i, n in enumerate(names)}
+            pairs = []
+            for grp in a.staves.split(','):
+                up, lo = (x.strip().lower() for x in grp.split('+'))
+                if up not in idx or lo not in idx:
+                    sys.exit(f'--staves: unknown part in {grp!r}; parts are {names}')
+                pairs.append((idx[up], idx[lo]))
+        else:
+            pairs = default_pairs(names, sung)
+        centre = notes_by_part
+    # A rest that fills its bar alone is a bar rest, centred in the bar. Some files write it as a
+    # plain whole rest on beat 1, which Verovio sets at the left edge of the bar; mark it as one.
+    for ns_ in centre:
+        by_bar = {}
+        for n in ns_:
+            if not n['grace']:
+                by_bar.setdefault((n['mi'], n['voice'], n['el'].findtext('staff') or '1'), []).append(n)
+        for (mi, _, _), evs in by_bar.items():
+            if len(evs) == 1 and evs[0]['rest'] and evs[0]['rel'] == 0 and mi < len(blen) \
+                    and evs[0]['dur'] == blen[mi]:
+                evs[0]['el'].find('rest').set('measure', 'yes')
+    if not closed:
+        disp, owners, syl_holder = display_score(root, parts, notes_by_part, pairs, sung)
+        d_all = [n for ns_ in notes_by_part for n in ns_]
+        pair_of = {x: pr for pr in pairs for x in pr}
+        staff_pid = {i: (f'PX{pair_of[i][0]}' if i in pair_of else parts[i].get('id')) for i in range(len(parts))}
+        pid_of = {n['id']: staff_pid[i] for i, ns_ in enumerate(notes_by_part) for n in ns_}
+        mi_of = {n['id']: n['mi'] for n in d_all}
+        for i, ns_ in enumerate(notes_by_part):
+            if i not in sung:
+                continue
+            for n in ns_:
+                if not n['grace'] and n['dur'] > 0:
+                    (rest_q if n['rest'] else note_q).setdefault(n['id'], []).append(
+                        (i, n['mi'], n['on'], n['on'] + n['dur']))
+            for nid, (q0, q1) in syllable_windows(ns_).items():
+                h = syl_holder.get((i, nid))
+                if h:
+                    syl_q.setdefault(h, []).append((i, mi_of[nid], q0, q1))
+        # a unison notehead carries both parts; the lower part's own note id is not printed
+        for table in (note_q, rest_q):
+            for nid, ps in owners.items():
+                if nid in table:
+                    have = {w[0] for w in table[nid]}
+                    _, mi, q0, q1 = table[nid][0]
+                    table[nid] += [(p, mi, q0, q1) for p in ps if p not in have]
+    colours = {}                           # the parts sharing staves get the four strongest colours
+    for i in [x for pr in pairs for x in pr] + sorted(sung):
+        if i in sung and i not in colours:
+            colours[i] = palette[len(colours) % len(palette)]
+    print('parts: ' + ', '.join(f'{names[i]}{" (sung, " + colours[i] + ")" if i in sung else ""}'
+                                 for i in range(len(names))))
+    if not closed:
+        print('staves: ' + ('open score' if not pairs else
+                            ', '.join(f'{names[u_]} + {names[l_]}' for u_, l_ in pairs)))
+    index_syl_holder(syl_holder)
+
+    # each sung part's pulse: the coarsest note value that 95% of the bars it sings keep to
+    # (every note starting and lasting a whole number of them; tuplets aside). A piece in
+    # eighths with one bar of sixteenths pulses in eighths. A rest's bar fills in jumps of this
+    # length counted from the barline, so the pulse shows, the way a sung note lights up
+    pulse = {}
+    for i in sung:
+        bars_ = {}
+        for n in src_notes[i]:
+            if not n['grace'] and not n['tmod'] and n['dur'] > 0:
+                bars_.setdefault(n['mi'], []).append(n)
+        sung_bars = [ns_ for ns_ in bars_.values() if any(not n['rest'] for n in ns_)]
+        pulse[i] = Fr(1, 8)
+        for u_ in (Fr(4), Fr(2), Fr(1), Fr(1, 2), Fr(1, 4), Fr(1, 8)):
+            fits = sum(all(n['rel'] % u_ == 0 and n['dur'] % u_ == 0 for n in ns_) for ns_ in sung_bars)
+            if sung_bars and fits >= 0.95 * len(sung_bars):
+                pulse[i] = u_
+                break
+        if a.pulse:
+            pulse[i] = Fr(4, a.pulse)
+    note_name = {Fr(4): 'whole', Fr(2): 'half', Fr(1): 'quarter', Fr(1, 2): 'eighth', Fr(1, 4): 'sixteenth',
+                 Fr(1, 8): '32nd'}
+    print('rest bars jump in: ' + ', '.join(f'{names[i]} {note_name.get(pulse[i], str(pulse[i]) + " quarter")}s'
+                                             for i in sorted(sung)))
+
+    def unroll(table):
+        """{id: [(part, bar, q0, q1)]} -> {id: [(part, s0, s1, q0, q1, bar)]}, once per playing."""
+        out = {}
+        for k, ws in table.items():
+            for p_, mi, q0, q1 in ws:
+                for s0, s1 in times_of(mi, q0, q1):
+                    out.setdefault(k, []).append((p_, s0, s1, q0, q1, mi))
+        return out
+    note_s, rest_s, syl_s = unroll(note_q), unroll(rest_q), unroll(syl_q)
+
+    def steps(part, s0, s1, q0, q1, mi):
+        """Score seconds where a rest's bar jumps: the end of each pulse inside the rest."""
+        m0, u_ = src_starts[mi], pulse[part]
+        k = (q0 - m0) // u_ + 1
+        out = []
+        while m0 + k * u_ < q1:
+            out.append(s0 + float(m0 + k * u_ - q0) / float(q1 - q0) * (s1 - s0))
+            k += 1
+        return tuple(out) + (s1,)
+
+    # where things are on the page, in written quarters: for the rest bars' time -> x maps, and
+    # which screen each bar is on
+    d_mi = {n['id']: n['mi'] for n in d_all}
+    x_q = {n['id']: float(n['on']) for n in d_all if not n['grace'] and not (
+        n['rest'] and (n['el'].find('rest').get('measure') == 'yes' or n['type'] in (None, 'whole') and n['rel'] == 0))}
+    bar_end = {n['id']: float(src_starts[n['mi']] + blen[n['mi']]) for n in d_all if n['mi'] < len(blen)}
+    last_on_q = {}
+    for n in d_all:
+        if not n['grace'] and not n['rest']:
+            last_on_q[n['mi']] = max(last_on_q.get(n['mi'], n['on']), n['on'])
+
+    # engrave
+    import verovio
+    install_smufl_font()
+    z = 72.0 / a.staff_px
+    band = int(round(0.045 * H))
+    opts = {'pageWidth': int(W * z), 'pageHeight': int(H * z), 'scale': 100,
+            'pageMarginTop': int((band + 0.01 * H) * z), 'pageMarginBottom': int(0.02 * H * z),
+            'pageMarginLeft': int(0.02 * W * z), 'pageMarginRight': int(0.02 * W * z),
+            'breaks': 'auto', 'header': 'none', 'footer': 'none', 'adjustPageHeight': False,
+            'justifyVertically': False, 'lyricSize': 5.0, 'spacingSystem': 10, 'svgViewBox': False}
+    k = mark_accidentals(disp)
+    print('check, accidentals: ' + (f'{k} the file leaves to the reader, written out for the video' if k else
+                                     'the file writes every one the page needs'))
+    # every lyric line stops where its melisma does (SKILL.md 7.6): verify.py's check 14, on what is shown
+    dsp = {sp.get('id'): (sp.findtext('part-name') or sp.get('id')).strip() for sp in disp.iter('score-part')}
+    # which notes sing words of their own: the open score whose words are shown (a closed display file
+    # given ready-made has none beside it, and verify.py --original checks that one)
+    src_names = [(sp.findtext('part-name') or '').strip() for sp in root.iter('score-part')]
+
+    def sung_on(p):                        # only the parts sharing that staff (a soloist is not the tenors)
+        return frozenset() if closed else sung_positions(root, parts_on(dsp.get(p.get('id'), ''), src_names))
+    bad = [f"{dsp.get(p.get('id'), p.get('id'))} voice {v} line {num}: the line from {t!r} (bar {mn}) runs on to "
+           f"bar {last}, {why}" for p in disp.findall('part') for mn, v, num, t, last, why in lyric_line_runs(p, sung_on(p))]
+    if bad:
+        sys.exit('lyric lines that run on past their melisma in the score shown (SKILL.md 7.6):\n   ' + '\n   '.join(bad))
+    print('check, lyric lines: every one stops where its melisma does' +
+          ('' if not closed else ' (past rests only: a closed display file has no open score beside it)'))
+    tk = verovio.toolkit()
+    tk.setOptions(opts)
+    if not tk.loadData(etree.tostring(disp).decode()):
+        sys.exit('verovio could not read the closed score')
+    wrong = pitch_readback(tk)
+    if wrong:
+        sys.exit('notes that read on the page as a pitch they do not sound (bar, staff, reads, sounds):\n   ' +
+                 '\n   '.join(f'{b} staff {n}: reads {r}, sounds {s}' for b, n, _, r, s in wrong))
+    print('check, pitch readback: every note reads on the page as the pitch it sounds')
+    base_mei = tk.getMEI()
+    # words printed above the staff: Verovio reads no placement from a MusicXML lyric, but honours
+    # it on an MEI verse (@place). The note ids survive the trip, and a verse's @n is its lyric number
+    # every verse names its line in the SVG (a class "vn<n>"), for a note printing its word on two lines
+    _rm = etree.fromstring(base_mei.encode())
+    for vv in _rm.iter('{http://www.music-encoding.org/ns/mei}verse'):
+        vv.set('type', 'vn' + (vv.get('n') or '1'))
+    base_mei = etree.tostring(_rm).decode()
+    above = {(n_.get('id'), ly.get('number') or '1') for n_ in disp.iter('note') for ly in n_.findall('lyric')
+             if ly.get('placement') == 'above' and n_.get('id')}
+    if above:
+        M_, X_ = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+        rm = etree.fromstring(base_mei.encode())
+        k_ = 0
+        for el in rm.iter(M_ + 'note', M_ + 'chord'):
+            # a chord's verses sit under the <chord>, not its notes: take any member's placement
+            ids = [el.get(X_)] + ([m_.get(X_) for m_ in el.iter(M_ + 'note')] if el.tag == M_ + 'chord' else [])
+            for vv in el.findall(M_ + 'verse'):
+                if any((i_, vv.get('n') or '1') in above for i_ in ids):
+                    vv.set('place', 'above')
+                    k_ += 1
+        base_mei = etree.tostring(rm).decode()
+        print(f'words above the staff: {k_} syllables, as printed')
+    layouts = {}
+
+    def layout(view):
+        """The screens for one view. Staves empty for a whole system are hidden, as in a printed
+        score (Verovio does this for MEI with <scoreDef optimize="true">, not for MusicXML, and
+        keeps the note ids); in one part's own video its staff is never hidden, so its rests
+        stay on screen to be lit."""
+        if view in layouts:
+            return layouts[view]
+        _SYL_SVG.clear()
+        mei = base_mei
+        if not a.no_condense:
+            M = '{http://www.music-encoding.org/ns/mei}'
+            r = etree.fromstring(re.sub(r'<scoreDef ', '<scoreDef optimize="true" ', mei, count=1).encode())
+            if view != 'all':
+                pid = staff_pid.get(view)
+                sd = next((d for d in r.iter(M + 'staffDef')
+                           if d.get('{http://www.w3.org/XML/1998/namespace}id') == pid), None)
+                for st in (r.iter(M + 'staff') if sd is not None else []):
+                    if st.get('n') == sd.get('n') and st.find('.//' + M + 'note') is None \
+                            and st.find('.//' + M + 'chord') is None:
+                        # an invisible whole note keeps the staff; a second layer would push the
+                        # rests off their usual lines, so pin them there (a whole rest hangs from the
+                        # fourth line, loc 6; the rest sit on the middle line, loc 4). A bar of rest
+                        # is an <mRest> or, from some files, a plain whole <rest>
+                        for mr in st.iter(M + 'mRest'):
+                            mr.set('loc', '6')
+                        for rr in st.iter(M + 'rest'):
+                            rr.set('loc', '6' if rr.get('dur') in ('1', 'breve', 'long') else '4')
+                        ly = etree.SubElement(st, M + 'layer', n='9')
+                        etree.SubElement(ly, M + 'note', dur='1', oct='4', pname='c', visible='false')
+            mei = etree.tostring(r).decode()
+        t = verovio.toolkit()
+        t.setOptions(opts)
+        if not t.loadData(mei):
+            sys.exit('verovio could not re-read the score as MEI')
+        # whose each tie and slur is: from the notes the MEI says it starts and ends on (the SVG
+        # keeps the MEI ids). A tie is its notes' part's; a slur starting or ending on a chord
+        # that two parts share is both parts'
+        M, X = '{http://www.music-encoding.org/ns/mei}', '{http://www.w3.org/XML/1998/namespace}id'
+        rr = etree.fromstring(mei.encode())
+        chord_of = {}
+        for ch in rr.iter(M + 'chord'):
+            mem = [nn.get(X) for nn in ch.iter(M + 'note')]
+            for nn in mem:
+                chord_of[nn] = mem
+        ctrl = {}
+        d_end = {n['id']: (n['mi'], n['on'] + n['dur']) for n in d_all}
+
+        def staff_sung(nid):
+            # the parts on the fermata's own staff: the tenors' hold is not the basses'
+            return {i for i, pid in staff_pid.items() if pid == pid_of.get(nid)}
+        ferm_end = {}
+        for i_, ns_ in enumerate(notes_by_part):
+            for n in ns_:
+                if i_ in sung and n['el'].find('.//fermata') is not None:
+                    ferm_end.setdefault((n['mi'], n['on'] + n['dur']), set()).add(i_)
+        for ch in rr.iter(M + 'chord'):
+            chord_of[ch.get(X)] = [nn.get(X) for nn in ch.iter(M + 'note')]
+        for tag in ('tie', 'slur', 'fermata'):
+            for e in rr.iter(M + tag):
+                st, en = (e.get('startid') or '').lstrip('#'), (e.get('endid') or '').lstrip('#')
+                ends = [st, en] if tag == 'tie' else chord_of.get(st, [st]) + chord_of.get(en, [en])
+                # a fermata is black in a part's own video only where it sits on that part's note or
+                # rest (grey over everyone else's, like their notes)
+                own = set().union(*[owners.get(i, set()) for i in ends if i])
+                k_ = next((i for i in [st] + chord_of.get(st, []) if i in d_end), None)
+                if tag == 'fermata' and k_:
+                    # and every part holding its own fermata to the same moment (a bar rest's
+                    # fermata, left out on the closed staff where it would stack over this one)
+                    own |= ferm_end.get(d_end[k_], set()) & staff_sung(k_)
+                ctrl[e.get(X)] = (tag, st, en, own)
+        # a staff's own markings (words such as a piano's "slow down", dynamics, hairpins) are the
+        # parts on that staff: grey in the video of a part that is not, like that staff's notes.
+        # Tempo marks are everyone's and stay black
+        staff_own = {}
+        for stf in rr.iter(M + 'staff'):
+            got = staff_own.setdefault(stf.get('n'), set())
+            for nn in list(stf.iter(M + 'note')) + list(stf.iter(M + 'rest')) + list(stf.iter(M + 'mRest')):
+                got |= owners.get(nn.get(X), set())
+        for tag in ('dir', 'dynam', 'hairpin'):
+            for e in rr.iter(M + tag):
+                own = set().union(*[staff_own.get(n_, set()) for n_ in (e.get('staff') or '').split()])
+                ctrl[e.get(X)] = (tag, '', '', own)
+        pages = [Page(t.renderToSVG(p), W, H, owners, syl_holder, colours, [view], names, int(band * 0.62),
+                      x_q, bar_end, ctrl)
+                 for p in range(1, t.getPageCount() + 1)]
+        bar_page = {}                            # which screen each written bar is on
+        for pi_, pg in enumerate(pages):
+            for i in pg.ids_on_page:
+                if i in d_mi:
+                    bar_page.setdefault(d_mi[i], pi_)
+        print(f'engraved for {"every part" if view == "all" else names[view]}: {len(pages)} screens of '
+              f'{W}x{H}, staff {a.staff_px:.0f} px')
+        nud = sum(p_.nudged for p_ in pages)
+        if nud:
+            print(f'   {nud} syllables moved right to clear the word before them on their line')
+        layouts[view] = (pages, bar_page, ctrl)
+        return layouts[view]
+
+    jobs = []
+    for mp3 in a.mp3s:
+        f = featured_of(mp3, names, part_map)
+        if f is not None and f not in sung:
+            sys.exit(f'{mp3}: {names[f]} has no lyrics in the score')
+        out_dir = a.out or os.path.dirname(os.path.abspath(mp3))
+        base = os.path.splitext(os.path.basename(mp3))[0]
+        jobs.append((mp3, 'all' if f is None else f, os.path.join(out_dir, base)))
+
+    numbers = [m.get('number') for m in src_parts[0].findall('measure')]
+    bar_sec = [(usec(us), numbers[mi]) for mi, us in ubars]
+
+    def lyric_videos(T, view, mp3, stem):
+        """The lyric sheet's two videos for this mp3 (16:9 and iPad), lit by this video's timing: every
+        syllable of every part, at every time its bar is played; the last ones held, as the score video's
+        are, until the sound stops."""
+        import lyric_sheet
+        LS = lyric_sheet.Sheet(lyric_plan, colours={names[i]: c for i, c in colours.items()})
+        if len(LS.W.numbers) != len(src_starts) or [n_ for n_ in LS.W.names if n_ not in LS.colours]:
+            sys.exit(f'lyric sheet: {LS.plan["lyrics"]} does not match the score: {len(LS.W.numbers)} bars '
+                     f'against {len(src_starts)}, sung parts {LS.W.names} against {names}')
+        lw = lyric_sheet.windows(LS, lambda mi, q0, q1: [(float(T(s0)), float(T(s1)))
+                                                         for s0, s1 in times_of(mi, q0, q1)],
+                                 last_audio=min(T.last_audio, T.dur))
+        feat = None
+        if view != 'all':
+            feat = next((n for n in LS.W.names if n.lower() == names[view].lower()), None)
+            if feat is None:
+                sys.exit(f'lyric sheet: no part {names[view]!r} in {LS.plan["lyrics"]}')
+        lbars = [(float(T(s0)), n_) for s0, n_ in bar_sec]
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics.mp4', featured=feat, crf=a.crf)
+        lyric_sheet.video(LS, lw, lbars, mp3, stem + ', lyrics, iPad.mp4', featured=feat, crf=a.crf,
+                          shape='ipad')
+
+    for mp3, view, stem in jobs:
+        if not a.lyrics_only:
+            pages, bar_page, ctrl = layout(view)
+        if a.proof and view == 'all' and not a.lyrics_only:
+            from PIL import Image
+            os.makedirs(a.proof, exist_ok=True)
+            nums = [m.get('number') for m in src_parts[0].findall('measure')]
+            for p_ in range(len(pages)):
+                bars = sorted(mi for mi, pg in bar_page.items() if pg == p_)
+                pages[p_].raster()
+                fn = os.path.join(a.proof, f'screen {p_ + 1} bars {nums[bars[0]]}-{nums[bars[-1]]}.png')
+                Image.fromarray(pages[p_].base['all']).save(fn)
+                print(f'   proof screen: {os.path.basename(fn)}')
+        ref, why = timing_source(mp3)
+        T = Timing(ref, pitched, first_score, breaks)
+        # hand-measured downbeats overrule the fit for the stretch between fermatas that holds them:
+        # where the pitch alignment has too little to hold on to (a repeated piano figure, held
+        # chords, few onsets) the fitted hold can come out seconds wrong, and even negative
+        for an in a.anchor:
+            num, t = an.split('=', 1)
+            mm, _, ss = t.rpartition(':')
+            t_audio = (float(mm) * 60 if mm else 0.0) + float(ss)
+            s0 = next((s0 for s0, n_ in bar_sec if str(n_) == num.strip()), None)
+            if s0 is None:
+                sys.exit(f'--anchor {an}: no bar {num}')
+            j = int(np.searchsorted(T.breaks, s0, side='right'))
+            # an anchor that is not at the start of its stretch starts a stretch of its own there:
+            # playback can lose time with no fermata to show for it (a TTBB with piano ran 0.37 s
+            # late from a bar rest ending on a double barline, halfway through a 128-bar stretch)
+            start = T.breaks[j - 1] if j else min(T.so)
+            new = ''
+            if s0 - start > 1e-6 and not (j == 0 and s0 <= min(T.so) + 1e-6):
+                T.breaks = np.insert(T.breaks, j, s0)
+                T.cum = np.insert(T.cum, j + 1, T.cum[j])
+                T.hand.add(float(s0))
+                j += 1
+                new = ', a new stretch from there'
+            T.cum[j] = t_audio - float(T.straight(s0))
+            T.steps = [float(v) for v in np.diff(T.cum)]
+            print(f'   anchored: bar {num} at {t}, by hand (stretch {j + 1} of {len(T.breaks) + 1}{new})')
+        # a stretch with no onsets to fit (after the last fermata: only the final note's end) holds
+        # nothing of its own and keeps the offset before it. Left at the fit's value it did not follow
+        # an anchor: bar 76's lights ended 6 s before they began, and the last bar never lit
+        for j in range(1, len(T.cum)):
+            lo_ = T.breaks[j - 1]
+            hi_ = T.breaks[j] if j < len(T.breaks) else np.inf
+            if not ((T.so >= lo_) & (T.so < hi_)).any():
+                T.cum[j] = T.cum[j - 1]
+        T.steps = [float(v) for v in np.diff(T.cum)]
+        if ref != mp3:
+            T.x = decode(mp3)                            # the audio check below is against this mp3
+        def bar_at(t_audio):
+            # the bar whose downbeat the lights reach by then: through every hold and anchor, not the
+            # straight line (which put an anchor at bar 2 down as "bar 1", one at 153 as "bar 156")
+            cur = bar_sec[0][1]
+            for s0, num in bar_sec:
+                if float(T(s0)) <= t_audio + 1e-3:
+                    cur = num
+            return cur
+        T.report(bar_at, f'{os.path.basename(mp3)} -> {"every part" if view == "all" else names[view]}')
+        if why:
+            print(f'   {why}')
+        if a.lyrics_only:
+            lyric_videos(T, view, mp3, stem)
+            continue
+        # page turns (audio seconds), in the order the bars are played: a repeat turns back.
+        # Up to --lead s before the next screen's first bar, never before the last note on the old
+        # screen has begun
+        turns, pages_at, prev = [], [], None
+        for k, (mi, us) in enumerate(ubars):
+            pg_ = bar_page.get(mi)
+            if pg_ is None or pg_ == prev:
+                continue
+            start = float(T(usec(us)))
+            if prev is None:
+                tsw = 0.0
+            else:
+                pmi, pus = ubars[k - 1]
+                last_on = float(T(usec(pus + last_on_q.get(pmi, src_starts[pmi]) - src_starts[pmi])))
+                tsw = min(start, max(last_on + 0.3, start - a.lead))
+            turns.append(tsw)
+            pages_at.append(pg_)
+            prev = pg_
+        # light windows per page: (t0, t1, page, group key, colour)
+        wins = []
+        page_of = {}                               # (kind, id) -> [(page, lit group)]
+        for pi_, pg in enumerate(pages):
+            for kind, key, _ in pg.elems:
+                if kind == 'sylx':                 # an extender's continuation lights with its syllable
+                    page_of.setdefault(('syl', key.split('#')[0]), []).append((pi_, (kind, key)))
+                    continue
+                if kind == 'tie':                  # each drawn piece of a tie, on whatever screen
+                    page_of.setdefault(('tie', key.split('#')[0]), []).append((pi_, (kind, key)))
+                    continue
+                kk = ('note' if kind in ('body', 'head') else kind, key)
+                gk = ('note', pg.alias.get(key, key)) if kk[0] == 'note' else kk
+                if (pi_, gk) not in page_of.setdefault(kk, []):
+                    page_of[kk].append((pi_, gk))
+        score_end = max(w[2] for tb in (note_s, rest_s) for ws in tb.values() for w in ws)
+        tie_s = {}
+        for cid, (tag, st, en, ps) in ctrl.items():
+            if tag == 'tie':
+                tie_s[cid] = [w for nid in (st, en) for w in note_s.get(nid, []) if w[0] in ps]
+        for kind, table in (('note', note_s), ('syl', syl_s), ('rest', rest_s), ('tie', tie_s)):
+            for nid, ws in table.items():
+                if (kind, nid) not in page_of:
+                    continue
+                for pi_, gk in page_of[(kind, nid)]:
+                    for part, s0, s1, q0, q1, mi in ws:
+                        if view == 'all' or part == view:
+                            t1_ = float(T(s1))
+                            if s1 >= score_end - 1e-6 and kind != 'rest':
+                                # playback holds the final fermata as long as it likes: the last
+                                # notes stay lit until the sound stops
+                                t1_ = max(t1_, min(T.last_audio, T.dur))
+                            wins.append((float(T(s0)), t1_, pi_, gk, colours[part], part, s0, s1,
+                                         steps(part, s0, s1, q0, q1, mi) if kind == 'rest' else None,
+                                         float(q0), float(q1)))
+        wins.sort()
+
+        t_start, t_len = 0.0, T.dur
+        if a.clip:
+            c0, c1 = (float(v) for v in a.clip.split(','))
+            t_start, t_len = c0, min(c1, T.dur - c0)
+
+        def lit_key(p, ws, t):
+            lit, prog = {}, {}
+            for w in ws:
+                if w[2] == p:
+                    lit.setdefault(w[3], set()).add((w[5], w[4]))
+                    rb = pages[p].rest_bar.get(w[3][1]) if w[3][0] == 'rest' else None
+                    if rb is not None:
+                        ts, xs = pages[p].timemap[rb[0]]
+                        s = w[6] + (t - w[0]) / max(w[1] - w[0], 1e-6) * (w[7] - w[6])
+                        s = next((b for b in w[8] if b > s + 1e-9), w[7])   # through the current pulse
+                        q = w[9] + (s - w[6]) / max(w[7] - w[6], 1e-9) * (w[10] - w[9])   # where on the page
+                        prog[w[3]] = tuple(int(round(float(np.interp(v, ts, xs)))) for v in (w[9], w[10], q))
+            return (p, tuple(sorted((k, tuple(c for _, c in sorted(v)), prog.get(k)) for k, v in lit.items())))
+
+        def page_at(t):
+            k = bisect.bisect_right(turns, t) - 1
+            return pages_at[max(k, 0)]
+
+        def frame_at(t):
+            p = page_at(t)
+            return lit_key(p, [w for w in wins if w[0] <= t < w[1]], t)
+
+        def compose(key):
+            p, lit = key
+            pages[p].raster()
+            fr = pages[p].base[view].copy()
+            pages[p].lights.apply(fr.reshape(-1, 3), list(lit))
+            return fr
+
+        from PIL import Image
+        if a.stills:
+            for tv in a.stills.split(','):
+                tv = float(tv)
+                path = f'{stem} @{tv:.0f}s.png'
+                Image.fromarray(compose(frame_at(tv))).save(path)
+                print(f'   still: {path}')
+            continue
+
+        out = stem + ('' if not a.clip else f' clip {int(t_start)}-{int(t_start + t_len)}s') + '.mp4'
+        t_end = t_start + t_len
+        # Variable frame rate: one frame per change of lights or page, shown from the exact
+        # moment of the change (to the millisecond) until the next. No frame grid, so no rounding
+        # of a light to the nearest frame, and nothing encoded twice.
+        ev = {t_start, t_end}
+        for w in wins:
+            ev.update(v for v in (w[0], w[1]) if t_start < v < t_end)
+            if w[8]:
+                ev.update(float(T(b)) for b in w[8] if t_start < float(T(b)) < t_end)
+        ev.update(v for v in turns if t_start < v < t_end)
+        ev = sorted(ev)
+        segs = []                                  # (start ms, key)
+        wi, active = 0, []
+        for e0, e1 in zip(ev[:-1], ev[1:]):
+            t = (e0 + e1) / 2
+            while wi < len(wins) and wins[wi][0] <= t:
+                active.append(wins[wi])
+                wi += 1
+            active = [w for w in active if w[1] > t]
+            key = lit_key(page_at(t), active, t)
+            ms = int(round(1000 * (e0 - t_start)))
+            if segs and (segs[-1][1] == key or segs[-1][0] == ms):
+                if segs[-1][1] != key:
+                    segs[-1] = (ms, key)           # under a millisecond: the later state wins
+                continue
+            segs.append((ms, key))
+        end_ms = int(round(1000 * t_len))
+        tmpd = tempfile.mkdtemp(prefix='score_video_')
+        lines = ['ffconcat version 1.0']
+        with ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
+            jobs_ = []
+            for k, (ms, key) in enumerate(segs):
+                fn = os.path.join(tmpd, f'{k:06d}.png')
+                jobs_.append(pool.submit(lambda im, fn: Image.fromarray(im).save(fn, compress_level=1),
+                                         compose(key), fn))
+                nxt = segs[k + 1][0] if k + 1 < len(segs) else end_ms
+                lines += [f"file '{fn}'", 'option framerate 1000', f'duration {(nxt - ms) / 1000:.3f}']
+            for jb in jobs_:
+                jb.result()
+        lines += [f"file '{os.path.join(tmpd, f'{len(segs) - 1:06d}.png')}'", 'option framerate 1000']
+        lst = os.path.join(tmpd, 'frames.ffconcat')
+        open(lst, 'w').write('\n'.join(lines) + '\n')
+        cmd = ['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst,
+               '-ss', f'{t_start:.3f}', '-t', f'{t_len:.3f}', '-i', mp3, '-map', '0:v', '-map', '1:a',
+               *vfr_flag(), '-video_track_timescale', '1000', '-c:v', 'libx264', '-preset', 'veryfast',
+               '-tune', 'stillimage', '-g', '30', '-crf', str(a.crf), '-pix_fmt', 'yuv420p',
+               '-c:a', 'aac', '-b:a', '192k', '-t', f'{t_len:.3f}', *mp4out.FRAG, out]
+        r = subprocess.run(cmd)
+        if not r.returncode:
+            mp4out.finalize(out)   # written fragmented, so it can be watched while it encodes
+        shutil.rmtree(tmpd, ignore_errors=True)
+        if r.returncode:
+            sys.exit(f'ffmpeg failed on {out}')
+        # check the audio that landed against the mp3 (an AAC priming delay would shift everything)
+        y = decode(out)
+        x = T.x[int(t_start * 22050):int(t_start * 22050) + len(y)]
+        n = min(len(x), len(y), 22050 * 20)
+        lag = 0
+        if n > 22050:
+            seg_x, seg_y = x[:n] - x[:n].mean(), y[:n] - y[:n].mean()
+            cc = np.fft.irfft(np.fft.rfft(seg_y, 2 * n) * np.conj(np.fft.rfft(seg_x, 2 * n)))
+            k = int(np.argmax(np.concatenate([cc[-2205:], cc[:2206]]))) - 2205
+            lag = k / 22.05
+        print(f'   wrote {os.path.basename(out)}: {len(segs)} frames, one per change of lights or page; '
+              f'audio in the mp4 is {lag:+.1f} ms from the mp3')
+        check_frames(out, [ms for ms, _ in segs])
+        if lyric_plan:
+            lyric_videos(T, view, mp3, stem)
+        if all(v != view for _, v, _ in jobs[jobs.index((mp3, view, stem)) + 1:]):
+            layouts.pop(view, None)              # its screens are not needed again: free them
+    if not (a.child or a.stills or a.clip):
+        proof_note(a)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+
+### lyric_sheet.py
+
+```python
+#!/usr/bin/env python3
+"""Lyric sheet (SKILL.md 10.1): every part's words on one printable page, and videos of that page
+with each syllable lit, in the colours of the parts singing it, while it is sung.
+
+    python3 lyric_sheet.py plan LYRICS.musicxml -o "TITLE - lyric sheet plan.json" [--title T] [--credits C]
+    python3 lyric_sheet.py structure LYRICS.musicxml
+    python3 lyric_sheet.py pdf PLAN.json [-o "TITLE - lyric sheet.pdf"]
+
+score_video.py runs all of this in the course of making the follow-along videos: it writes the draft
+plan when there is none (and stops), refuses a plan that fails the checks below, makes the PDF, and
+beside each score video "<mp3 name>, lyrics.mp4", timed exactly as the score video is.
+
+LYRICS is a print-faithful MusicXML with one part per sung part (never the Cantai learning file: its
+split syllables would print). Syllables that parts sing together (same bar, beat and word) are one word
+on the sheet; the parts singing it are shown by coloured dots before the row, a short label under them,
+and, for words only some of the row's parts sing, italics and a small tag.
+
+The plan is JSON, written as a draft and finished by hand:
+
+  "sections": [{"name": ..., "rows": [{"from": "55", "to": "56:2", "parts": [...]}, ...]}]
+      A row is every syllable from bar:quarter "from" up to "to" (quarters from the bar's start, "3/2"
+      allowed), of the named parts (all parts if left out). {"continues": true} prints a row as the
+      second line of the one before it, with no label. The draft breaks rows at rests and names
+      sections "A?", "B?"... from rehearsal marks, double barlines and melody that repeats; the names
+      must come from the musical structure (compare melody and harmony: `structure`).
+  "words":  [{"bar": "7", "word": "river", "emoji": "...", "parts": [...]}]
+      At least one key word per row, printed bold and followed by its emoji: a fixation point.
+  "edits":  [{"bar": "77", "syllable": "ah", "show": "ah..."}]    display text only
+  "whole_sections": true   no section carried on into the next column: smaller type instead
+  "names":  short part names for the legend;  "sets": label and tag for each set of parts
+  "reviewed": true once all of that is done.
+
+The type is as large as the page allows: the layout tries one column and more, and takes the column
+count that gives the largest type, every section whole in its column. A row too wide for its column
+wraps, indented, onto as few lines as it can (three at most), at the best phrase break: a rest, the end
+of a sentence or clause, a held note, or before a word that starts a phrase ("and", "when", "in"); a
+row the plan splits with "continues" (where the music rests) always starts a new line. The video uses
+the same rows at 1920x1080 (16:9), and an iPad video (3:4 portrait, 1536x2048) shows the printed
+page itself. The PDF has two pages: first the portrait page to print; then the 16:9
+video's page, landscape, the full width with the paper below it empty.
+
+Needs lxml, numpy, pycairo, pillow, the Noto Color Emoji font and one of Carlito, Lato or
+Liberation Sans; imports score_video.py (for its MusicXML reader), so keep it beside that.
+"""
+import sys, os, re, math, json, argparse, subprocess, tempfile, shutil, itertools
+from fractions import Fraction as Fr
+from concurrent.futures import ThreadPoolExecutor
+import numpy as np
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import score_video as sv  # noqa: E402
+import mp4out  # noqa: E402
+
+try:
+    import cairo
+except ImportError:          # the plan and structure commands need no drawing
+    cairo = None
+
+PLAN_KEYS = ('lyrics', 'title', 'credits', 'reviewed', 'names', 'colours', 'sets', 'sections', 'words', 'edits',
+             'whole_sections')
+GREY = '#BDBDBD'
+MAX_WRAP = 3                 # a row wraps onto at most this many lines
+# words a phrase can start with: a line may begin with one
+PHRASE_START = {'and', 'but', 'or', 'nor', 'so', 'yet', 'for', 'that', 'when', 'where', 'while', 'as', 'if',
+                'though', 'because', "'cause", 'till', 'until', 'with', 'without', 'to', 'in', 'on', 'of',
+                'from', 'by', 'like', 'through', 'who', 'which', 'how', 'what', 'than', 'then', 'into',
+                'at', 'over', 'under', 'all', 'just', 'although', 'once', 'since', 'before', 'after'}
+# a line may begin with one of these less happily (a clause's subject), and never end with one of NO_END
+SUBJECT = {'i', "i'm", "i'll", "i'd", 'you', "you're", "you'll", 'we', "we're", "we'll", 'they', "they're",
+           'he', 'she', 'it', "it's", 'there', "there's", 'this'}
+NO_END = {'the', 'a', 'an', 'my', 'your', 'our', 'their', 'his', 'her', 'its', 'to', 'of', 'in', 'on', 'and',
+          'with', 'for', 'from', 'by', 'at', 'so', 'but', 'or', 'as'}
+EMO_W = 1.12                 # an emoji's advance, in font sizes (a thin space, the glyph, a thin space)
+
+
+def norm(t):
+    return re.sub(r"[^\w']", '', t or '').lower()
+
+
+def font_family():
+    fams = subprocess.run(['fc-list', ':', 'family'], capture_output=True, text=True).stdout
+    for f in ('Carlito', 'Lato', 'Liberation Sans', 'Arial', 'DejaVu Sans'):
+        if re.search(rf'(^|,){re.escape(f)}(,|$)', fams, re.M):
+            return f
+    return 'sans-serif'
+
+
+def emoji_font():
+    p = subprocess.run(['fc-match', '-f', '%{file}', 'Noto Color Emoji'], capture_output=True, text=True).stdout
+    if 'emoji' not in p.lower():
+        sys.exit('lyric_sheet: no Noto Color Emoji font (apt install fonts-noto-color-emoji)')
+    return p
+
+
+# ----------------------------------------------------------------------------- the words
+
+class Words:
+    """Every syllable of every sung part of LYRICS, merged across parts that sing it together."""
+
+    def __init__(self, path):
+        self.path = path
+        root = sv.read_xml(path)
+        parts = root.findall('part')
+        sps = {sp.get('id'): sp for sp in root.find('part-list').findall('score-part')}
+        self.all_names = [(sps[p.get('id')].findtext('part-name') or p.get('id')).strip() for p in parts]
+        self.title = (root.findtext('work/work-title') or root.findtext('movement-title') or '').strip()
+        self.credits = [c.findtext('credit-words') or '' for c in root.findall('credit')]
+        notes, starts = [], None
+        for i, p in enumerate(parts):
+            ns, st = sv.scan_part(i, p)
+            notes.append(ns)
+            starts = starts or st
+        self.notes, self.starts, self.parts = notes, starts, parts
+        self.numbers = [m.get('number') for m in parts[0].findall('measure')]
+        self.mi_of = {}
+        for mi, n in enumerate(self.numbers):
+            self.mi_of.setdefault(n, mi)
+        self.sung = [i for i, ns in enumerate(notes) if any(n['lyric'] for n in ns)]
+        self.names = [self.all_names[i] for i in self.sung]
+        tok = {}
+        for i in self.sung:
+            ns = notes[i]
+            byid = {n['id']: n for n in ns}
+            for nid, (q0, q1) in sv.syllable_windows(ns).items():
+                n = byid[nid]
+                ly = n['el'].find('lyric')
+                text = ly.findtext('text') or ''
+                syl = ly.findtext('syllabic') or 'single'
+                rel = n['on'] - starts[n['mi']]
+                k = (n['mi'], rel, norm(text))
+                t = tok.setdefault(k, dict(mi=n['mi'], bar=self.numbers[n['mi']], q=rel, text=text, syl=syl,
+                                           parts={}))
+                if len(text) > len(t['text']):
+                    t['text'] = text                    # "long" and "long," are one word
+                t['parts'][self.all_names[i]] = (q0, q1)
+        self.tokens = [tok[k] for k in sorted(tok, key=lambda k: (k[0], k[1]))]
+        for j, t in enumerate(self.tokens):
+            t['id'] = j
+        self.order = {n: k for k, n in enumerate(self.names)}
+
+    def pos(self, s):
+        """'55' or '56:2' or '75:7/2' -> (measure index, quarters from its start)."""
+        b, _, q = str(s).partition(':')
+        if b not in self.mi_of:
+            if b.isdigit() and int(b) > int(max(self.numbers, key=lambda x: int(x) if x.isdigit() else 0)):
+                return (len(self.numbers), Fr(0))
+            raise ValueError(f'no bar {b!r}')
+        return (self.mi_of[b], Fr(q) if q else Fr(0))
+
+    def sort_parts(self, ps):
+        return sorted(ps, key=lambda p: self.order.get(p, 99))
+
+    def melody(self):
+        """Per bar: the highest sung pitch at each onset, the lowest unsung one, and the unsung pitch classes."""
+        top, low, pcs = {}, {}, {}
+        for i, ns in enumerate(self.notes):
+            for n in ns:
+                if n['rest'] or n['grace'] or n['midi'] is None:
+                    continue
+                if i in self.sung:
+                    q = n['on'] - self.starts[n['mi']]
+                    d = top.setdefault(n['mi'], {})
+                    d[q] = max(d.get(q, 0), n['midi'])
+                else:
+                    pcs.setdefault(n['mi'], set()).add(n['midi'] % 12)
+                    q = n['on'] - self.starts[n['mi']]
+                    cur = low.get(n['mi'])
+                    if cur is None or (q, n['midi']) < cur:
+                        low[n['mi']] = (q, n['midi'])
+        return top, low, pcs
+
+    def signatures(self):
+        """A bar's melody, rhythm and intervals only: the same tune a half step up matches."""
+        top, _, _ = self.melody()
+        sig = {}
+        for mi, d in top.items():
+            qs = sorted(d)
+            sig[mi] = tuple((q, d[b] - d[a]) for a, b, q in zip(qs, qs[1:], qs[1:])) + ((qs[0], 0),)
+        return sig
+
+
+# ----------------------------------------------------------------------------- the draft plan
+
+def section_starts(W):
+    """Measure indices where a section may begin: rehearsal marks, double barlines, a new key."""
+    out = set()
+    for p in W.parts:
+        for mi, m in enumerate(p.findall('measure')):
+            if m.find('.//rehearsal') is not None:
+                out.add(mi)
+            for bl in m.findall('barline'):
+                if (bl.findtext('bar-style') or '') in ('light-light', 'light-heavy', 'heavy-light'):
+                    out.add(mi + 1 if bl.get('location', 'right') == 'right' else mi)
+            if mi and m.find('attributes/key') is not None:
+                out.add(mi)
+    return out
+
+
+def draft_rows(W):
+    """Rows broken where the music rests: after two quarters' rest; after any rest at the end of a
+    sentence; after a quarter's rest where the singers change. Parts singing different words at once
+    (one part holding while another answers) get rows of their own."""
+    rows, open_ = [], []
+    for t in W.tokens:
+        q0 = W.starts[t['mi']] + t['q']
+        ps = set(t['parts'])
+        home = None
+        for r in open_:
+            if not (r['parts'] & ps):
+                continue
+            last = r['tokens'][-1]
+            gap = q0 - max(v[1] for v in last['parts'].values())
+            same = set(last['parts']) == ps
+            end = bool(re.search(r'[.?!]["”\']?$', last['text']))
+            if gap >= 2 or (gap > 0 and end) or (gap >= 1 and not same):
+                continue
+            home = r
+            break
+        # a row that shares singers with this word and did not take it is finished
+        open_ = [r for r in open_ if r is home or not (r['parts'] & ps)]
+        if home is None:
+            home = dict(tokens=[], parts=set())
+            rows.append(home)
+            open_.append(home)
+        home['tokens'].append(t)
+        home['parts'] |= ps
+    return rows
+
+
+def auto_short(name):
+    return re.sub(r'\s*\(.*?\)\s*', ' ', name).strip()
+
+
+def auto_set(W, ps):
+    ps = W.sort_parts(ps)
+    short = [auto_short(p) for p in ps]
+    choir = [n for n in W.names if not n.lower().startswith('solo')]
+    if set(ps) == set(choir) and len(choir) > 1:
+        label = 'All'
+    elif len(ps) == 1:
+        label = short[0]
+    elif all(s.lower().startswith('solo') for s in short):
+        label = 'Solos'
+    elif len({s.split()[0] for s in short}) == 1:
+        label = short[0].split()[0] + 's'
+    else:
+        label = '/'.join(short)
+    tag = ''.join(dict.fromkeys(s[0].upper() + ''.join(c for c in s if c.isdigit()) if s.lower().startswith('solo')
+                                else s[0].upper() for s in short))
+    return dict(label=label, tag=tag)
+
+
+def bq(W, mi, q):
+    return W.numbers[mi] + ('' if q == 0 else f':{q}')
+
+
+def draft(lyrics, out, title=None, credits=None, colours=None):
+    W = Words(lyrics)
+    rows = draft_rows(W)
+    starts = section_starts(W)
+    sig = W.signatures()
+    # sections: at the section starts, each taking the rows that begin inside it
+    secs = []
+    for r in rows:
+        mi = r['tokens'][0]['mi']
+        if not secs or any(secs[-1]['mi'] < s <= mi for s in starts):
+            secs.append(dict(mi=mi, rows=[]))
+        secs[-1]['rows'].append(r)
+    # letters by melody: a section whose bars mostly match an earlier section's, bar for bar, shares its letter
+    letters, spans = [], []
+    for k, s in enumerate(secs):
+        lo = s['mi']
+        hi = secs[k + 1]['mi'] if k + 1 < len(secs) else len(W.numbers)
+        spans.append((lo, hi))
+    for k, (lo, hi) in enumerate(spans):
+        best = (0, None)
+        for j in range(k):
+            a0, a1 = spans[j]
+            n = min(hi - lo, a1 - a0)
+            both = [d for d in range(n) if sig.get(lo + d) and sig.get(a0 + d)]
+            if both:
+                m = sum(sig[lo + d] == sig[a0 + d] for d in both) / len(both)
+                if m > best[0]:
+                    best = (m, j)
+        if best[0] >= 0.5:
+            letters.append(letters[best[1]])
+        else:
+            letters.append(chr(ord('A') + len(set(letters))))
+    colours = colours or default_colours(W)
+    sets = {}
+    plan_secs = []
+    for s, L, (lo, hi) in zip(secs, letters, spans):
+        prow = []
+        for r in s['rows']:
+            t0, t1 = r['tokens'][0], r['tokens'][-1]
+            nxt = next((u for u in W.tokens if (u['mi'], u['q']) > (t1['mi'], t1['q'])), None)
+            end = bq(W, nxt['mi'], nxt['q']) if nxt else str(int(W.numbers[-1]) + 1)
+            row = {'from': bq(W, t0['mi'], t0['q']), 'to': end}
+            others = [u for u in W.tokens if t0['id'] <= u['id'] <= t1['id'] and u not in r['tokens']]
+            if others:
+                row['parts'] = W.sort_parts(r['parts'])
+            prow.append(row)
+            for u in r['tokens']:
+                for ps in (r['parts'], set(u['parts'])):
+                    key = '+'.join(W.sort_parts(ps))
+                    sets.setdefault(key, auto_set(W, ps))
+        plan_secs.append({'name': L + '?', 'bars': f'{W.numbers[lo]}-{W.numbers[hi - 1]}', 'rows': prow})
+    plan = {
+        'lyrics': os.path.relpath(os.path.abspath(lyrics), os.path.dirname(os.path.abspath(out))),
+        'title': title or W.title or os.path.splitext(os.path.basename(lyrics))[0],
+        'credits': credits or 'lyric sheet',
+        'reviewed': False,
+        'names': {n: auto_short(n) for n in W.names},
+        'colours': colours,
+        'sets': sets,
+        'sections': plan_secs,
+        'words': [],
+        'edits': [],
+    }
+    with open(out, 'w') as f:
+        json.dump(plan, f, indent=1, ensure_ascii=False)
+    print(f'lyric sheet: draft plan written, {out}: {sum(len(s["rows"]) for s in plan_secs)} rows in '
+          f'{len(plan_secs)} sections, lettered by melody')
+    structure(W, [(p['name'], p['bars']) for p in plan_secs])
+    return out
+
+
+def default_colours(W):
+    """As score_video.py gives them by default: the choir parts, paired in score order, first."""
+    pal = sv.PALETTE
+    choir = [n for n in W.names if not n.lower().startswith('solo')]
+    order = choir + [n for n in W.names if n not in choir]
+    return {n: pal[k % len(pal)] for k, n in enumerate(order)}
+
+
+NOTE = 'C C# D Eb E F F# G Ab A Bb B'.split()
+
+
+def structure(W, secs=None):
+    """The melody and harmony bar by bar, for naming the sections from the music."""
+    top, low, pcs = W.melody()
+    print('\nbar  bass  accompaniment          melody (highest sung note at each onset)')
+    for mi, num in enumerate(W.numbers):
+        d = top.get(mi, {})
+        mel = ' '.join(f'{NOTE[d[q] % 12]}{d[q] // 12 - 1}' for q in sorted(d))
+        b = low.get(mi)
+        print(f'{num:>4}  {NOTE[b[1] % 12] if b else "-":>4}  {" ".join(NOTE[p] for p in sorted(pcs.get(mi, ()))):<22} {mel}')
+    if secs:
+        print('\nsections (letters: the same melody, bar for bar, allowing a change of key):')
+        for name, bars in secs:
+            print(f'   {name:<6} bars {bars}')
+
+
+# ----------------------------------------------------------------------------- reading a plan
+
+class Sheet:
+    """A plan read and applied: sections of rows of tokens, with the bold words, emoji and edits."""
+
+    def __init__(self, plan_path, colours=None):
+        self.path = plan_path
+        self.plan = json.load(open(plan_path))
+        unknown = set(self.plan) - set(PLAN_KEYS)
+        if unknown:
+            print(f'lyric sheet: plan keys not used: {sorted(unknown)}')
+        lp = os.path.join(os.path.dirname(os.path.abspath(plan_path)), self.plan['lyrics'])
+        self.W = W = Words(lp)
+        self.colours = dict(self.plan.get('colours') or default_colours(W))
+        if colours:
+            self.colours.update(colours)
+        self.problems = []
+        for e in self.plan.get('edits', []):
+            hit = [t for t in W.tokens if t['bar'] == str(e['bar']) and norm(t['text']) == norm(e['syllable'])]
+            if not hit:
+                self.problems.append(f'edit {e}: no such syllable')
+            for t in hit[:1]:
+                t['text'] = e['show']
+        self.sections, used = [], set()
+        for sec in self.plan['sections']:
+            lines = []
+            for row in sec['rows']:
+                try:
+                    a, b = W.pos(row['from']), W.pos(row['to'])
+                except ValueError as ex:
+                    self.problems.append(f'{sec["name"]}: row {row}: {ex}')
+                    continue
+                flt = set(row['parts']) if row.get('parts') else None
+                if row.get('continues') and lines and flt is None:
+                    flt = lines[-1]['flt']
+                ts = [t for t in W.tokens if a <= (t['mi'], t['q']) < b and t['id'] not in used and
+                      (flt is None or set(t['parts']) & flt)]
+                if not ts:
+                    self.problems.append(f'{sec["name"]}: row {row["from"]}-{row["to"]} has no words')
+                    continue
+                used |= {t['id'] for t in ts}
+                ps = set().union(*[set(t['parts']) for t in ts])
+                if row.get('continues') and lines:
+                    lines[-1]['conts'].append(ts)
+                    lines[-1]['parts'] |= ps
+                else:
+                    lines.append(dict(tokens=ts, parts=ps, bar=ts[0]['bar'], flt=flt, conts=[]))
+            self.sections.append((sec['name'], lines))
+        missing = [t for t in W.tokens if t['id'] not in used]
+        if missing:
+            self.problems.append('words in no row: ' + '; '.join(f'bar {t["bar"]} "{t["text"]}"'
+                                                                  for t in missing[:12]))
+        for w in self.plan.get('words', []):
+            self.mark(w)
+        for name, lines in self.sections:
+            if not name or name.endswith('?'):
+                self.problems.append(f'section {name or "(unnamed)"}: name it from the musical structure')
+            for ln in lines:
+                for ts in [ln['tokens']] + ln['conts']:
+                    if not any(t.get('bold') for t in ts):
+                        self.problems.append(f'{name}: the row at bar {ts[0]["bar"]} has no bold key word')
+        if not self.plan.get('reviewed'):
+            self.problems.append('"reviewed" is not true: finish the plan, then set it')
+
+    def mark(self, w):
+        W = self.W
+        grp = set(w['parts']) if w.get('parts') else None
+        for i, t in enumerate(W.tokens):
+            if t['bar'] != str(w['bar']) or t['syl'] not in ('single', 'begin'):
+                continue
+            if grp and not set(t['parts']) & grp:
+                continue
+            word, j = [t], i
+            while word[-1]['syl'] in ('begin', 'middle') and j + 1 < len(W.tokens):
+                j += 1
+                u = W.tokens[j]
+                if u['syl'] in ('middle', 'end') and set(u['parts']) & set(t['parts']):
+                    word.append(u)
+            if norm(''.join(x['text'] for x in word)) == norm(w['word']):
+                for x in word:
+                    x['bold'] = True
+                if w.get('emoji'):
+                    word[-1]['emoji'] = w['emoji']
+                else:
+                    self.problems.append(f'word {w["word"]!r} at bar {w["bar"]}: no emoji')
+                return
+        self.problems.append(f'word {w["word"]!r}: not found in bar {w["bar"]}')
+
+    def set_info(self, ps):
+        key = '+'.join(self.W.sort_parts(ps))
+        s = (self.plan.get('sets') or {}).get(key)
+        return s or auto_set(self.W, set(ps))
+
+    def short(self, name):
+        return (self.plan.get('names') or {}).get(name, auto_short(name))
+
+
+# ----------------------------------------------------------------------------- layout and drawing
+
+def set_opts(cx):
+    fo = cairo.FontOptions()
+    fo.set_hint_metrics(cairo.HINT_METRICS_OFF)
+    fo.set_hint_style(cairo.HINT_STYLE_NONE)
+    cx.set_font_options(fo)
+
+
+def rgb(h, a=None):
+    h = h.lstrip('#')
+    c = tuple(int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+    return c if a is None else c + (a,)
+
+
+def segs(s, bd):
+    """A bold word's own letters bold; its quote marks and punctuation not."""
+    if not bd:
+        return [(s, False)]
+    m = re.match(r'^(\W*)(.*?)(\W*)$', s)
+    return [(p, b) for p, b in ((m.group(1), False), (m.group(2), True), (m.group(3), False)) if p]
+
+
+_EMO = {}
+
+
+def emoji_surface(ch):
+    """A colour emoji as a 128 px cairo surface (the font's bitmaps, drawn by pillow)."""
+    if ch not in _EMO:
+        from PIL import Image, ImageDraw, ImageFont
+        f = ImageFont.truetype(emoji_font(), 109)
+        im = Image.new('RGBA', (136, 128), (0, 0, 0, 0))
+        ImageDraw.Draw(im).text((0, 0), ch, font=f, embedded_color=True)
+        arr = np.asarray(im.crop((0, 0, 128, 128))).astype(np.float32)
+        al = arr[..., 3:4] / 255
+        pm = np.concatenate([arr[..., 2:3] * al, arr[..., 1:2] * al, arr[..., 0:1] * al, arr[..., 3:4]], 2)
+        _EMO[ch] = cairo.ImageSurface.create_for_data(bytearray(pm.astype(np.uint8).tobytes()),
+                                                      cairo.FORMAT_ARGB32, 128, 128, 512)
+    return _EMO[ch]
+
+
+class Layout:
+    """Everything's position, in page units: title, legend, then the sections in columns, none broken."""
+
+    def __init__(self, S, W, H, margin, fs, title_fs, gutter, col_gap, lead=1.34, ncols=2, subtitle=True):
+        self.S, self.W, self.H, self.fs, self.font = S, W, H, fs, font_family()
+        self.cx = cairo.Context(cairo.RecordingSurface(cairo.CONTENT_COLOR_ALPHA, None))
+        set_opts(self.cx)
+        self.items, self.boxes, self.overflow, self.widths = [], {}, -1e9, {}
+        self.m, self.gutter, self.col_gap, self.ncols = margin, gutter, col_gap, ncols
+        self.lead, self.sec_gap = lead * fs, 0.9 * fs
+        y = margin + title_fs * 0.9
+        self.text(margin, y, S.plan['title'], title_fs, bold=True)
+        self.title_right = margin + self.width(S.plan['title'], title_fs, bold=True)
+        if subtitle and S.plan.get('credits'):
+            self.text(margin, y + fs * 1.15, S.plan['credits'], fs * 0.72, colour='#555555')
+        x = W - margin
+        for n in reversed(S.W.names):
+            nm = S.short(n)
+            x -= self.width(nm, fs * 0.72, bold=True)
+            self.text(x, y, nm, fs * 0.72, bold=True, colour=S.colours[n])
+            x -= fs * 0.55
+            self.items.append(('dot', x + fs * 0.2, y - fs * 0.24, fs * 0.2, S.colours[n]))
+            x -= fs * 0.9
+        self.legend_left = x
+        y += (fs * 1.15 if subtitle and S.plan.get('credits') else 0) + fs * 0.6
+        self.items.append(('rule', margin, y, W - margin, y))
+        self.head_y = margin + title_fs * 0.9
+        self.top = y + fs * 0.6
+        self.colw = (W - 2 * margin - (ncols - 1) * col_gap) / ncols
+
+    def width(self, s, size, bold=False, italic=False):
+        k = (s, size, bold, italic)
+        if k not in self.widths:
+            self.widths[k] = self._width(s, size, bold, italic)
+        return self.widths[k]
+
+    def _width(self, s, size, bold, italic):
+        self.cx.select_font_face(self.font, cairo.FONT_SLANT_ITALIC if italic else cairo.FONT_SLANT_NORMAL,
+                                 cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL)
+        self.cx.set_font_size(size)
+        return self.cx.text_extents(s).x_advance
+
+    def text(self, x, y, s, size, bold=False, italic=False, colour='#000000'):
+        self.items.append(('text', x, y, s, size, bold, italic, colour))
+
+    def pieces(self, ts, line_parts):
+        out = []
+        for j, t in enumerate(ts):
+            s = t['text']
+            if j == 0:                                    # a row starts with a capital
+                i = next((k for k, c in enumerate(s) if c.isalpha()), None)
+                if i is not None and not (i > 0 and s[i - 1] == "'"):
+                    s = s[:i] + s[i].upper() + s[i + 1:]
+            space = t['syl'] in ('single', 'end') and j < len(ts) - 1
+            out.append([t, s, space, set(t['parts']) != line_parts])
+        return out
+
+    @staticmethod
+    def tag_here(pcs, j):
+        """Does the small tag follow piece j (the last of a run of words the same few parts sing)?"""
+        t, sub = pcs[j][0], pcs[j][3]
+        return sub and (j == len(pcs) - 1 or not pcs[j + 1][3] or set(pcs[j + 1][0]['parts']) != set(t['parts']))
+
+    def measure(self, pcs):
+        """A line's width as row() draws it."""
+        fs, w = self.fs, 0
+        for j, (t, s, sp, sub) in enumerate(pcs):
+            w += sum(self.width(p, fs, italic=sub, bold=b) for p, b in segs(s, t.get('bold', False)))
+            w += self.width(' ', fs) if sp else 0
+            w += fs * EMO_W if t.get('emoji') else 0
+            if self.tag_here(pcs, j):
+                w += self.width(self.S.set_info(t['parts'])['tag'], fs * 0.5, bold=True) + fs * 0.06
+        return w
+
+    def break_cost(self, a, b):
+        """How bad a line break is between tokens a and b: 0 at a rest or a sentence's end, worst
+        between two words of one phrase."""
+        W = self.S.W
+        gap = W.starts[b['mi']] + b['q'] - max(v[1] for v in a['parts'].values())
+        held = max(v[1] - v[0] for v in a['parts'].values())
+        c = 10.0
+        if gap >= Fr(1, 2) or re.search(r'[.?!…]["”’\')]*$', a['text']):
+            c = 0.0
+        elif re.search(r'[,;:—–)]["”’\']*$', a['text']) or gap > 0:
+            c = 1.0
+        elif held >= 2 or (b['text'][:1].isupper() and norm(b['text']) not in ('i', "i'm", "i'll", "i'd")):
+            c = 3.0                                    # a held note, or a sentence the words run into
+        elif norm(b['text']) in PHRASE_START and b['syl'] in ('single', 'begin'):
+            c = 4.0
+        elif norm(b['text']) in SUBJECT and b['syl'] in ('single', 'begin'):
+            c = 6.0
+        if norm(a['text']) in NO_END and a['syl'] == 'single' and c > 0:
+            c = 15.0
+        return c
+
+    def wrap(self, pcs, first_avail, avail):
+        """A row as lines: itself if it fits, else the fewest lines (up to MAX_WRAP) that fit, broken
+        where break_cost and the lines' raggedness are least; one line more if that avoids a bad break
+        (an extra line costs 8). None if it cannot fit."""
+        n = len(pcs)
+        if self.measure(pcs) <= first_avail:
+            return [pcs]
+
+        memo = {}
+
+        def width(i, j):                              # pieces i..j-1 as one line
+            if (i, j) not in memo:
+                seg = [list(p) for p in pcs[i:j]]
+                seg[-1][2] = False
+                memo[i, j] = self.measure(seg)
+            return memo[i, j]
+        ends = [j + 1 for j in range(n - 1) if pcs[j][0]['syl'] in ('single', 'end')]
+        bc = {j: self.break_cost(pcs[j - 1][0], pcs[j][0]) for j in ends}
+        words = lambda i, j: sum(1 for p in pcs[i:j] if p[0]['syl'] in ('single', 'end')) + \
+            (pcs[j - 1][0]['syl'] not in ('single', 'end'))
+
+        def line_cost(i, j, last):
+            room = first_avail if i == 0 else avail
+            wd = width(i, j)
+            if wd > room:
+                return None
+            c = 0.0 if last else 4 * ((room - wd) / room) ** 2
+            return c + (5 if words(i, j) == 1 else 0)
+
+        found = None
+        for K in range(2, MAX_WRAP + 1):
+            best = {0: (0.0, [])}                     # line start -> (cost, breaks so far)
+            for k in range(K):
+                last = k == K - 1
+                nxt = {}
+                for i, (c0, br) in best.items():
+                    for j in ([n] if last else [e for e in ends if e > i]):
+                        lc = line_cost(i, j, last)
+                        if lc is None:
+                            continue
+                        c = c0 + lc + (0 if last else bc[j])
+                        if j not in nxt or c < nxt[j][0]:
+                            nxt[j] = (c, br + [j])
+                best = nxt
+            if n in best:
+                if found is None:
+                    found = best[n]
+                    continue                          # and try one line more
+                if best[n][0] + 8 < found[0]:
+                    found = best[n]
+            if found is not None:
+                break
+        if found is None:
+            return None
+        cuts = [0] + found[1]
+        out = []
+        for a, b in zip(cuts[:-1], cuts[1:]):
+            seg = [list(p) for p in pcs[a:b]]
+            seg[-1][2] = False
+            out.append(seg)
+        return out
+
+    def flow(self, room=None):
+        """Lay out every section; returns the tallest column's height. A row wider than its column
+        wraps (wrap); one that cannot shows as self.overflow > 0, and the caller makes the type smaller.
+        Sections stay whole in a column when they fit in room that way; otherwise a section may go on
+        in the next column, between two sung lines, under its heading again."""
+        fs = self.fs
+        avail = self.colw - self.gutter - fs * 1.25
+        blocks = []
+        self.nwrap = 0
+        for name, lines in self.S.sections:
+            rows, units = [], []
+            for ln in lines:
+                units.append(len(rows))
+                for k, ts in enumerate([ln['tokens']] + ln['conts']):
+                    pcs = self.pieces(ts, ln['parts'])
+                    parts = self.wrap(pcs, avail - (fs * 0.8 if k else 0), avail - fs * 0.8)
+                    if parts is None:
+                        self.overflow = max(self.overflow, 1.0)
+                        parts = [pcs]
+                    self.nwrap += len(parts) - 1
+                    for i, seg in enumerate(parts):
+                        rows.append(dict(pcs=seg, line=ln, first=k == 0 and i == 0))
+            blocks.append((name, rows, fs * 1.25 + len(rows) * self.lead, units))
+        tot = [b[2] for b in blocks]
+        hcol = lambda a, b: sum(tot[a:b]) + (b - a - 1) * self.sec_gap
+        best = None
+        for cuts in itertools.combinations(range(1, len(blocks)), self.ncols - 1):
+            e = (0,) + cuts + (len(blocks),)
+            v = max(hcol(a, b) for a, b in zip(e[:-1], e[1:]))
+            if best is None or v < best[0]:
+                best = (v, e)
+        cols = [[(name, rows) for name, rows, _, _ in blocks[a:b]] for a, b in zip(best[1][:-1], best[1][1:])]
+        height = best[0]
+        # "whole_sections": true in the plan: never carry a section on into the next column (the type shrinks
+        # instead), so repeated sections line up
+        if room is not None and height > room and not self.S.plan.get('whole_sections'):
+            split = self.fill(blocks, room)
+            if split is not None:
+                cols, height = split
+        for ci, col in enumerate(cols):
+            x0 = self.m + ci * (self.colw + self.col_gap)
+            y = self.top
+            for name, rows in col:
+                y += fs * 0.95
+                self.text(x0, y, name.upper(), fs * 0.66, bold=True, colour='#6b6b6b')
+                y += fs * 0.3
+                for r in rows:
+                    y += self.lead
+                    self.row(x0, y, r)
+                y += self.sec_gap
+        return height
+
+    def fill(self, blocks, room):
+        """Columns filled top to bottom, a section going on in the next column (between two sung
+        lines, at least two of them on each side) when it does not fit in what is left of this one.
+        (columns, tallest height), or None if it needs more columns than there are."""
+        fs, lead = self.fs, self.lead
+        head = fs * 1.25
+        cols, col, y = [], [], 0.0
+        for name, rows, h, units in blocks:
+            gap = self.sec_gap if col else 0.0
+            if y + gap + h <= room:
+                col.append((name, rows))
+                y += gap + h
+                continue
+            start, nm = 0, name
+            while True:
+                gap = self.sec_gap if col else 0.0
+                left = (len(rows) - start) * lead + head
+                if y + gap + left <= room:
+                    col.append((nm, rows[start:]))
+                    y += gap + left
+                    break
+                fit_to = [u for u in units if u > start and y + gap + head + (u - start) * lead <= room
+                          and units.index(u) - units.index(start) >= 2 and len(units) - units.index(u) >= 2]
+                if fit_to and start in units:
+                    u = fit_to[-1]
+                    col.append((nm, rows[start:u]))
+                    y += gap + head + (u - start) * lead
+                    start, nm = u, name + ' (continued)'
+                elif not col:
+                    return None                        # not even a fresh column holds it
+                cols.append((col, y))
+                col, y = [], 0.0
+        cols.append((col, y))
+        if len(cols) > self.ncols:
+            return None
+        return [c for c, _ in cols], max(h for _, h in cols)
+
+    def row(self, x0, y, r):
+        fs, S, ln = self.fs, self.S, r['line']
+        if r['first']:
+            lx = x0
+            for p in S.W.sort_parts(ln['parts']):
+                self.items.append(('dot', lx + fs * 0.17, y - fs * 0.42, fs * 0.17, S.colours[p]))
+                lx += fs * 0.38
+            # the label tight under the dots, nearer them than the next row's, and within the gutter
+            lab, size = S.set_info(ln['parts'])['label'], fs * 0.5
+            w = self.width(lab, size)
+            if w > self.gutter - fs * 0.25:
+                size = max(fs * 0.36, size * (self.gutter - fs * 0.25) / w)
+            self.text(x0, y + fs * 0.3, lab, size, colour='#777777')
+            s = str(ln['bar'])
+            self.text(x0 + self.colw - self.width(s, fs * 0.55), y, s, fs * 0.55, colour='#9a9a9a')
+        x = x0 + self.gutter + (0 if r['first'] else fs * 0.8)
+        pcs = r['pcs']
+        for j, (t, s, sp, sub) in enumerate(pcs):
+            w = 0
+            for p, b in segs(s, t.get('bold', False)):
+                self.text(x + w, y, p, fs, italic=sub, bold=b)
+                w += self.width(p, fs, italic=sub, bold=b)
+            self.boxes.setdefault(t['id'], []).append((x, y, x + w))
+            x += w
+            if self.tag_here(pcs, j):
+                tg = S.set_info(t['parts'])['tag']
+                x += fs * 0.06
+                self.text(x, y - fs * 0.38, tg, fs * 0.5, bold=True,
+                          colour=S.colours[S.W.sort_parts(t['parts'])[0]])
+                x += self.width(tg, fs * 0.5, bold=True)
+            if t.get('emoji'):
+                self.items.append(('emoji', x + fs * 0.12, y, t['emoji'], fs))
+                x += fs * EMO_W
+            if sp:
+                x += self.width(' ', fs)
+
+    def draw(self, cx):
+        set_opts(cx)
+        for it in self.items:
+            if it[0] == 'text':
+                _, x, y, s, size, bold, italic, colour = it
+                cx.select_font_face(self.font, cairo.FONT_SLANT_ITALIC if italic else cairo.FONT_SLANT_NORMAL,
+                                    cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL)
+                cx.set_font_size(size)
+                cx.set_source_rgb(*rgb(colour))
+                cx.move_to(x, y)
+                cx.show_text(s)
+            elif it[0] == 'emoji':
+                _, x, y, ch, size = it
+                sc = size * 0.95 / 128
+                cx.save()
+                cx.translate(x, y - size * 0.8)
+                cx.scale(sc, sc)
+                cx.set_source_surface(emoji_surface(ch), 0, 0)
+                cx.get_source().set_filter(cairo.FILTER_BEST)
+                cx.paint()
+                cx.restore()
+            elif it[0] == 'dot':
+                _, x, y, r, colour = it
+                cx.set_source_rgb(*rgb(colour))
+                cx.new_path()
+                cx.arc(x, y, r, 0, 2 * math.pi)
+                cx.fill()
+            elif it[0] == 'rule':
+                _, x0, y0, x1, y1 = it
+                cx.set_source_rgb(*rgb('#cccccc'))
+                cx.set_line_width(max(0.6, self.fs * 0.05))
+                cx.move_to(x0, y0)
+                cx.line_to(x1, y1)
+                cx.stroke()
+
+    def highlight(self, cx, tid, cols):
+        """Bands, one per part singing, top to bottom in score order (as the score videos stack them)."""
+        fs, pad = self.fs, self.fs * 0.12
+        for x0, y, x1 in self.boxes.get(tid, []):
+            top, bot = y - fs * 0.86, y + fs * 0.3
+            h = (bot - top) / len(cols)
+            for k, c in enumerate(cols):
+                cx.set_source_rgba(*rgb(c, 0.55))
+                cx.rectangle(x0 - pad, top + k * h, x1 - x0 + 2 * pad, h)
+                cx.fill()
+
+
+def fit(S, W, H, margin, cols, start, step, gutter_k, col_gap, bottom, subtitle, title_k=None):
+    """For each column count, the largest type at which every row fits its column (wrapped where it
+    must be) and every column the page; the count with the largest type wins, less 0.5% for each
+    wrapped line (a wrap costs some reading). Then the line spacing opened into the room left."""
+    mk = lambda fs, lead, nc: Layout(S, W, H, margin=margin, fs=fs, title_fs=title_k * fs if title_k else 22,
+                                     gutter=fs * gutter_k, col_gap=col_gap(fs), lead=lead, ncols=nc,
+                                     subtitle=subtitle)
+
+    def ok(fs, nc, lead=1.34):
+        L = mk(fs, lead, nc)
+        room = H - bottom - L.top - 0.5 * fs           # the last row's label hangs below its line
+        h = L.flow(room)
+        return L if L.overflow <= 0 and h <= room else None
+
+    best = None
+    for nc in cols:
+        lo, hi = step, start
+        if ok(lo, nc) is None:
+            continue
+        while hi - lo > step / 2:                     # bisect to the step, then step down to a fit
+            mid = (lo + hi) / 2
+            lo, hi = (mid, hi) if ok(mid, nc) else (lo, mid)
+        fs = math.floor(lo / step) * step
+        while fs > step and ok(fs, nc) is None:
+            fs -= step
+        L = ok(fs, nc)
+        score = fs * (1 - 0.005 * L.nwrap)
+        if best is None or score > best[0]:
+            best = (score, fs, nc, L)
+    _, fs, nc, L = best
+    lead = 1.34
+    while lead < 1.8:
+        L2 = ok(fs, nc, lead + 0.02)
+        if L2 is None:
+            break
+        L, lead = L2, lead + 0.02
+    return L, fs, lead
+
+
+FOOTNOTE = ('Dots: who sings the row.  Italic words with a small tag: only those parts sing them.  '
+            'Grey numbers: the bar where the row starts.')
+
+
+def layouts(S):
+    """The two layouts, each computed once, so every copy of a layout is the same:
+    'page', the letter portrait page in one to three columns (the PDF's first page, and the iPad video);
+    'screen', 1920x1080 in one to four columns (the 16:9 video, and the PDF's second page)."""
+    if not hasattr(S, '_layouts'):
+        S._layouts = {
+            'page': fit(S, 612, 792, 34, (1, 2, 3), 30.0, 0.1, 2.75, lambda fs: 18, 30, True),
+            'screen': fit(S, 1920, 1080, 34, (1, 2, 3, 4), 90.0, 0.25, 2.75, lambda fs: fs * 1.3, 20, False,
+                          title_k=1.45),
+        }
+    return S._layouts
+
+
+def footnote(cx, L):
+    cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cx.set_font_size(7.5)
+    cx.set_source_rgb(*rgb('#888888'))
+    cx.move_to(34, L.H - 20)
+    cx.show_text(FOOTNOTE)
+
+
+def pdf(S, out):
+    """Two pages. First, portrait letter: the page to print (and the iPad video's page). Second,
+    landscape letter: the 16:9 video's page, the full width, with the paper below it left empty.
+    One file, so nobody downloads the wrong one."""
+    lay = layouts(S)
+    Ls, fs_s, _ = lay['screen']
+    Lp, fs_p, lead_p = lay['page']
+    surf = cairo.PDFSurface(out, 612, 792)
+    cx = cairo.Context(surf)
+    Lp.draw(cx)
+    footnote(cx, Lp)
+    cx.show_page()
+    surf.set_size(792, 612)
+    cx = cairo.Context(surf)
+    k = 792 / Ls.W
+    cx.scale(k, k)
+    Ls.draw(cx)
+    surf.finish()
+    rows = sum(len(ln["conts"]) + 1 for _, lns in S.sections for ln in lns)
+    print(f'lyric sheet: {os.path.basename(out)}: page 1 portrait, to print ({fs_p:.1f} pt type, '
+          f'{Lp.ncols} column(s), line spacing {lead_p:.2f}, {Lp.nwrap} wrapped line(s)); page 2 landscape, '
+          f'the 16:9 video\'s page ({fs_s * k:.1f} pt type, {Ls.ncols} column(s), {Ls.nwrap} wrapped line(s), '
+          f'{612 - Ls.H * k:.0f} pt empty below); {rows} rows')
+    return out
+
+
+SHAPES = {
+    # 16:9, the three-column layout at its own size
+    'screen': dict(size=(1920, 1080), layout='screen'),
+    # 3:4 for an iPad in portrait: the printed page, scaled to the full width, at the top; the band
+    # left below it carries the bar number
+    'ipad': dict(size=(1536, 2048), layout='page'),
+}
+
+
+def draw_frame(S, L, st, path, featured=None, shape='screen'):
+    """One frame of a lyric video as a PNG (or, with path None, the cairo surface): L (the shape's
+    layout) with st = (lit (token id, part) pairs, bar number) lit and labelled."""
+    W, H = SHAPES[shape]['size']
+    fs = L.fs
+    k = min(W / L.W, H / L.H)
+    band = H - L.H * k                       # below the page: the iPad's bar number goes here
+    act, bar = st
+    surf = cairo.ImageSurface(cairo.FORMAT_RGB24, W, H)
+    cx = cairo.Context(surf)
+    cx.set_source_rgb(1, 1, 1)
+    cx.paint()
+    cx.save()
+    cx.translate((W - L.W * k) / 2, 0)
+    cx.scale(k, k)
+    by = {}
+    for tid, p in act:
+        by.setdefault(tid, []).append(p)
+    for tid, ps in by.items():
+        if featured is None:
+            L.highlight(cx, tid, [S.colours[p] for p in S.W.sort_parts(ps)])
+        else:
+            L.highlight(cx, tid, [S.colours[featured] if featured in ps else GREY])
+    L.draw(cx)
+    if shape == 'ipad':
+        footnote(cx, L)
+    cx.restore()
+    # the bar number, and whose video it is: in the header on the 16:9 screen, below the page on
+    # the iPad
+    size = fs * 0.7 * k if shape == 'screen' else min(band * 0.45, 30)
+    y = L.head_y * k if shape == 'screen' else H - band / 2 + size * 0.35
+    cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL)
+    cx.set_font_size(size)
+    bits = []
+    if bar is not None:
+        bits.append((f'bar {bar}', '#8a8a8a', False))
+    if featured is not None:
+        bits.append((f'{S.short(featured)} in colour, other parts grey', S.colours[featured], True))
+    if shape == 'screen':
+        # between the title and the legend: the bar number in a slot as wide as the widest, then
+        # whose video it is; smaller type if they do not fit
+        lo, hi = (L.title_right + fs) * k, (L.legend_left - fs) * k
+
+        def adv(s, b):
+            cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+            cx.set_font_size(size)
+            return cx.text_extents(s).x_advance
+        while True:
+            wbar = max(adv(f'bar {n}', False) for n in set(S.W.numbers))
+            tot = wbar + sum(size * 1.5 + adv(s, b) for s, c, b in bits if b)
+            if tot <= hi - lo or size < 10:
+                break
+            size *= 0.95
+        x = (lo + hi) / 2 - tot / 2
+        for s, c, b in bits:
+            adv(s, b)
+            cx.set_source_rgb(*rgb(c))
+            cx.move_to(x if not b else x + wbar + size * 1.5, y)
+            cx.show_text(s)
+    else:
+        x = 34 * k
+        for s, c, b in bits:
+            cx.select_font_face(L.font, cairo.FONT_SLANT_NORMAL,
+                                cairo.FONT_WEIGHT_BOLD if b else cairo.FONT_WEIGHT_NORMAL)
+            cx.set_source_rgb(*rgb(c))
+            cx.move_to(x, y)
+            cx.show_text(s)
+            x += cx.text_extents(s).x_advance + size * 1.5
+    if path is None:
+        return surf
+    surf.write_to_png(path)
+
+
+def video(S, wins, bars, mp3, out, featured=None, crf=20, shape='screen'):
+    """The sheet with each syllable lit while it is sung: in the colours of every part singing it
+    (stacked), or in a part's own video, that part's colour where it sings and grey where only others
+    do. shape 'screen': 1920x1080, its own columns. shape 'ipad': 1536x2048 (3:4 portrait), exactly the
+    printed page. wins: (audio start, audio end, token id, part name). bars: (audio time, bar
+    number) for the bar number shown. One frame per change, exact to the millisecond."""
+    dur = float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0',
+                                mp3], capture_output=True, text=True).stdout)
+    bar_t = np.array([b[0] for b in bars])
+
+    def state(t):
+        act = tuple(sorted((tid, p) for t0, t1, tid, p in wins if t0 <= t < t1))
+        j = int(np.searchsorted(bar_t, t, side='right')) - 1
+        return act, (bars[j][1] if j >= 0 else None)
+
+    times = sorted({0.0} | {x for w in wins for x in w[:2] if 0 <= x < dur} | {b for b in bar_t if 0 <= b < dur})
+    segs_ = []
+    for t in times:
+        st = state(t)
+        ms = int(round(1000 * t))
+        if segs_ and (segs_[-1][1] == st or segs_[-1][0] == ms):
+            if segs_[-1][1] != st:
+                segs_[-1] = (ms, st)
+            continue
+        segs_.append((ms, st))
+    return encode(S, segs_, mp3, out, dur, featured=featured, crf=crf, shape=shape)
+
+
+def encode(S, segs_, audio, out, dur, featured=None, crf=20, shape='screen', copy_audio=False):
+    """segs_: (start in ms, state) per frame, each shown until the next; drawn by draw_frame and
+    encoded over audio (an mp3, or with copy_audio an earlier video whose sound is kept as it is)."""
+    W, H = SHAPES[shape]['size']
+    L, fs, lead = layouts(S)[SHAPES[shape]['layout']]
+    k = min(W / L.W, H / L.H)
+    end_ms = int(round(1000 * dur))
+    tmpd = tempfile.mkdtemp(prefix='lyric_video_')
+    lines, files = ['ffconcat version 1.0'], {}
+    with ThreadPoolExecutor(max_workers=os.cpu_count() or 2) as pool:
+        futs = []
+        for j, (ms, st) in enumerate(segs_):
+            if st not in files:
+                files[st] = os.path.join(tmpd, f'{len(files):06d}.png')
+                futs.append(pool.submit(draw_frame, S, L, st, files[st], featured, shape))
+            nxt = segs_[j + 1][0] if j + 1 < len(segs_) else end_ms
+            lines += [f"file '{files[st]}'", 'option framerate 1000', f'duration {(nxt - ms) / 1000:.3f}']
+        for f in futs:
+            f.result()
+    lines += [f"file '{files[segs_[-1][1]]}'", 'option framerate 1000']
+    lst = os.path.join(tmpd, 'frames.ffconcat')
+    open(lst, 'w').write('\n'.join(lines) + '\n')
+    acodec = ['-c:a', 'copy'] if copy_audio else ['-c:a', 'aac', '-b:a', '192k']
+    r = subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-f', 'concat', '-safe', '0', '-i', lst, '-i', audio,
+                        '-map', '0:v', '-map', '1:a', *sv.vfr_flag(), '-video_track_timescale', '1000',
+                        '-c:v', 'libx264', '-preset', 'veryfast', '-tune', 'stillimage', '-g', '30',
+                        '-crf', str(crf), '-pix_fmt', 'yuv420p', *acodec,
+                        '-t', f'{dur:.3f}', *mp4out.FRAG, out])
+    shutil.rmtree(tmpd, ignore_errors=True)
+    if r.returncode:
+        sys.exit(f'ffmpeg failed on {out}')
+    mp4out.finalize(out)   # written fragmented, so it can be watched while it encodes
+    pts = subprocess.run(['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time',
+                          '-of', 'csv=p=0', out], capture_output=True, text=True).stdout.replace(',', '').split()
+    err = (max(abs(float(p) * 1000 - s[0]) for p, s in zip(pts, segs_)) if len(pts) == len(segs_) else None)
+    print(f'   wrote {os.path.basename(out)}: {W}x{H}, {fs * k:.1f} px type, {len(segs_)} frames, one per change '
+          f'of lights; ' + (f'every frame where planned (within {err:.0f} ms)' if err is not None
+                            else f'{len(pts)} frames in the file, {len(segs_)} planned'))
+    return out
+
+
+def windows(S, to_audio, final_q=None, last_audio=None):
+    """(audio start, end, token id, part) for every syllable of every part, at every time it is sung.
+    to_audio(mi, q0, q1) -> [(t0, t1), ...], one per time the bar is played (repeats)."""
+    W, out = S.W, []
+    end_q = final_q if final_q is not None else max(q1 for t in W.tokens for _, q1 in t['parts'].values())
+    for t in W.tokens:
+        for p, (q0, q1) in t['parts'].items():
+            for t0, t1 in to_audio(t['mi'], q0, q1):
+                if last_audio is not None and q1 >= end_q:
+                    t1 = max(t1, last_audio)        # the last syllable stays lit through the final hold
+                out.append((t0, t1, t['id'], p))
+    return out
+
+
+# ----------------------------------------------------------------------------- command line
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest='cmd', required=True)
+    p = sub.add_parser('plan')
+    p.add_argument('lyrics')
+    p.add_argument('-o', '--out', required=True)
+    p.add_argument('--title')
+    p.add_argument('--credits')
+    p = sub.add_parser('structure')
+    p.add_argument('lyrics')
+    p = sub.add_parser('pdf')
+    p.add_argument('plan')
+    p.add_argument('-o', '--out')
+    a = ap.parse_args()
+    if a.cmd == 'plan':
+        if os.path.exists(a.out):
+            sys.exit(f'{a.out} exists; not overwriting a plan that may have been finished by hand')
+        draft(a.lyrics, a.out, a.title, a.credits)
+    elif a.cmd == 'structure':
+        structure(Words(a.lyrics))
+    else:
+        S = Sheet(a.plan)
+        if S.problems:
+            print('lyric sheet plan: not ready:\n   ' + '\n   '.join(S.problems))
+            sys.exit(1)
+        out = a.out or os.path.join(os.path.dirname(os.path.abspath(a.plan)),
+                                    S.plan['title'] + ' - lyric sheet.pdf')
+        pdf(S, out)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### dance_sync.py
+
+```python
+#!/usr/bin/env python3
+"""Sync a choreography video, filmed to a different recording, to a follow-along score video.
+
+    python3 dance_sync.py DANCE.mp4 SCORE_VIDEO.mp4 MIX.mp3 --accomp ACCOMP.mp3 \
+        --bar1 1.03 --beat 0.5 --stack "OUT stacked.mp4" --overlay "OUT over dance.mp4" [--white-opacity 0.75]
+
+1. The dance recording's tempo: beat tracker, straight-line fit of its beats.
+2. A straight map, dance time = c + r * (our time - bar1): r near (dance beat / our beat), c and r
+   fitted by the dance audio's onset strength at our accompaniment's onset times.  The search range
+   for r is set from the beat periods: a range set by guess once missed it and fitted the edge.
+3. Corrected by the beats: each dance beat is paired with our nearest grid beat; the residual is
+   smoothed (median over +-8 beats) and sampled every 8 s; a piecewise-linear map through those
+   knots.  On a ChoreoTrax demo at 120.9 bpm against a 120 bpm practice track, the straight map left
+   the opening 110 ms off; the piecewise one put every 20 s within +-11 ms of the grid, at speeds of
+   0.986-1.004.
+4. Rendered with ONE setpts expression (output time as a piecewise function of the frame's own time),
+   then resampled to 29.97 fps.  Cutting into segments, retiming each and joining them drifted to
+   130 ms by the end: each cut rounds to a frame.
+5. Checked on the rendered file: for dance frames at 20/40/60/80% of the piece, the output frame that
+   matches best (pixel difference) against where the map puts it.  Expect one frame of seek rounding.
+
+Layouts: --stack puts the dance on top and the score video below (1920x2160).  --overlay puts the
+score over the dance at 1920x1080 with the score's white (and near-white, for compression noise)
+at --white-opacity and its ink opaque: opacity 1 for channels below 200, ramping to --white-opacity
+above 235.  At 0.75 the score stays fully legible; dancers in a white studio show as faint figures.
+The audio is MIX.mp3; re-mux a new mix later with -c:v copy, the picture does not depend on it.
+"""
+import argparse
+import subprocess
+
+import numpy as np
+import mp4out
+
+
+def load(path, sr=22050):
+    """Any audio or video file's sound, mono, via ffmpeg (soundfile cannot open an mp4)."""
+    r = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-vn', '-ac', '1', '-ar', str(sr), '-f', 'f32le', '-'],
+                       capture_output=True, check=True)
+    return np.frombuffer(r.stdout, np.float32).astype(np.float64)
+
+
+def beats(y, sr=22050, bpm=120):
+    import librosa
+    env = librosa.onset.onset_strength(y=y, sr=sr, hop_length=256)
+    _, b = librosa.beat.beat_track(onset_envelope=env, sr=sr, hop_length=256, start_bpm=bpm, tightness=800, units='time')
+    return b
+
+
+def fit_map(dance, accomp, bar1, beat, sr=22050):
+    import librosa
+    db = beats(dance, sr, 60 / beat)
+    A = np.vstack([np.arange(len(db)), np.ones(len(db))]).T
+    dperiod = float(np.linalg.lstsq(A, db, rcond=None)[0][0])
+    r0 = dperiod / beat
+    print(f'dance recording: beat {dperiod:.5f} s ({60 / dperiod:.2f} bpm); ours {beat:.5f} s; ratio about {r0:.4f}')
+    hop = 128
+    ed = librosa.onset.onset_strength(y=dance, sr=sr, hop_length=hop)
+    td = np.arange(len(ed)) * hop / sr
+    on = librosa.onset.onset_detect(y=accomp, sr=sr, units='time', hop_length=hop)
+    on = on[on > bar1]
+    best = None
+    for r in np.arange(r0 - 0.004, r0 + 0.0041, 0.0002):
+        for c in np.arange(-2.0, 6.0, 0.004):
+            s = np.interp(c + (on - bar1) * r, td, ed).mean()
+            if best is None or s > best[0]:
+                best = (s, r, c)
+    _, r, c = best
+    print(f'straight map: dance = {c:.3f} + {r:.4f} * (ours - {bar1})')
+    # piecewise correction from the beats
+    t = bar1 + (db - c) / r
+    k = np.round((t - bar1) / beat)
+    g = bar1 + beat * k
+    keep = np.r_[True, np.diff(k) > 0]
+    g, b = g[keep], db[keep]
+    res = b - (c + r * (g - bar1))
+    sm = np.array([np.median(res[max(0, i - 8):i + 9]) for i in range(len(res))])
+    T = np.arange(0.0, len(accomp) / sr + 8.0, 8.0)
+    D = c + r * (T - bar1) + np.interp(T, g, sm)
+    after = b - np.interp(g, T, D)
+    for s in range(0, int(T[-1]), 20):
+        sel = (g >= s) & (g < s + 20)
+        if sel.any():
+            print(f'   {s:3d}-{s + 20:3d} s: dance beats {1000 * np.median(after[sel]):+.0f} ms from our grid')
+    sp = np.diff(D) / np.diff(T)
+    print(f'speeds {sp.min():.4f}-{sp.max():.4f}')
+    return T, D
+
+
+def setpts_expr(T, D):
+    terms = []
+    for i in range(len(T) - 1):
+        s = (T[i + 1] - T[i]) / (D[i + 1] - D[i])
+        lo = '-1e9' if i == 0 else f'{D[i]:.5f}'
+        hi = '1e9' if i == len(T) - 2 else f'{D[i + 1]:.5f}'
+        terms.append(f'gte(T\\,{lo})*lt(T\\,{hi})*({T[i]:.5f}+(T-{D[i]:.5f})*{s:.7f})')
+    return '+'.join(terms)
+
+
+def duration(path):
+    return float(subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', path],
+                                capture_output=True, text=True).stdout)
+
+
+def render(dance, score, mix, expr, out, mode, opacity):
+    dur = duration(mix)
+    fit = f'fps=30000/1001,scale=1920:1080,tpad=stop_mode=clone:stop_duration=5,trim=duration={dur},setsar=1'
+    top = f"[0:v]setpts='({expr})/TB',{fit}[d]"
+    bot = f'[1:v]{fit}[s]'
+    if mode == 'stack':
+        fc = f'{top};{bot};[d][s]vstack=inputs=2[v]'
+    else:
+        lo = int(round(255 * opacity))
+        mn = 'min(min(r(X,Y),g(X,Y)),b(X,Y))'
+        alpha = f"if(lt({mn},200),255,if(gt({mn},235),{lo},255-{255 - lo}*({mn}-200)/35))"
+        fc = f"{top};{bot[:-3]},format=rgba,geq=r='r(X,Y)':g='g(X,Y)':b='b(X,Y)':a='{alpha}'[s];[d][s]overlay=format=auto[v]"
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', dance, '-i', score, '-i', mix, '-filter_complex', fc,
+                    '-map', '[v]', '-map', '2:a', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20',
+                    '-pix_fmt', 'yuv420p', '-g', '60', '-c:a', 'aac', '-b:a', '192k', '-shortest', *mp4out.FRAG, out], check=True)
+    mp4out.finalize(out)   # written fragmented, so it can be watched while it encodes
+
+
+def check(dance, out, T, D, mode):
+    """Find source dance frames in the output.  In the stacked video, the top half; in the overlay,
+    the bottom 40% of the frame (below the systems on these screens), where the score adds only an
+    even wash of white that does not move the best match."""
+    W, H = 320, 180
+    def frames(path, t0, n, region):
+        crops = {'full': '', 'top': 'crop=1920:1080:0:0,', 'low': 'crop=1920:432:0:648,'}
+        vf = crops[region] + f'scale={W}:{H},format=gray'
+        r = subprocess.run(['ffmpeg', '-v', 'error', '-ss', f'{max(t0, 0):.3f}', '-i', path, '-frames:v', str(n),
+                            '-vf', vf, '-f', 'rawvideo', '-'], capture_output=True)
+        f = np.frombuffer(r.stdout, np.uint8).reshape(-1, H, W).astype(float)
+        return (f - f.mean(axis=(1, 2), keepdims=True)) / (f.std(axis=(1, 2), keepdims=True) + 1e-6)
+    fps = 30000 / 1001
+    span = duration(dance)
+    for frac in (0.2, 0.4, 0.6, 0.8):
+        d = frac * span
+        src = frames(dance, d, 1, 'full' if mode == 'stack' else 'low')[0]
+        t = float(np.interp(d, D, T))
+        got = frames(out, t - 0.3, 19, 'top' if mode == 'stack' else 'low')
+        e = [np.abs(o - src).mean() for o in got]
+        j = int(np.argmin(e))
+        print(f'   dance {d:6.1f} s: expected at {t:7.3f} s, found {1000 * ((t - 0.3) + j / fps - t):+.0f} ms '
+              f'away (one frame is 33 ms)')
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument('dance'); ap.add_argument('score_video'); ap.add_argument('mix')
+    ap.add_argument('--accomp', required=True, help='our accompaniment track (its onsets fit the map)')
+    ap.add_argument('--bar1', type=float, required=True); ap.add_argument('--beat', type=float, required=True)
+    ap.add_argument('--stack'); ap.add_argument('--overlay')
+    ap.add_argument('--white-opacity', type=float, default=0.75)
+    a = ap.parse_args()
+    T, D = fit_map(load(a.dance), load(a.accomp), a.bar1, a.beat)
+    expr = setpts_expr(T, D)
+    for mode, out in (('stack', a.stack), ('overlay', a.overlay)):
+        if out:
+            render(a.dance, a.score_video, a.mix, expr, out, mode, a.white_opacity)
+            print(f'wrote {out}')
+            check(a.dance, out, T, D, mode)
+
+
+if __name__ == '__main__':
+    main()
+```
+
+### mp4out.py
+
+```python
+#!/usr/bin/env python3
+"""Write MP4s that can be watched while they render (SKILL.md, Step 10).
+
+A plain MP4 writes its index (the moov box) last, so a partial file doesn't play until the encode ends. Every
+renderer here encodes with FRAG (fragmented MP4: an empty moov first, then self-contained fragments from each
+keyframe), so the file in progress opens and plays as far as it has got; then finalize() remuxes it, by stream copy
+in seconds, to an ordinary MP4 with its index at the front (+faststart), the form players and uploads expect.
+finalize() checks that the remux changed no stream (MD5 of each stream's packets, before and after); if any differs
+it keeps the fragmented file as it was and raises.
+
+    cmd = ['ffmpeg', ..., *mp4out.FRAG, out]; subprocess.run(cmd, check=True); mp4out.finalize(out)
+
+    python3 mp4out.py --selftest DIR   (1) a slow piped render probed at frame 400 of 450 while ffmpeg is still
+                                       writing must play; (2) a VFR video with B-frames and AAC written plain and
+                                       written with FRAG + finalize() must have identical frame and start times
+"""
+import os, subprocess
+
+# -flush_packets 1: without it ffmpeg holds the fragments (even the empty moov) in its output buffer, and a small or
+# slow render shows 28 bytes on disk (just the ftyp box) until the buffer fills, about 2 MiB.
+# delay_moov: the moov waits for the first fragment, so it can carry the edit list that hides x264's B-frame delay and
+# the AAC encoder's priming. Without it every video frame came out late against the audio: by 24 ms (the priming,
+# 1024 samples) on a retimed follow-along video, by 1.312 s (two whole VFR frames of B-frame delay) with the audio's
+# priming handled otherwise, and finalize()'s stream copy keeps whatever the fragments say.
+FRAG = ['-movflags', 'frag_keyframe+empty_moov+delay_moov+default_base_moof', '-flush_packets', '1']
+
+
+def stream_md5(path):
+    """MD5 of each stream's packets (video, audio), as ffmpeg's md5 muxer gives them"""
+    out = []
+    for sel in ('0:v', '0:a'):
+        r = subprocess.run(['ffmpeg', '-v', 'error', '-i', path, '-map', sel + '?', '-c', 'copy', '-f', 'md5', '-'],
+                           capture_output=True, text=True)
+        out.append(r.stdout.strip())
+    return out
+
+
+def finalize(path):
+    """remux a fragmented MP4 in place to a plain one with +faststart (stream copy); raises, keeping the fragmented
+    file, if ffmpeg fails or any stream's packets changed"""
+    tmp = path + '.faststart.mp4'
+    subprocess.run(['ffmpeg', '-v', 'error', '-y', '-i', path, '-map', '0', '-c', 'copy', '-movflags', '+faststart', tmp],
+                   check=True)
+    before, after = stream_md5(path), stream_md5(tmp)
+    if before != after:
+        os.remove(tmp)
+        raise RuntimeError(f'mp4out.finalize: the remux changed a stream of {path} ({before} -> {after}); '
+                           'the fragmented file is kept')
+    os.replace(tmp, path)
+
+
+def selftest(d):
+    """two checks: (1) a slow render from a pipe, probed at frame 400 of 450 while ffmpeg still writes it, must have a
+    duration; (2) the same VFR video (B-frames on, AAC audio) written plain and written with FRAG + finalize() must
+    have identical frame times and stream start times"""
+    import sys, time
+    import numpy as np
+    os.makedirs(d, exist_ok=True)
+    out = os.path.join(d, 'mp4out_selftest.mp4')
+    p = subprocess.Popen(['ffmpeg', '-v', 'error', '-y', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', '640x360', '-r', '30',
+                          '-i', '-', '-f', 'lavfi', '-i', 'sine=frequency=440:duration=15', '-map', '0:v', '-map', '1:a',
+                          '-c:v', 'libx264', '-preset', 'veryfast', '-g', '60', '-pix_fmt', 'yuv420p', '-c:a', 'aac',
+                          '-shortest', *FRAG, out], stdin=subprocess.PIPE)
+    probed, size = None, 0
+    for k in range(450):
+        p.stdin.write(np.full((360, 640, 3), (k * 7) % 256, np.uint8).tobytes())
+        time.sleep(0.01)
+        if k == 400:
+            p.stdin.flush(); time.sleep(1.5)
+            probed = subprocess.run(['ffprobe', '-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', out],
+                                    capture_output=True, text=True).stdout.strip()
+            size = os.path.getsize(out)
+    p.stdin.close(); p.wait()
+    ok1 = bool(probed) and float(probed) > 5
+    print(f'(1) at frame 400 of 450, while writing: {size} bytes, probed duration {probed or "none"} s -> '
+          f'{"plays" if ok1 else "FAILS"}')
+    # (2) VFR stills with uneven durations, as score_video.py writes them
+    lst = os.path.join(d, 'frames.ffconcat'); lines = ['ffconcat version 1.0']
+    for i, dur in enumerate([0.906, 0.406, 0.811, 0.405, 1.227, 0.25, 0.9]):
+        f = os.path.join(d, f'still{i}.png')
+        subprocess.run(['ffmpeg', '-v', 'error', '-y', '-f', 'lavfi', '-i', f'color=c=0x{(i * 37) % 256:02x}8040:s=320x180',
+                        '-frames:v', '1', f], check=True)
+        lines += [f"file '{f}'", 'option framerate 1000', f'duration {dur:.3f}']
+    lines += [lines[-3], 'option framerate 1000']
+    open(lst, 'w').write('\n'.join(lines) + '\n')
+    base = ['ffmpeg', '-v', 'error', '-y', '-f', 'concat', '-safe', '0', '-i', lst, '-f', 'lavfi', '-i',
+            'sine=frequency=440:duration=6', '-map', '0:v', '-map', '1:a', '-fps_mode', 'vfr', '-video_track_timescale',
+            '1000', '-c:v', 'libx264', '-preset', 'veryfast', '-g', '30', '-pix_fmt', 'yuv420p', '-c:a', 'aac', '-t', '5']
+    plain, frag = os.path.join(d, 'plain.mp4'), os.path.join(d, 'frag.mp4')
+    subprocess.run(base + ['-movflags', '+faststart', plain], check=True)
+    subprocess.run(base + [*FRAG, frag], check=True)
+    finalize(frag)
+    info = lambda f, s_: subprocess.run(['ffprobe', '-v', 'error', '-select_streams', s_, '-show_entries',
+                                         'frame=pts_time:stream=start_time', '-of', 'csv=p=0', f],
+                                        capture_output=True, text=True).stdout
+    ok2 = info(plain, 'v:0') == info(frag, 'v:0') and info(plain, 'a:0') == info(frag, 'a:0')
+    print(f'(2) VFR + B-frames + AAC, plain vs fragmented and finalized: frame and start times '
+          f'{"identical" if ok2 else "DIFFER"}')
+    sys.exit(0 if ok1 and ok2 else 1)
+
+
+if __name__ == '__main__':
+    import sys
+    if len(sys.argv) == 3 and sys.argv[1] == '--selftest':
+        selftest(sys.argv[2])
+```
+
+## Appendix — Sibelius "Opus" font glyph codes
+
+Empirically determined. **Other engravers use other fonts** (Finale = Maestro,
+Dorico/modern = Bravura, MuseScore = Emmentaler/Leland) with entirely different
+code points. Re-derive by cropping one instance of each unseen code and looking
+at it — that takes about five minutes and is the fastest part of the job.
+
+| Code | Font | Meaning |
+|---|---|---|
+| `0xf0cf` | Opus | filled notehead |
+| `0xf0fa` | Opus | half notehead |
+| `0xf077` | Opus | whole notehead |
+| `0xf0aa` | OpusSpecial | augmentation dot |
+| `0xf0e4` | Opus | eighth rest |
+| `0xf0ce` | Opus | quarter rest |
+| `0xf0c5` | Opus | 16th rest |
+| `0xf0ee` | Opus | half rest |
+| `0xf0b7` | Opus | whole / whole-measure rest |
+| `0xf062` | Opus | flat |
+| `0xf023` | Opus | sharp |
+| `0xf06e` | Opus | natural |
+| `0xf026` | Opus | treble clef |
+| `0xf03f` | Opus | bass clef |
+| `0xf0dc` | OpusSpecial | the "8" under a treble-8vb clef |
+| `0xf032` / `0xf034` | Opus | time-signature digits 2 / 4 |
+| `0xf06a` / `0xf04a` | Opus | eighth flag up / down |
+| `0xf072` / `0xf052` | Opus | 16th flag up / down |
+| `0xf055` | Opus | fermata |
+| `0xf03e` | Opus | accent |
+| `0xf02c` | Opus | breath mark |
+| `"3"` | OpusText | triplet bracket number |
+
+**Maestro** (Finale): accent `>` 0x3E; `0xF9` is accent and staccato stacked above the
+note in one glyph and `0xDF` the same below, so read both marks from it (read as a
+staccato alone, every accent on a TTBB's shouted one-word refrain was lost); a plain staccato
+dot is `.` 0x2E, the augmentation dot's code, told apart by sitting over or under its
+head rather than 1.6–2 SP to its right.
+
+**Helsinki** (Sibelius's other house font) uses the same code points, but
+pdfplumber hands them back through the Mac Roman table, so they arrive as
+ordinary Unicode: filled notehead `U+0153 œ` (= 0xCF), half notehead `U+02D9`
+(0xFA), whole `w`, X-notehead `U+00BF ¿` (0xC0), quarter rest `U+0152 Œ`
+(0xCE), eighth rest `U+2030 ‰` (0xE4), half rest `U+00D3 Ó` (0xEE), whole rest
+`U+2211 ∑` (0xB7), augmentation dot `U+2122 ™` in HelsinkiSpecial (0xAA),
+flags `j`/`J`/`r`, fermata `U`, accent `>`, marcato `^`, staccato `.`, treble
+clef `&`, bass clef `?`, the 8 under a treble-8vb clef `U+2039 ‹` in
+HelsinkiSpecial (0xDC), dynamics and tuplet digits in HelsinkiTextStd. Glyph
+*baselines* (`matrix[5]`), not char-box centres, sit exactly on the staff
+position — the key-signature accidentals landed on their lines with zero
+correction, so no baseline offset was needed for this font.
+
+In this file slanted beams were 5-point filled curves, flat beams were rects
+0.5 SP high, ties/slurs were the 2-operator stroked curve of a pair (the
+4-operator filled twin is the same arc), stems were vertical lines of one
+line-width and barlines of another, and lyric extension lines had their own
+line-width — three widths, three object classes, no ambiguity.
+
+Derived measurements, in staff spaces (SP = distance between adjacent staff lines):
+
+| Quantity | Value |
+|---|---|
+| notehead width | 1.28 · SP |
+| beam thickness | 0.5 · SP |
+| OpusSpecial baseline offset vs Opus | 0.85 · SP lower |
+| dot x-offset from notehead | 1.6 – 2.0 · SP |
+
+**Verovio's own output**, when you render: notated accidentals are paths, but
+chord-symbol accidentals are `<text font-family="Leipzig">` at private-use code
+points — sharp `U+EA66`. See 8.4.
+
+## Credits
+
+Pieces are described, not named (see *No song titles in this repository*).
+
+`dorico_reader.py`, 2.7, the Dorico changes to `verify.py` and the whole of Step 11
+come from two Dorico SATB + piano pop arrangements used in
+note-learning rehearsals, modelled on a section leader's hand-marked scores and
+checklists.
+
+The Cantai section, the extension-line-as-source rule, the shared-hyphen rule,
+the Helsinki appendix, the clap-part encoding and checks 8–11 come from
+the two-soloist TTBB (TTBB + two tenor soloists + piano, with a clapped
+passage), a 2021 Sibelius/Helsinki export.
+
+The OMR-as-donor rule, the bar-remap warning, the cue-placement rule (3.2), the
+whole of Steps 7 and 8, checks 13–16, the vocable respelling and
+`lyric_collisions.py` come from the scanned SATB octavo (SATB + piano), a hand scan, taken through OMR repair, a director's TTBB
+revoicing, collapsing to two staves, and print layout.
+
+The page-global stem-and-beam rule (2.2, 2.3), the stem-keyed chord grouping
+(2.3, 3.1) and the notehead-grid check (check 12) come from the 12/8 TTBB (TTBB + piano, six staves per system), a
+MuseScore/Leland vector PDF.
+
+The credit rules (8.6) and the probe-instead-of-tune habit come from putting
+an arranger's and an adapter's names on that same scanned SATB octavo. The
+crossed-parts rules (7.6), the tie-stays-in-its-voice rule (7.4) and the
+barline rule (8.5) come from proofreading its TTBB print layout in Sibelius.
+
+Step 9 comes from exporting Cantai stems and mixing rehearsal tracks for
+the solo-and-TTBB piece (TTBB + Solo + piano), handed over from another
+session; its ffmpeg checks and mix command were re-run on synthetic stems
+before being written here. The Balanced track, the above-full-scale peak
+measurement, the −21 dB default and the entrance-pattern note come from mixing
+the set for the 2008 Sibelius TTBB. The part-left
+tracks came from the set for the scanned SATB octavo, and the predominant-left
+tracks that replaced both kinds from a set made by a human singer; `stem_vs_score.py` was
+tested on its stems. The stop-for-good dropouts come from exports of the
+two-soloist TTBB and the solo-and-TTBB piece.
+
+The panned and 3D Balanced tracks, `rehearsal_mix.py`, the anchored line-up in
+`stem_vs_score.py` and the check-what-landed rule (9.4) come from mixing the
+unaccompanied TTBB's set, where the front pair of the 3D layout went from 45°
+to 22.5° to 10° by ear.
+
+`verify.py`, the page-over-notes rules for extension lines (2.5) and the
+Finale ledger-line note come from the unaccompanied TTBB (a TTBB closed score,
+a Finale/Maestro vector PDF bought as a download), where the extension lines
+were derived from the notes, check 10 was never run, and the
+result was caught by eye.
+
+The voice-explosion requirements (one part per voice, no chords, `<extend/>`
+melismas, the `<note>` element order that Sibelius enforces, and the
+XSD/music21/Verovio verification stack) come from a prior handoff by another
+agent working on the solo-and-TTBB piece. The vector-extraction method,
+the OMR failure catalogue and the two scripts come from repairing the 2008
+Sibelius TTBB.
